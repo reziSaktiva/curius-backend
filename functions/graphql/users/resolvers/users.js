@@ -841,6 +841,15 @@ module.exports = {
                 console.log(err);
             }
         },
+        async checkPhoneNumber(_, { phoneNumber }){
+            const checkPhoneNumber = await db.collection("users").where('phoneNumber', "==", phoneNumber).get()
+            try{
+                return !checkPhoneNumber.empty
+            }
+            catch(err){
+                console.log(err);
+            }
+        },
         async checkUsername(_, { username }) {
             const checkUsername = await db.collection('users').where('username', "==", username).get()
 

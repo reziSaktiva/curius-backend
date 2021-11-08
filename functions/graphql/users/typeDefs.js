@@ -234,6 +234,7 @@ module.exports = gql`
         deleteAccount( id: ID! ): String!
         privateSetting: Boolean
         checkUsername( username: String! ): Boolean
+        checkPhoneNumber( phoneNumber: String ): Boolean
         setUserTheme(theme: String): String
         setPersonalInterest(interest: [String] ): [String]
 
