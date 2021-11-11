@@ -792,61 +792,13 @@ module.exports = {
                 console.error(err)
             }
         },
-        async registerUserWithFacebook(_, args, content, info) {
-            const { facebookData: { username, email, imageUrl, token, mobileNumber, gender, birthday, id } } = args
-
-            let newUser = {
-                username,
-                id,
-                email,
-                mobileNumber,
-                gender,
-                birthday,
-                createdAt: new Date().toISOString(),
-                profilePicture: imageUrl
-            }
+        async checkPhoneNumber(_, { phoneNumber }) {
+            const checkPhoneNumber = await db.collection("users").where('mobileNumber', "==", phoneNumber).get()
 
             try {
-                await db.doc(`/users/${username}`).set(newUser)
-
-                return token
-            }
-            catch (err) {
-                console.log(err);
-            }
-        },
-        async registerUserWithGoogle(_, args, content, info) {
-            const { googleData: { username, email, imageUrl, token, mobileNumber, gender, birthday, id } } = args
-
-            const checkUsername = await db.collection('user').where('username', "==", username).get()
-            if (!checkUsername.empty) throw new UserInputError("username has been used")
-
-            let newUser = {
-                username,
-                id,
-                email,
-                mobileNumber,
-                gender,
-                birthday,
-                createdAt: new Date().toISOString(),
-                profilePicture: imageUrl
-            }
-
-            try {
-                await db.doc(`/users/${username}`).set(newUser)
-
-                return token
-            }
-            catch (err) {
-                console.log(err);
-            }
-        },
-        async checkPhoneNumber(_, { phoneNumber }){
-            const checkPhoneNumber = await db.collection("users").where('phoneNumber', "==", phoneNumber).get()
-            try{
                 return !checkPhoneNumber.empty
             }
-            catch(err){
+            catch (err) {
                 console.log(err);
             }
         },
