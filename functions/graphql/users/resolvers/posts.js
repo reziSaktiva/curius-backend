@@ -1093,7 +1093,7 @@ module.exports = {
         console.log(err);
       }
     },
-    async createPost(_, { text, media, location, repost, room }, context) {
+    async createPost(_, { text, media, location, repostedPost, room }, context) {
       const { username } = await fbAuthContext(context);
       if (username) {
         try {
@@ -1117,6 +1117,11 @@ module.exports = {
             geohash,
             location,
             _tags: hastags,
+            status: {
+              active: true,
+              flag: [],
+              takedown: false
+            },
             room
           } : {
             owner: username,
@@ -1129,11 +1134,16 @@ module.exports = {
             rank: 0,
             geohash,
             location,
+            status: {
+              active: true,
+              flag: [],
+              takedown: false
+            },
             _tags: hastags
           };
 
-          if (repost.repost) {
-            newPost.repost = repost
+          if (repostedPost.idReposted) {
+            newPost.repostedPost = repostedPost
           }
 
           await db.collection(`${room ? `/room/${room}/posts` : "posts"}`)
@@ -1157,8 +1167,8 @@ module.exports = {
               doc.update({ id: doc.id });
             });
 
-          if (repost.repost) {
-            db.doc(`/${repost.room ? `room/${repost.room}/posts` : 'posts'}/${repost.repost}`).get()
+          if (repostedPost.idReposted) {
+            db.doc(`/${repostedPost.fromRoom ? `room/${repostedPost.fromRoom}/posts` : 'posts'}/${repostedPost.idReposted}`).get()
               .then(async doc => {
                 doc.ref.update({ repostCount: doc.data().repostCount + 1, rank: doc.data().rank + 1 })
                 if (doc.data().owner !== username) {
@@ -1176,7 +1186,7 @@ module.exports = {
                     displayImage,
                     colorCode,
                   }
-                  // FIX ME (done)
+
                   db.collection(`/users/${doc.data().owner}/notifications`)
                     .add(notification)
                     .then((data) => {

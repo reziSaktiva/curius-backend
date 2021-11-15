@@ -5,13 +5,14 @@ module.exports = gql`
         id: ID!
         owner: String!
         text: String
-        media: Media
+        media: [String]
         createdAt: String!
         location: LatLong
         rank: Int
         likeCount: Int
         commentCount: Int
         repostCount: Int
+        status: StatusPost
         comments: [Comment]
         likes: [Like]
         muted: [Mute]
@@ -19,6 +20,11 @@ module.exports = gql`
         subscribe: [Subscribe],
         hastags: [String]
         room: String
+    }
+    type StatusPost {
+        active: Boolean
+        flag: [String]
+        takedown: Boolean
     }
     type Media {
         content: [String]
@@ -33,10 +39,6 @@ module.exports = gql`
         hitsPerPage: Int
         processingTimeMS: Float
     }
-    # type Repost {
-    #     repost: String
-    #     room: String
-    # }
     type Repost {
         id: ID
         owner: String
@@ -48,7 +50,17 @@ module.exports = gql`
     type LatLong {
         lat: Float
         lng: Float
-        name: String
+        detail: DetailLatLong
+    }
+    type DetailLatLong {
+        city: String
+        country: String
+        district: String
+        formattedAddress: String
+        postCode: String
+        state: String
+        streetName: String
+        subDistrict: String
     }
     type GeoLocation {
         administrative_area_level_4: String
@@ -203,14 +215,24 @@ module.exports = gql`
         gender: String!
         birthday: String!
     },
+    input DetailLocation {
+        city: String
+        country: String
+        district: String
+        formattedAddress: String
+        postCode: String
+        state: String
+        streetName: String
+        subDistrict: String
+    }
     input Location {
         lat: Float
         lng: Float
-        name: String
+        detail: DetailLocation
     }
     input Data {
-        repost: String
-        room: String
+        idReposted: String
+        fromRoom: String
     }
     input Profile {
         newUsername: String
@@ -243,7 +265,7 @@ module.exports = gql`
         nextRoomPosts( id:ID!, room: String ): [Post]!
         nextPopularPosts( id:ID! lat: Float, lng: Float, range: Float): dataPost
         nextMoreForYou (id: ID): dataPost
-        createPost(text:String, media: [String] location: Location! repost: Data room: String): Post!
+        createPost(text:String, media: [String] location: Location! repostedPost: Data room: String): Post!
         subscribePost( postId: ID! room: String ): Subscribe!
         mutePost ( postId: ID! room: String ): Mute!
         deletePost( id: ID! room: String ): String!
