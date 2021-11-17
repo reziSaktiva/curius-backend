@@ -80,7 +80,7 @@ module.exports = gql`
         username: String
         fullName: String
         email: String
-        mobileNumber: Float
+        mobileNumber: String
         gender: String
         dob: String
         joinDate: String
