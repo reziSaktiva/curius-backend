@@ -2,9 +2,12 @@ const { db } = require('../../../utility/admin')
 const { client } = require('../../../utility/algolia')
 
 module.exports = {
+    Query: {
+
+    },
     Mutation: {
-        async searchUser(_, { search, perPage, page }, _context) {
-            const index = client.initIndex('users');
+        async searchPost(_, { search, perPage, page }, _context) {
+            const index = client.initIndex('posts');
 
             const defaultPayload = {
                 "attributesToRetrieve": "*",
@@ -34,12 +37,12 @@ module.exports = {
                                     userIds.push(data.objectID);
                                 })
                             }
-
-                            const getUsers = await db.collection('users').where('id', 'in', userIds).get()
-                            const users = getUsers.docs.map(doc => doc.data())
+                            console.log(index);
+                            const getPosts = await db.collection('posts').where('id', 'in', userIds).get()
+                            const posts = getPosts.docs.map(doc => doc.data())
 
                             // return following structure data algolia
-                            resolve({ hits: users, page, nbHits, nbPages, hitsPerPage, processingTimeMS })
+                            resolve({ hits: posts, page, nbHits, nbPages, hitsPerPage, processingTimeMS })
                         })
                 })
             }

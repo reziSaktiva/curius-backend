@@ -1150,12 +1150,16 @@ module.exports = {
             .add(newPost)
             .then((doc) => {
               newPost.id = doc.id;
-              const index = client.initIndex('search_posts');
+              const index = client.initIndex('posts');
               index.saveObjects([
                 {
                   ...newPost,
                   objectID: doc.id,
-                  _geoloc: location
+                  _geoloc: {
+                    lat: location.lat,
+                    lng: location.lng
+                  },
+                  location
                 }], { autoGenerateObjectIDIfNotExist: false })
                 .then(({ objectIDs }) => {
                   (objectIDs);
