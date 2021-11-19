@@ -7,11 +7,11 @@ module.exports = gql`
         name: String
     }
     type Post {
-        id: ID!
-        owner: String!
+        id: ID
+        owner: String
         text: String
         media: [String]
-        createdAt: String!
+        createdAt: String
         location: LatLong
         rank: Int
         likeCount: Int
@@ -133,6 +133,6 @@ module.exports = gql`
 
         # Search
         searchUser(search: String, perPage: Int, page: Int ): SearchUser!
-        searchPost(search: String, perPage: Int, page: Int ): SearchPost!
+        searchPost(search: String, perPage: Int, page: Int ): SearchPost
     }
 `

@@ -26,6 +26,8 @@ module.exports = {
                 "page": page || 0,
             }
 
+            console.log(index);
+
             try {
                 return new Promise(async (resolve, reject) => {
                     index.search(search, { ...defaultPayload, ...pagination })
@@ -37,7 +39,7 @@ module.exports = {
                                     userIds.push(data.objectID);
                                 })
                             }
-                            console.log(index);
+
                             const getPosts = await db.collection('posts').where('id', 'in', userIds).get()
                             const posts = getPosts.docs.map(doc => doc.data())
 
