@@ -60,10 +60,10 @@ module.exports = {
 
         docs.forEach(async (doc, index) => {
           const data = doc.data()
-          const { repost: repostId } = data;
+          const { repostedPost } = data;
           const repostData = async () => {
-            if (repostId) {
-              const repostData = await db.doc(`/${repostId.room ? `room/${repostId.room}/posts` : 'posts'}/${repostId.repost}`).get()
+            if (repostedPost) {
+              const repostData = await db.doc(`/${repostedPost.fromRoom ? `room/${repostedPost.fromRoom}/posts` : 'posts'}/${repostedPost.idReposted}`).get()
               return repostData.data() || {}
             }
           }

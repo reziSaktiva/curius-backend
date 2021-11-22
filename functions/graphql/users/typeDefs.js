@@ -5,7 +5,7 @@ module.exports = gql`
         id: ID!
         owner: String!
         text: String
-        media: [String]
+        media: Media
         createdAt: String!
         location: LatLong
         rank: Int
