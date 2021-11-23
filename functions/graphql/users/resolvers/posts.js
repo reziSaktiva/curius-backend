@@ -1361,7 +1361,7 @@ module.exports = {
                 displayName: name,
                 displayImage,
                 colorCode,
-                isLike: false,
+                isLiked: false,
               };
 
               db.doc(`/${room ? `room/${room}/posts` : 'posts'}/${id}/likes/${likeId}`).delete();
@@ -1425,7 +1425,7 @@ module.exports = {
                     displayName: name,
                     displayImage,
                     colorCode,
-                    isLike: true,
+                    isLiked: true,
                   };
 
                   db.doc(`/users/${username}/liked/${data.id}`).set(likeData);

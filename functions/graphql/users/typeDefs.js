@@ -122,7 +122,7 @@ module.exports = gql`
         displayName: String!
         displayImage: String!
         colorCode: String!
-        isLike: Boolean
+        isLiked: Boolean
     },
     type Notification {
         owner: String
