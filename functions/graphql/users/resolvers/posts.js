@@ -1360,8 +1360,7 @@ module.exports = {
                 postId: post.id,
                 displayName: name,
                 displayImage,
-                colorCode,
-                isLiked: false,
+                colorCode
               };
 
               db.doc(`/${room ? `room/${room}/posts` : 'posts'}/${id}/likes/${likeId}`).delete();
@@ -1424,8 +1423,7 @@ module.exports = {
                     postId: post.id,
                     displayName: name,
                     displayImage,
-                    colorCode,
-                    isLiked: true,
+                    colorCode
                   };
 
                   db.doc(`/users/${username}/liked/${data.id}`).set(likeData);
@@ -1489,7 +1487,11 @@ module.exports = {
           }
         });
 
-        return likeData;
+        return {
+          ...likeData,
+          isLiked,
+          room
+        };
       } catch (err) {
         console.log(err);
         throw new Error(err);

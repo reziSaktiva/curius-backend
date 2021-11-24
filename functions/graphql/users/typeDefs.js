@@ -122,6 +122,8 @@ module.exports = gql`
         displayName: String!
         displayImage: String!
         colorCode: String!
+        postId: String!
+        room: String
         isLiked: Boolean
     },
     type Notification {
@@ -269,7 +271,7 @@ module.exports = gql`
         subscribePost( postId: ID! room: String ): Subscribe!
         mutePost ( postId: ID! room: String ): Mute!
         deletePost( id: ID! room: String ): String!
-        likePost(id: ID! room:String ): Like
+        likePost(id: ID! room: String): Like
         textSearch(search: String, perPage: Int, page: Int, range: Float, location: Location ): Search!
 
         # comments mutation
