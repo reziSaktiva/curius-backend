@@ -42,6 +42,7 @@ module.exports = gql`
         joinDate: String
         profilePicture: String
         theme: String
+        status: String
         interest: [String]
     }
     type Repost {

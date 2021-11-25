@@ -39,7 +39,7 @@ module.exports = {
                             const users = getUsers.docs.map(doc => doc.data())
 
                             // return following structure data algolia
-                            resolve({ hits: users, page, nbHits, nbPages, hitsPerPage, processingTimeMS })
+                            resolve({ hits: users, page, nbHits, nbPages: nbPages - 1, hitsPerPage, processingTimeMS })
                         })
                 })
             }

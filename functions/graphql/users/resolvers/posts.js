@@ -1238,8 +1238,9 @@ module.exports = {
       const subcribeCollection = db.collection(`/${room ? `room/${room}/posts` : 'posts'}/${id}/subscribes`);
       const likesData = db.collection(`/${room ? `room/${room}/posts` : 'posts'}/${id}/likes`);
 
-      try {
+      const index = client.initIndex('posts');
 
+      try {
         await document.get().then(async (doc) => {
           if (!doc.exists) {
             throw new Error("Postingan tidak di temukan");
@@ -1287,6 +1288,7 @@ module.exports = {
                 return subcribeCollection.get();
               })
               .then((data) => {
+                index.deleteObject(document.id.toString())
                 document.delete();
                 return data.docs.forEach((doc) => {
                   const docOwner = doc.data().owner;
@@ -1306,7 +1308,7 @@ module.exports = {
               });
           }
         });
-        return "postingan sudah di hapus";
+        return document.id;
       } catch (err) {
         console.log(err);
         throw new Error(err);

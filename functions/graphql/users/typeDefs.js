@@ -270,7 +270,7 @@ module.exports = gql`
         createPost(text:String, media: [String] location: Location! repostedPost: Data room: String): Post!
         subscribePost( postId: ID! room: String ): Subscribe!
         mutePost ( postId: ID! room: String ): Mute!
-        deletePost( id: ID! room: String ): String!
+        deletePost( id: ID! room: String ): ID!
         likePost(id: ID! room: String): Like
         textSearch(search: String, perPage: Int, page: Int, range: Float, location: Location ): Search!
 
