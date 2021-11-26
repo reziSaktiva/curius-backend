@@ -171,6 +171,10 @@ module.exports = gql`
         lastId: ID
         posts: [Post]
     }
+    type DeleteData {
+        id: ID!,
+        room: String
+    }
     type Query {
         moreForYou: dataPost
         getPosts(lat: Float, lng: Float, range: Float type: String): dataPost
@@ -270,7 +274,7 @@ module.exports = gql`
         createPost(text:String, media: [String] location: Location! repostedPost: Data room: String): Post!
         subscribePost( postId: ID! room: String ): Subscribe!
         mutePost ( postId: ID! room: String ): Mute!
-        deletePost( id: ID! room: String ): ID!
+        deletePost( id: ID! room: String ): DeleteData
         likePost(id: ID! room: String): Like
         textSearch(search: String, perPage: Int, page: Int, range: Float, location: Location ): Search!
 

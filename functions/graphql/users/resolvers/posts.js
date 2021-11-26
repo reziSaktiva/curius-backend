@@ -1308,7 +1308,10 @@ module.exports = {
               });
           }
         });
-        return document.id;
+        return {
+          id: document.id,
+          room
+        };
       } catch (err) {
         console.log(err);
         throw new Error(err);
