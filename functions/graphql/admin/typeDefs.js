@@ -10,7 +10,7 @@ module.exports = gql`
         id: ID
         owner: String
         text: String
-        media: [String]
+        media: Media
         createdAt: String
         location: LatLong
         rank: Int
@@ -25,6 +25,11 @@ module.exports = gql`
         subscribe: [Subscribe],
         hastags: [String]
         room: String
+    }
+    type Media {
+        content: [String]
+        meta: String
+        type: String
     }
     type StatusPost {
         active: Boolean
