@@ -8,6 +8,8 @@ const randomGenerator = require("../../../utility/randomGenerator");
 
 const { client } = require('../../../utility/algolia')
 
+const { ALGOLIA_INDEX_POSTS } = require('../../../constant/post')
+
 module.exports = {
   Query: {
     async getPosts(_, { lat, lng, range, type }) {
@@ -1146,27 +1148,13 @@ module.exports = {
             newPost.repostedPost = repostedPost
           }
 
+          const index = client.initIndex(ALGOLIA_INDEX_POSTS);
+          let newId = null;
           await db.collection(`${room ? `/room/${room}/posts` : "posts"}`)
             .add(newPost)
             .then((doc) => {
               newPost.id = doc.id;
-              const index = client.initIndex('posts');
-              index.saveObjects([
-                {
-                  ...newPost,
-                  objectID: doc.id,
-                  _geoloc: {
-                    lat: location.lat,
-                    lng: location.lng
-                  },
-                  location
-                }], { autoGenerateObjectIDIfNotExist: false })
-                .then(({ objectIDs }) => {
-                  (objectIDs);
-                })
-                .catch(err => {
-                  console.log(err);
-                });
+              newId = doc.id;
 
               doc.update({ id: doc.id });
             });
@@ -1215,6 +1203,21 @@ module.exports = {
                 createAt: new Date().toISOString()
               });
             }
+          }
+
+          // Set Posts on algolia
+          const newPostPayload = {
+            ...newPost,
+            objectID: newId,
+            _geoloc: location,
+            // field algolia
+            date_timestamp: new Date.now()
+          };
+
+          try {
+            await index.saveObjects([newPostPayload], { autoGenerateObjectIDIfNotExist: false })
+          } catch (err) {
+            console.log(err);
           }
 
           return {

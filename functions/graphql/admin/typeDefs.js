@@ -134,11 +134,33 @@ module.exports = gql`
     type Query {
         getAdmin: [Admin]
     }
+
+    type SearchPosts {
+        hits: [Post]
+        page: Int
+        nbHits: Int
+        nbPages: Int
+        hitsPerPage: Int
+        processingTimeMS: Float
+    }
+    
+    input Location {
+        lat: Float
+        lng: Float
+        name: String
+    }
+
+    input RequestFilter {
+        timestamp: Float
+        ratingFrom: Float
+        ratingTo: Float
+    }
+
     type Mutation {
         checkEmail(email: String): Boolean
 
         # Search
         searchUser(search: String, perPage: Int, page: Int ): SearchUser!
-        searchPost(search: String, perPage: Int, page: Int ): SearchPost
+        searchPosts(search: String, perPage: Int, page: Int, range: Float, location: Location, request: RequestFilter ): SearchPosts!
     }
 `
