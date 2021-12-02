@@ -151,7 +151,7 @@ module.exports = gql`
     }
 
     input RequestFilter {
-        timestamp: Float
+        timestamp: String
         ratingFrom: Float
         ratingTo: Float
     }
@@ -161,6 +161,6 @@ module.exports = gql`
 
         # Search
         searchUser(search: String, perPage: Int, page: Int ): SearchUser!
-        searchPosts(search: String, perPage: Int, page: Int, range: Float, location: Location, request: RequestFilter ): SearchPosts!
+        searchPosts(search: String, perPage: Int, page: Int, range: Float, location: String, request: RequestFilter ): SearchPosts!
     }
 `
