@@ -92,9 +92,10 @@ module.exports = {
             const payload = {
               ...defaultPayload,
               ...geoLocPayload,
-              ...pagination,
-              facetFilters
+              ...pagination
             };
+
+            if (facetFilters.length) payload.facetFilters = facetFilters
 
             return await index.search(search, payload)
         } catch (err) {

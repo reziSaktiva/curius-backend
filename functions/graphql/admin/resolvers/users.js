@@ -3,7 +3,7 @@ const { client } = require('../../../utility/algolia')
 
 module.exports = {
     Mutation: {
-        async searchUser(_, { search, perPage, page }, _context) {
+        async searchUser(_, { search, status, perPage, page }, _context) {
             const index = client.initIndex('users');
 
             const defaultPayload = {
@@ -22,12 +22,17 @@ module.exports = {
                 "hitsPerPage": perPage || 10,
                 "page": page || 0,
             }
-
+            let facetFilters = []
+            if (status) facetFilters.push([`status:${status}`])
+            
             try {
                 return new Promise(async (resolve, reject) => {
-                    index.search(search, { ...defaultPayload, ...pagination })
+                    const payload = { ...defaultPayload, ...pagination }
+                    
+                    if (facetFilters.length) payload.facetFilters = facetFilters
+                    index.search(search, payload)
                         .then(async res => {
-                            const { hits, page, nbHits, nbPages, hitsPerPage, processingTimeMS } = res;
+                            const { hits, page: nbPage, nbHits, nbPages, hitsPerPage, processingTimeMS } = res;
                             const userIds = [];
                             if (hits.length) {
                                 hits.forEach(async data => {
@@ -35,11 +40,18 @@ module.exports = {
                                 })
                             }
 
-                            const getUsers = await db.collection('users').where('id', 'in', userIds).get()
-                            const users = getUsers.docs.map(doc => doc.data())
-
-                            // return following structure data algolia
-                            resolve({ hits: users, page, nbHits, nbPages: nbPages - 1, hitsPerPage, processingTimeMS })
+                            if (userIds.length) {
+                                const getUsers = await db.collection('users').where('id', 'in', userIds).get()
+                                const users = getUsers.docs.map(doc => doc.data())
+    
+                                // return following structure data algolia
+                                resolve({ hits: users, page: nbPage, nbHits, nbPages: nbPages - 1, hitsPerPage, processingTimeMS })
+                                return;
+                            }
+                            
+                            resolve({ hits: [], page: nbPage, nbHits, nbPages: nbPages - 1, hitsPerPage, processingTimeMS })
+                        }).catch(err => {
+                            reject(err)
                         })
                 })
             }
