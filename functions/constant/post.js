@@ -1,0 +1,12 @@
+const STATUS_POSTS = {
+  ACTIVE: 'ACTIVE',
+  TAKEDOWN: 'TAKEDOWN',
+  FLAG: 'FLAG'
+}
+
+const ALGOLIA_INDEX_POSTS = "posts"
+
+module.exports = {
+  STATUS_POSTS,
+  ALGOLIA_INDEX_POSTS
+}
