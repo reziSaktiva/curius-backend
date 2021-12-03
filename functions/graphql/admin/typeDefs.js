@@ -151,7 +151,7 @@ module.exports = gql`
     }
 
     input RequestFilter {
-        timestamp: Float
+        timestamp: String
         ratingFrom: Float
         ratingTo: Float
     }
@@ -160,7 +160,7 @@ module.exports = gql`
         checkEmail(email: String): Boolean
 
         # Search
-        searchUser(search: String, perPage: Int, page: Int ): SearchUser!
-        searchPosts(search: String, perPage: Int, page: Int, range: Float, location: Location, request: RequestFilter ): SearchPosts!
+        searchUser(search: String, status: String, perPage: Int, page: Int ): SearchUser!
+        searchPosts(search: String, perPage: Int, page: Int, range: Float, location: String, request: RequestFilter ): SearchPosts!
     }
 `
