@@ -17,7 +17,7 @@ module.exports = gql`
         likes: [Like]
         muted: [Mute]
         repost: Repost
-        subscribe: [Subscribe],
+        subscribe: [Subscribe]
         hastags: [String]
         room: String
     }

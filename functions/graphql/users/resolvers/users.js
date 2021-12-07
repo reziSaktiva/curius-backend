@@ -214,53 +214,49 @@ module.exports = {
                 throw new Error(err)
             }
         },
-        async getSubscribePosts(_, args, context) {
+        async getSubscribePosts(_, _args, context) {
             const { username } = await fbAuthContext(context)
 
             try {
                 if (!username) {
                     throw UserInputError("you must login first")
                 }
-                const getPosts = await db.collection("posts").get()
+                const getPosts = await db.collection(`/users/${username}/subscribed`).get()
 
-                const docs = getPosts.docs.map(doc => doc.data())
+                const postIds = getPosts.docs.map(doc => doc.data().postId)
 
-                const result = docs.map(async data => {
-                    const getSubscribes = await db.collection(`/posts/${data.id}/subscribes`).where('owner', '==', username).get()
+                const subscribedPost = postIds.length ? await db.collection('posts').where('id', "in", postIds).get() : []
 
-                    const { repost: repostId } = data;
-                    let repost = {}
+                if (subscribedPost.docs) {
+                    return subscribedPost.docs.map(async doc => {
+                        const data = doc.data();
+                        const { repost: repostId } = data;
+                        let repost = {}
 
-                    if (repostId) {
-                        const repostData = await db.doc(`/${repostId.room ? `room/${repostId.room}/posts` : 'posts'}/${repostId.repost}`).get()
-                        repost = repostData.data() || {}
-                    }
+                        if (repostId) {
+                            const repostData = await db.doc(`/${repostId.room ? `room/${repostId.room}/posts` : 'posts'}/${repostId.repost}`).get()
+                            repost = repostData.data() || {}
+                        }
 
-                    // Likes
-                    const likesData = await db.collection(`/posts/${data.id}/likes`).get()
-                    const likes = likesData.docs.map(doc => doc.data())
+                        // Likes
+                        const likesData = await db.collection(`/posts/${data.id}/likes`).get()
+                        const likes = likesData.docs.map(doc => doc.data())
 
-                    // Comments
-                    const commentsData = await db.collection(`/posts/${data.id}/comments`).get()
-                    const comments = commentsData.docs.map(doc => doc.data())
+                        // Comments
+                        const commentsData = await db.collection(`/posts/${data.id}/comments`).get()
+                        const comments = commentsData.docs.map(doc => doc.data())
 
-                    // Muted
-                    const mutedData = await db.collection(`/posts/${data.id}/muted`).get();
-                    const muted = mutedData.docs.map(doc => doc.data());
+                        // Muted
+                        const mutedData = await db.collection(`/posts/${data.id}/muted`).get();
+                        const muted = mutedData.docs.map(doc => doc.data());
 
-                    const subscribeData = await db.collection(`/posts/${data.id}/subscribes`).get();
-                    const subscribe = subscribeData.docs.map(doc => doc.data());
+                        const subscribeData = await db.collection(`/posts/${data.id}/subscribes`).get();
+                        const subscribe = subscribeData.docs.map(doc => doc.data());
 
-                    if (!getSubscribes.empty) return { ...data, likes, comments, muted, repost, subscribe }
-                })
-
-                return Promise.all(result).then(values => {
-                    return values.filter(item => item && item)
-                })
-
-                // return Promise.all(result).then(values => {
-                //     return values.filter(item => item && item)
-                // })
+                        return { ...data, likes, comments, muted, subscribe, repost }
+                    })
+                }
+                return []
             }
             catch (err) {
                 throw new Error(err)

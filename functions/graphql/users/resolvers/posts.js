@@ -1623,6 +1623,13 @@ module.exports = {
                   .then((data) => {
                     data.update({ id: data.id });
 
+                    db.collection(`/users/${username}/subscribed`).add({
+                      ...subscribe,
+                      room
+                    }).then(data => {
+                      data.update({ id: data.id })
+                    })
+
                     if (postOwner !== username) {
                       const notification = {
                         owner: postOwner,
@@ -1647,6 +1654,10 @@ module.exports = {
                   });
               } else {
                 db.doc(`/${room ? `room/${room}/posts` : 'posts'}/${postId}/subscribes/${subId}/`).delete();
+                db.collection(`/users/${username}/subscribed/`).where('postId', '==', postId).get()
+                  .then(data => {
+                    db.doc(`/users/${username}/subscribed/${data.docs[0].id}`).delete()
+                  })
               }
             }
           });
