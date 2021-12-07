@@ -5,8 +5,10 @@ const STATUS_POSTS = {
 }
 
 const ALGOLIA_INDEX_POSTS = "posts"
+const ALGOLIA_INDEX_USERS = "users"
 
 module.exports = {
   STATUS_POSTS,
-  ALGOLIA_INDEX_POSTS
+  ALGOLIA_INDEX_POSTS,
+  ALGOLIA_INDEX_USERS
 }
