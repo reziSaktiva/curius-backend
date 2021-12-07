@@ -1,10 +1,15 @@
-const { client } = require('../../../utility/algolia')
+const { server } = require('../../../utility/algolia')
+const { db } = require('../../../utility/admin')
 const { get } = require('lodash')
 const axios = require('axios')
 const { Client } = require("@googlemaps/google-maps-services-js");
 
 const { ALGOLIA_INDEX_POSTS } = require('../../../constant/post')
 const { API_KEY_GEOCODE } = require('../../../utility/secret/API')
+
+const isNullOrUndefined = data => {
+  return typeof data !== undefined || data !== null
+}
 
 module.exports = {
     Query: {
@@ -24,6 +29,51 @@ module.exports = {
            }
          }
        */
+      async setStatusPost(_, { active, flags = [], takedown, postId }, _ctx) {
+        if (!postId) throw new Error('postId is Required')
+
+        const index = server.initIndex(ALGOLIA_INDEX_POSTS);
+        const targetCollection = `/posts/${postId}`
+        const data = await db.doc(targetCollection).get()
+        const status = {}
+
+        try {
+          await db.doc(targetCollection)
+            .get()
+            .then(doc => {
+              const oldPost = data.data()
+              
+              if (flags) {
+                status.flag = [...(oldPost.status.flag || []), ...flags]
+              }
+
+              if (isNullOrUndefined(takedown)) {
+                status.takedown = takedown
+              }
+
+              if (isNullOrUndefined(active)) {
+                status.active = active
+              }
+
+              return doc.ref.update({ status })
+            })
+
+          // Update Algolia Search Posts
+          await index.partialUpdateObjects([{
+            objectID: postId,
+            status,
+          }]);
+
+        } catch (err) {
+          console.log(err)
+          throw new Error(err)
+        }
+        
+        return {
+          ...data.data(),
+          status
+        }
+      },
       async searchPosts(_, { perPage = 5, page, location, range = 40, search, request }, ctx) {
         const googleMapsClient = new Client({ axiosInstance: axios });
         const timestamp = get(request, 'timestamp', '');
@@ -31,7 +81,7 @@ module.exports = {
         const ratingTo = get(request, 'ratingTo', 0);
         const status = get(request, 'status', 0);
         
-        const index = client.initIndex(ALGOLIA_INDEX_POSTS);
+        const index = server.initIndex(ALGOLIA_INDEX_POSTS);
 
         const defaultPayload = {
           "attributesToRetrieve": "*",

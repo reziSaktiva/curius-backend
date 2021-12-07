@@ -158,7 +158,9 @@ module.exports = gql`
 
     type Mutation {
         checkEmail(email: String): Boolean
-
+        changeUserStatus(status: String!, username: String!): User!
+        setStatusPost(active: Boolean, flags: [String], takedown: Boolean, postId: String): Post!
+        
         # Search
         searchUser(search: String, status: String, perPage: Int, page: Int ): SearchUser!
         searchPosts(search: String, perPage: Int, page: Int, range: Float, location: String, request: RequestFilter ): SearchPosts!
