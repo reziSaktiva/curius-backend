@@ -1211,7 +1211,7 @@ module.exports = {
             objectID: newId,
             _geoloc: location,
             // field algolia
-            date_timestamp: new Date.now()
+            date_timestamp: Date.now()
           };
 
           try {
@@ -1224,7 +1224,8 @@ module.exports = {
             ...newPost,
             likes: [],
             comments: [],
-            muted: []
+            muted: [],
+            subscribe: []
           };
         } catch (err) {
           throw new Error(err);

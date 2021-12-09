@@ -1,4 +1,5 @@
 const { db } = require('../../../utility/admin')
+const adminAuthContext = require('../../../utility/adminAuthContext')
 
 module.exports = {
     Query: {
@@ -20,6 +21,18 @@ module.exports = {
 
             try {
                 return !getAdmin.empty
+            }
+            catch (err) {
+                console.log(err);
+            }
+        },
+        async registerAdmin(_, _regs, context) {
+            const userData = adminAuthContext(context)
+
+            try {
+                console.log(userData);
+
+                return ''
             }
             catch (err) {
                 console.log(err);
