@@ -10,12 +10,12 @@ module.exports = async (context) => {
         if (token) {
             try {
                 const decodeToken = await admin.auth().verifyIdToken(token).then(decodeToken => decodeToken)
-                const getUserData = await db.collection('users').where('id', '==', decodeToken.uid).limit(1).get();
-                const userData = getUserData.docs[0].data()
+                const getAdminData = await db.collection('admin').where('id', '==', decodeToken.uid).limit(1).get();
+                const adminData = getAdminData.docs[0].data()
 
                 return {
                     ...decodeToken,
-                    ...userData
+                    ...adminData
                 }
             }
             catch (err) {

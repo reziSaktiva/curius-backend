@@ -1,3 +1,4 @@
+const { UserInputError } = require('apollo-server-express')
 const { db } = require('../../../utility/admin')
 const adminAuthContext = require('../../../utility/adminAuthContext')
 
@@ -26,16 +27,27 @@ module.exports = {
                 console.log(err);
             }
         },
-        async registerAdmin(_, _regs, context) {
-            const userData = adminAuthContext(context)
+        async registerAdmin(_, { email, level: newAdminLevel }, context) {
+            const { name, level } = await adminAuthContext(context)
 
             try {
-                console.log(userData);
+                if (level === 1) {
+                    const getAdminWithSameEmail = await db.collection('admin').where('email', '==', email).get()
+                    const isEmailAlreadyExist = getAdminWithSameEmail.empty
 
-                return ''
+                    if (isEmailAlreadyExist) {
+                        db.collection('admin').add({
+                            email,
+                            level: newAdminLevel
+                        })
+                        return `new admin has been created by ${name}`
+                    }
+                    throw new UserInputError("email already used")
+                }
+                throw new UserInputError("you can't register a new admin")
             }
             catch (err) {
-                console.log(err);
+                throw new Error(err)
             }
         }
     }
