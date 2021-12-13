@@ -9,9 +9,9 @@
   - [x] status active
 - [ ] create actions for post 
   - [x] active/nonactive
-  - [ ] takedown
+  - [x] takedown
   - [ ] setRating
-  - [ ] setFlag
+  - [x] setFlag
   - [ ] Delete - for takedown, delete
   - [ ] and setFlag send notif to owner
 - [x] search for all
