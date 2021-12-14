@@ -27,7 +27,7 @@ module.exports = {
                 console.log(err);
             }
         },
-        async registerAdmin(_, { email, level: newAdminLevel }, context) {
+        async registerAdmin(_, { email, level: newAdminLevel, name: adminName }, context) {
             const { name, level } = await adminAuthContext(context)
 
             try {
@@ -38,8 +38,12 @@ module.exports = {
                     if (isEmailAlreadyExist) {
                         db.collection('admin').add({
                             email,
-                            level: newAdminLevel
+                            level: newAdminLevel,
+                            name: adminName
+                        }).then(doc => {
+                            doc.update({ id: doc.id })
                         })
+
                         return `new admin has been created by ${name}`
                     }
                     throw new UserInputError("email already used")

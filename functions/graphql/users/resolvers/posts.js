@@ -1156,6 +1156,20 @@ module.exports = {
               newPost.id = doc.id;
               newId = doc.id;
 
+              const { lat, lng } = location
+              // Set Posts on algolia
+              const newPostPayload = {
+                ...newPost,
+                objectID: newId,
+                _geoloc: {
+                  lat, lng
+                },
+                // field algolia
+                date_timestamp: Date.now()
+              };
+
+              index.saveObjects([newPostPayload], { autoGenerateObjectIDIfNotExist: false })
+
               doc.update({ id: doc.id });
             });
 
@@ -1203,21 +1217,6 @@ module.exports = {
                 createAt: new Date().toISOString()
               });
             }
-          }
-
-          // Set Posts on algolia
-          const newPostPayload = {
-            ...newPost,
-            objectID: newId,
-            _geoloc: location,
-            // field algolia
-            date_timestamp: Date.now()
-          };
-
-          try {
-            await index.saveObjects([newPostPayload], { autoGenerateObjectIDIfNotExist: false })
-          } catch (err) {
-            console.log(err);
           }
 
           return {
