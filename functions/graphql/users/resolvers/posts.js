@@ -6,7 +6,7 @@ const { AuthenticationError, UserInputError } = require('apollo-server-express')
 const fbAuthContext = require("../../../utility/fbAuthContext");
 const randomGenerator = require("../../../utility/randomGenerator");
 
-const { client } = require('../../../utility/algolia')
+const { server, client } = require('../../../utility/algolia')
 
 const { ALGOLIA_INDEX_POSTS } = require('../../../constant/post')
 
@@ -412,7 +412,7 @@ module.exports = {
         throw new UserInputError('rank is Required')
       }
 
-      const algoIndex = client.initIndex(index);
+      const algoIndex = server.initIndex(index);
 
       return new Promise((resolve, reject) => {
         algoIndex.setSettings({ customRanking: rank })
@@ -1148,7 +1148,7 @@ module.exports = {
             newPost.repostedPost = repostedPost
           }
 
-          const index = client.initIndex(ALGOLIA_INDEX_POSTS);
+          const index = server.initIndex(ALGOLIA_INDEX_POSTS);
           let newId = null;
           await db.collection(`${room ? `/room/${room}/posts` : "posts"}`)
             .add(newPost)
