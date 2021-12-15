@@ -22,7 +22,7 @@ module.exports = {
           "page": 0,
           "perPage": 10,
           "location":  "bandung",
-          "request":{
+          "filters":{
             "timestamp": "10-01-2022",
             "ratingFrom": 0,
             "ratingTo": 10
@@ -74,12 +74,14 @@ module.exports = {
         status
       }
     },
-    async searchPosts(_, { perPage = 5, page, location, range = 40, search, request }, _ctx) {
+    async searchPosts(_, { perPage = 5, page, location, range = 40, search, filters }, _ctx) {
       const googleMapsClient = new Client({ axiosInstance: axios });
-      const timestamp = get(request, 'timestamp', '');
-      const ratingFrom = get(request, 'ratingFrom', 0);
-      const ratingTo = get(request, 'ratingTo', 0);
-      const status = get(request, 'status', 0);
+      const timestampFrom = get(filters, 'timestamp.from', '');
+      const timestampTo = get(filters, 'timestamp.to', '');
+      const ratingFrom = get(filters, 'ratingFrom', 0);
+      const ratingTo = get(filters, 'ratingTo', 0);
+      const status = get(filters, 'status', 0);
+      const media = get(filters, 'media', []);
 
       const index = server.initIndex(ALGOLIA_INDEX_POSTS);
 
@@ -132,10 +134,28 @@ module.exports = {
       }
       const facetFilters = []
 
-      if (status) facetFilters.push([`status.active:${true}`])
-      if (timestamp) facetFilters.push([`date_timestamp > ${new Date(timestamp).getTime()}`])
+      if (status) facetFilters.push([`status.active:${status == "active" ? 'true': 'false'}`])
+
+      if (timestampFrom) {
+        const dateFrom = new Date(timestampFrom).getTime();
+        const dateTo = new Date(timestampTo).getTime();
+        
+        facetFilters.push([`date_timestamp >= ${dateFrom} AND date_timestamp <= ${dateTo}`]);
+      }
       if (ratingFrom && ratingTo) {
         facetFilters.push([`rank: ${ratingFrom} TO ${ratingTo}`])
+      }
+
+      if (media.length) {
+        let queryTags = []
+        if (media.includes('video')) {
+          queryTags.push('has_video')
+        }
+        if (media.includes('image')) {
+          queryTags.push('has_images')
+        }
+
+        facetFilters.push([`_tags:${queryTags.join(',')}`])
       }
 
       try {
@@ -144,6 +164,8 @@ module.exports = {
           ...geoLocPayload,
           ...pagination
         };
+
+        console.log(facetFilters)
 
         if (facetFilters.length) payload.facetFilters = facetFilters
 
