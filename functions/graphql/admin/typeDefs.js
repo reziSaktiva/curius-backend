@@ -150,10 +150,21 @@ module.exports = gql`
         name: String
     }
 
+    input Timestamp {
+        from: String
+        to: String
+    }
+
+    input Rating {
+        from: Float
+        to: Float
+    }
+
     input RequestFilter {
-        timestamp: String
-        ratingFrom: Float
-        ratingTo: Float
+        timestamp: Timestamp
+        rating: Rating
+        media: [String]
+        status: String
     }
 
     type Mutation {
@@ -164,6 +175,6 @@ module.exports = gql`
         
         # Search
         searchUser(search: String, status: String, perPage: Int, page: Int ): SearchUser!
-        searchPosts(search: String, perPage: Int, page: Int, range: Float, location: String, request: RequestFilter ): SearchPosts!
+        searchPosts(search: String, perPage: Int, page: Int, range: Float, location: String, filters: RequestFilter ): SearchPosts!
     }
 `
