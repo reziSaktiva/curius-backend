@@ -1,12 +1,10 @@
 const { server } = require('../../../utility/algolia')
 const { db } = require('../../../utility/admin')
 const { get } = require('lodash')
-const axios = require('axios')
-const { Client } = require("@googlemaps/google-maps-services-js");
 
 const { ALGOLIA_INDEX_POSTS } = require('../../../constant/post')
-const { API_KEY_GEOCODE } = require('../../../utility/secret/API')
 
+// Functions reusable
 const { getDetailLocationsByLatLng } = require('../../../app/maps')
 const { constructQuerySearchPost } = require('../../../app/search')
 
@@ -65,7 +63,6 @@ module.exports = {
       }
     },
     async searchPosts(_, { perPage = 5, page, location, range = 40, search, filters }, _ctx) {
-      const googleMapsClient = new Client({ axiosInstance: axios });
       const timestampFrom = get(filters, 'timestamp.from', '');
       const timestampTo = get(filters, 'timestamp.to', '');
       const ratingFrom = get(filters, 'ratingFrom', 0);
