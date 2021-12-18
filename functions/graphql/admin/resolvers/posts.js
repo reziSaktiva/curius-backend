@@ -7,6 +7,9 @@ const { Client } = require("@googlemaps/google-maps-services-js");
 const { ALGOLIA_INDEX_POSTS } = require('../../../constant/post')
 const { API_KEY_GEOCODE } = require('../../../utility/secret/API')
 
+const { getDetailLocationsByLatLng } = require('../../../app/maps')
+const { constructQuerySearchPost } = require('../../../app/search')
+
 const isNullOrUndefined = data => {
   return typeof data !== undefined || data !== null
 }
@@ -16,19 +19,6 @@ module.exports = {
 
   },
   Mutation: {
-    /** example payload
-     * {
-          "search": "",
-          "page": 0,
-          "perPage": 10,
-          "location":  "bandung",
-          "filters":{
-            "timestamp": "10-01-2022",
-            "ratingFrom": 0,
-            "ratingTo": 10
-         }
-       }
-     */
     async setStatusPost(_, { active, flags = [], takedown, postId }, _ctx) {
       if (!postId) throw new Error('postId is Required')
 
@@ -100,27 +90,10 @@ module.exports = {
       let aroundLatLng = '';
 
       if (location) {
-        const getPlaces = await googleMapsClient.findPlaceFromText({
-          params: {
-            input: location,
-            inputtype: 'textquery',
-            key: API_KEY_GEOCODE,
-            fields: ["place_id", "name", "formatted_address", "geometry"]
-          },
-          timeout: 5000
-        }, axios)
-
-        const candidates = get(getPlaces, 'data.candidates', [])
-        const detailplaces = candidates.map(({ geometry }) => {
-          const loc = get(geometry, 'location', {})
-          return ({
-            lat: loc.lat,
-            lng: loc.lng,
-          })
-        })
+        const detailplaces = await getDetailLocationsByLatLng(location);
 
         // TODO: need to makesure filter with multiple geolocation
-        aroundLatLng = `${detailplaces[0].lat}, ${detailplaces[0].lng}`
+        aroundLatLng = `${detailplaces[0].lat}, ${detailplaces[0].lng}`;
       }
 
       const geoLocPayload = location && aroundLatLng ? {
@@ -132,31 +105,13 @@ module.exports = {
         "hitsPerPage": perPage || 10,
         "page": page || 0,
       }
-      const facetFilters = []
 
-      if (status) facetFilters.push([`status.active:${status == "active" ? 'true': 'false'}`])
-
-      if (timestampFrom) {
-        const dateFrom = new Date(timestampFrom).getTime();
-        const dateTo = new Date(timestampTo).getTime();
-        
-        facetFilters.push([`date_timestamp >= ${dateFrom} AND date_timestamp <= ${dateTo}`]);
-      }
-      if (ratingFrom && ratingTo) {
-        facetFilters.push([`rank: ${ratingFrom} TO ${ratingTo}`])
-      }
-
-      if (media.length) {
-        let queryTags = []
-        if (media.includes('video')) {
-          queryTags.push('has_video')
-        }
-        if (media.includes('image')) {
-          queryTags.push('has_images')
-        }
-
-        facetFilters.push([`_tags:${queryTags.join(',')}`])
-      }
+      const { facetFilters, attributesForFaceting } = constructQuerySearchPost({
+        useStatus: status === 'active',
+        useTimestamp: { timestampFrom, timestampTo },
+        useRating: { ratingFrom, ratingTo },
+        useMedia: media
+      });
 
       try {
         const payload = {
@@ -165,9 +120,16 @@ module.exports = {
           ...pagination
         };
 
-        console.log(facetFilters)
-
         if (facetFilters.length) payload.facetFilters = facetFilters
+
+        if (attributesForFaceting.length) {
+          const settings = await index.getSettings();
+
+          const attribute = settings.attributesForFaceting || [];
+          if (attribute.length && !attribute.includes(attributesForFaceting)) {
+            await index.setSettings({ attributesForFaceting })
+          }
+        }
 
         return await index.search(search, payload)
       } catch (err) {

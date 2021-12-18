@@ -34,3 +34,17 @@ module.exports.validateLoginInput = (username, password) => {
         valid: Object.keys(errors).length < 1
     }
 }
+
+module.exports.isValidPhoneNumber = phone => {
+    const regexpPhone = /^[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$/im
+    
+    return new RegExp(regexpPhone).test(phone);
+}
+
+module.exports.isValidEmail = email => {
+    if (!email) return false 
+
+    const regexpMail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    return new RegExp(regexpMail).test(email);
+}

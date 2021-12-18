@@ -1,6 +1,8 @@
 const { db } = require('../../../utility/admin')
+const { isValidPhoneNumber, isValidEmail } = require('../../../utility/validators')
 const { client, server } = require('../../../utility/algolia')
 const { ALGOLIA_INDEX_USERS } = require('../../../constant/post')
+const { getIdsFromHits } = require('../../../app/search')
 
 module.exports = {
     Mutation: {
@@ -58,40 +60,55 @@ module.exports = {
                 "page": page || 0,
             }
             let facetFilters = []
-            if (status) facetFilters.push([`status:${status}`])
+            let searchableAttributes = []
+
+            if (status) {
+                facetFilters.push([`status:${status}`]);
+                searchableAttributes.push('status');
+            }
+
+            if (isValidPhoneNumber(search)) {
+                facetFilters.push([`mobileNumber:${search}`])
+                searchableAttributes.push('mobileNumber')
+            }
+
+            if (isValidEmail(search)) {
+                facetFilters.push([`email:${search}`])
+                searchableAttributes.push('email')
+            }
             
             try {
-                return new Promise(async (resolve, reject) => {
-                    const payload = { ...defaultPayload, ...pagination }
-                    
-                    if (facetFilters.length) payload.facetFilters = facetFilters
-                    index.search(search, payload)
-                        .then(async res => {
-                            const { hits, page: nbPage, nbHits, nbPages, hitsPerPage, processingTimeMS } = res;
-                            const userIds = [];
-                            if (hits.length) {
-                                hits.forEach(async data => {
-                                    userIds.push(data.objectID);
-                                })
-                            }
+                const payload = { ...defaultPayload, ...pagination }
+                
+                if (facetFilters.length) payload.facetFilters = facetFilters;
+                
+                if (searchableAttributes.length) {
+                    const settings = await index.getSettings();
+            
+                    const attribute = settings.searchableAttributes || [];
+                    if (attribute.length && !attribute.includes(searchableAttributes)) {
+                        await index.setSettings({ searchableAttributes })
+                    }
+                }
 
-                            if (userIds.length) {
-                                const getUsers = await db.collection('users').where('id', 'in', userIds).get()
-                                const users = getUsers.docs.map(doc => doc.data())
-    
-                                // return following structure data algolia
-                                resolve({ hits: users, page: nbPage, nbHits, nbPages: nbPages - 1, hitsPerPage, processingTimeMS })
-                                return;
-                            }
-                            
-                            resolve({ hits: [], page: nbPage, nbHits, nbPages: nbPages - 1, hitsPerPage, processingTimeMS })
-                        }).catch(err => {
-                            reject(err)
-                        })
-                })
+                const responseSearch = await index.search(search, payload);
+                const { hits, page: nbPage, nbHits, nbPages, hitsPerPage, processingTimeMS } = responseSearch;
+                
+                const userIds = getIdsFromHits(hits);
+
+                if (userIds.length) {
+                    const getUsers = await db.collection('users').where('id', 'in', userIds).get()
+                    const users = getUsers.docs.map(doc => doc.data())
+
+                    // return following structure data algolia
+                    return { hits: users, page: nbPage, nbHits, nbPages: nbPages - 1, hitsPerPage, processingTimeMS }
+                }
+
+                return { hits: [], page: nbPage, nbHits, nbPages: nbPages - 1, hitsPerPage, processingTimeMS }
             }
             catch (err) {
                 console.log(err);
+                return err;
             }
         }
     }
