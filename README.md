@@ -98,13 +98,46 @@ Payload
 ```json
 {
   "search": "",
-  "page": 0,
+  "page": 1,
   "perPage": 10,
-  "location":  "bandung",
- "request":{
-    "timestamp": "10-01-2022",
-    "ratingFrom": 0,
-    "ratingTo": 10
+  "location":  "",
+ "filters":{
+    "timestamp": {
+    	"from": "2021-01-01",
+      "to": "2021-12-31"
+    },
+    "rating": {
+      "from": 0,
+      "to": 10
+    },
+  "status": "active"
   }
+}
+```
+&nbsp;
+
+### Search Users
+
+```javascript
+mutation SearchUsers($search: String, $status: String, $perPage: Int, $page: Int ){
+  searchUser(search: $search, status: $status, perPage: $perPage, page: $page ) {
+    hits {
+      id
+      gender
+      status
+      mobileNumber
+      email
+    }
+  }
+}
+```
+
+Payload
+```json
+{
+  "search": "+6285956641969", // can adding email or phone number
+  "status": "",
+  "perPage": 10,
+  "page": 0
 }
 ```

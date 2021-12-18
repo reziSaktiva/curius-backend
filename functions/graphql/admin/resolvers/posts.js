@@ -63,6 +63,11 @@ module.exports = {
       }
     },
     async searchPosts(_, { perPage = 5, page, location, range = 40, search, filters }, _ctx) {
+      const { name } = await adminAuthContext(_ctx);
+
+      // TODO: Need to specific user level
+      if (!name) throw new Error('Permission Denied');
+
       const timestampFrom = get(filters, 'timestamp.from', '');
       const timestampTo = get(filters, 'timestamp.to', '');
       const ratingFrom = get(filters, 'ratingFrom', 0);

@@ -3,6 +3,7 @@ const { isValidPhoneNumber, isValidEmail } = require('../../../utility/validator
 const { client, server } = require('../../../utility/algolia')
 const { ALGOLIA_INDEX_USERS } = require('../../../constant/post')
 const { getIdsFromHits } = require('../../../app/search')
+const adminAuthContext = require('../../../utility/adminAuthContext')
 
 module.exports = {
     Mutation: {
@@ -41,6 +42,11 @@ module.exports = {
             }
         },
         async searchUser(_, { search, status, perPage, page }, _context) {
+            const { name } = await adminAuthContext(_context);
+
+            // TODO: Need to specific user level
+            if (!name) throw new Error('Permission Denied');
+            
             const index = client.initIndex('users');
 
             const defaultPayload = {
