@@ -5,6 +5,7 @@ const postsResolvers = require('./posts')
 module.exports = {
     Query: {
         ...adminResolvers.Query,
+        ...usersResolvers.Query
     },
     Mutation: {
         ...adminResolvers.Mutation,
