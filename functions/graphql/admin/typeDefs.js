@@ -133,6 +133,7 @@ module.exports = gql`
     }
     type Query {
         getAdmin: [Admin]
+        searchUser(search: String, status: String, perPage: Int, page: Int ): SearchUser!
     }
 
     type SearchPosts {
@@ -175,7 +176,6 @@ module.exports = gql`
         createRoom(roomName: String, description: String, startingDate: String, tillDate: String, displayPicture: String): String
         
         # Search
-        searchUser(search: String, status: String, perPage: Int, page: Int ): SearchUser!
         searchPosts(search: String, perPage: Int, page: Int, range: Float, location: String, filters: RequestFilter ): SearchPosts!
     }
 `
