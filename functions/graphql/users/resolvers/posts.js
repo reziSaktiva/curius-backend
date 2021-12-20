@@ -1,6 +1,6 @@
-const { db, pubSub, NOTIFICATION_ADDED, geofire } = require('../../../utility/admin');
 const { get } = require('lodash');
 const { computeDistanceBetween, LatLng } = require('spherical-geometry-js');
+const { db, pubSub, NOTIFICATION_ADDED, geofire } = require('../../../utility/admin');
 const { AuthenticationError, UserInputError } = require('apollo-server-express');
 
 const fbAuthContext = require("../../../utility/fbAuthContext");
@@ -1148,7 +1148,7 @@ module.exports = {
             newPost.repostedPost = repostedPost
           }
 
-          const index = server.initIndex(ALGOLIA_INDEX_POSTS);
+          const index = client.initIndex(ALGOLIA_INDEX_POSTS);
           let newId = null;
           await db.collection(`${room ? `/room/${room}/posts` : "posts"}`)
             .add(newPost)
@@ -1156,6 +1156,19 @@ module.exports = {
               newPost.id = doc.id;
               newId = doc.id;
 
+              // Set Posts on algolia
+              const newPostPayload = {
+                ...newPost,
+                objectID: newId,
+                _geoloc: {
+                  lat: location.lat,
+                  lng: location.lng
+                },
+                // field algolia
+                date_timestamp: Date.now()
+              };
+
+              index.saveObjects([newPostPayload], { autoGenerateObjectIDIfNotExist: false })
               doc.update({ id: doc.id });
             });
 
@@ -1203,21 +1216,6 @@ module.exports = {
                 createAt: new Date().toISOString()
               });
             }
-          }
-
-          // Set Posts on algolia
-          const newPostPayload = {
-            ...newPost,
-            objectID: newId,
-            _geoloc: location,
-            // field algolia
-            date_timestamp: Date.now()
-          };
-
-          try {
-            await index.saveObjects([newPostPayload], { autoGenerateObjectIDIfNotExist: false })
-          } catch (err) {
-            console.log(err);
           }
 
           return {

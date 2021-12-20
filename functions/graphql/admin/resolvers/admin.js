@@ -17,11 +17,24 @@ module.exports = {
         }
     },
     Mutation: {
-        async checkEmail(_, { email }) {
+        async checkEmail(_, { email, uid: id, name }) {
             const getAdmin = await db.collection('admin').where('email', '==', email).get()
 
             try {
-                return !getAdmin.empty
+                if (!getAdmin.empty) {
+                    return db.doc(`/admin/${getAdmin.docs[0].id}`).get()
+                        .then(doc => {
+                            console.log(!doc.data().id && !doc.data().name);
+                            if (!doc.data().id && !doc.data().name) {
+                                doc.ref.update({ id, name })
+                            } else if (doc.data().id !== id) {
+                                doc.ref.update({ id })
+                            }
+                            return !getAdmin.empty
+                        })
+                } else {
+                    return !getAdmin.empty
+                }
             }
             catch (err) {
                 console.log(err);
