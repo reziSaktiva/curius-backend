@@ -6,7 +6,8 @@ const roomResolvers = require('./room')
 module.exports = {
     Query: {
         ...adminResolvers.Query,
-        ...usersResolvers.Query
+        ...usersResolvers.Query,
+        ...postsResolvers.Query
     },
     Mutation: {
         ...adminResolvers.Mutation,
