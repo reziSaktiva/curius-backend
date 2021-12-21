@@ -108,3 +108,31 @@ Payload
   }
 }
 ```
+
+### Get Single Post
+
+```javascript
+query getSinglePost($id: ID!, $room: String) {
+  getSinglePost(id: $id, room: $room) {
+    id
+    text
+    repost {
+      id
+    }
+    media {
+      content
+    }
+    comments {
+      displayName
+    }
+  }
+}
+```
+
+Payload
+```json
+{
+  "id": "Q1pXUsZaigyB1QwQWoGb",
+  "room": ""
+}
+```

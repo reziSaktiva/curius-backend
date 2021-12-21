@@ -134,6 +134,7 @@ module.exports = gql`
     type Query {
         getAdmin: [Admin]
         searchUser(search: String, status: String, perPage: Int, page: Int ): SearchUser!
+        getSinglePost(id: ID! room: String): Post!
     }
 
     type SearchPosts {

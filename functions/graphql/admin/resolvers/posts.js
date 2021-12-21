@@ -1,3 +1,4 @@
+const { UserInputError } = require('apollo-server-express');
 const { server } = require('../../../utility/algolia')
 const { db } = require('../../../utility/admin')
 const { get } = require('lodash')
@@ -11,9 +12,63 @@ const isNullOrUndefined = data => {
   return typeof data !== undefined || data !== null
 }
 
+const getEndpointPost = (room, id, target = '') => {
+  return `/${room ? `room/${room}/posts` : 'posts'}/${id}${target}`
+}
+
 module.exports = {
   Query: {
+    async getSinglePost(_, { id, room }, _ctx) {
+      if (!id) throw new Error('id is Required')
 
+      const postDocument = db.doc(getEndpointPost(room, id))
+      const commentCollection = db.collection(getEndpointPost(room, id, '/comments')).orderBy('createdAt', 'asc')
+      const likeCollection = db.collection(getEndpointPost(room, id, '/likes'))
+      const mutedCollection = db.collection(getEndpointPost(room, id, '/muted'))
+      const subscribeCollection = db.collection(getEndpointPost(room, id, '/subscribes'))
+      
+      try {
+        const dataPost = await postDocument.get();
+        const post = dataPost.data();
+
+        if (!dataPost.exists) {
+          throw new UserInputError('Post not found')
+        } else {
+          let repost = {}
+          const repostId = get(post, 'repost') || {};
+          if (repostId) {
+            const repostData = await db.doc(getEndpointPost(repostId.room, repostId.repost)).get();
+
+            repost = repostData.data();
+          }
+
+          const likesPost = await likeCollection.get();
+          const likes = likesPost.docs.map(doc => doc.data()) || []
+
+          const commentsPost = await commentCollection.get();
+          const comments = commentsPost.docs.map(doc => doc.data()) || [];
+
+          const mutedPost = await mutedCollection.get();
+          const muted = mutedPost.docs.map(doc => doc.data()) || [];
+
+          const subscribePost = await subscribeCollection.get();
+          const subscribe = subscribePost.docs.map(doc => doc.data()) || [];
+
+          return {
+            ...post,
+            repost,
+            likes,
+            comments: comments,
+            muted,
+            subscribe
+          }
+        }
+      }
+      catch (err) {
+        console.log(err)
+        throw new Error(err)
+      }
+    }
   },
   Mutation: {
     /** example payload
