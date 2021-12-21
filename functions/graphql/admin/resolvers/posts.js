@@ -1,9 +1,9 @@
-const { UserInputError } = require('apollo-server-express');
-const { server } = require('../../../utility/algolia')
-const { db } = require('../../../utility/admin')
 const { get } = require('lodash')
-const axios = require('axios')
 const { Client } = require("@googlemaps/google-maps-services-js");
+const axios = require('axios')
+const { server, client } = require('../../../utility/algolia')
+const { db } = require('../../../utility/admin')
+const { UserInputError } = require('apollo-server-express');
 
 const { ALGOLIA_INDEX_POSTS } = require('../../../constant/post')
 const { API_KEY_GEOCODE } = require('../../../utility/secret/API')
@@ -23,10 +23,10 @@ module.exports = {
 
       let lastDoc = null;
 
-      if  (lastId) lastDoc = await db.doc(`/reports/${lastId}/`).get()
-  
+      if (lastId) lastDoc = await db.doc(`/reports/${lastId}/`).get()
+
       const reportCollection = db.collection('/reports')
-      
+
       let query;
       if (lastId) query = await reportCollection.startAfter(lastDoc).limit(perPage).get()
       else query = await reportCollection.get();
@@ -44,7 +44,7 @@ module.exports = {
       const likeCollection = db.collection(getEndpointPost(room, id, '/likes'))
       const mutedCollection = db.collection(getEndpointPost(room, id, '/muted'))
       const subscribeCollection = db.collection(getEndpointPost(room, id, '/subscribes'))
-      
+
       try {
         const dataPost = await postDocument.get();
         const post = dataPost.data();
@@ -156,7 +156,7 @@ module.exports = {
       const status = get(filters, 'status', 0);
       const media = get(filters, 'media', []);
 
-      const index = server.initIndex(ALGOLIA_INDEX_POSTS);
+      const index = client.initIndex(ALGOLIA_INDEX_POSTS);
 
       const defaultPayload = {
         "attributesToRetrieve": "*",
@@ -207,12 +207,12 @@ module.exports = {
       }
       const facetFilters = []
 
-      if (status) facetFilters.push([`status.active:${status == "active" ? 'true': 'false'}`])
+      if (status) facetFilters.push([`status.active:${status == "active" ? 'true' : 'false'}`])
 
       if (timestampFrom) {
         const dateFrom = new Date(timestampFrom).getTime();
         const dateTo = new Date(timestampTo).getTime();
-        
+
         facetFilters.push([`date_timestamp >= ${dateFrom} AND date_timestamp <= ${dateTo}`]);
       }
       if (ratingFrom && ratingTo) {
@@ -238,10 +238,7 @@ module.exports = {
           ...pagination
         };
 
-        console.log(facetFilters)
-
         if (facetFilters.length) payload.facetFilters = facetFilters
-
         return await index.search(search, payload)
       } catch (err) {
         return err
@@ -249,7 +246,7 @@ module.exports = {
     },
     async reportPostById(_, { idPost, content, userIdReporter }, _ctx) {
       if (!content) throw new UserInputError('required to fill reason this post')
-      
+
       try {
         const payload = {
           idPost,
@@ -257,7 +254,7 @@ module.exports = {
           userIdReporter
         }
         const writeRequest = await db.collection('/reports').add(payload)
-       
+
         const parseSnapshot = await (await writeRequest.get()).data()
 
         return parseSnapshot;

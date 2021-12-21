@@ -176,12 +176,13 @@ module.exports = gql`
     }
 
     type Mutation {
-        checkEmail(email: String): Boolean
+        checkEmail(email: String uid: String name: String): Boolean
         registerAdmin(email: String level: Int): String
         changeUserStatus(status: String!, username: String!): User!
-        setStatusPost(active: Boolean, flags: [String], takedown: Boolean, postId: String): Post!
+        setStatusPost(active: Boolean, flags: [String], takedown: Boolean, postId: String): Post!\
+        createRoom(roomName: String, description: String, startingDate: String, tillDate: String, displayPicture: String): String
         reportPostById(idPost: ID!, content: String, userIdReporter: ID!): ReportPost!
-
+        
         # Search
         searchPosts(search: String, perPage: Int, page: Int, range: Float, location: String, filters: RequestFilter ): SearchPosts!
     }

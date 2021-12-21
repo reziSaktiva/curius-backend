@@ -18,7 +18,7 @@ firebase.initializeApp(config)
 
 module.exports = {
     Query: {
-        async explorePlace(_, args, context) {
+        async explorePlace(_, _args, _context) {
             const googleMapsClient = new Client({ axiosInstance: axios })
             const time = new Date();
             time.setDate(time.getDate() - 7);
