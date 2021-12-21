@@ -2,7 +2,7 @@ const { UserInputError } = require('apollo-server-express')
 const { ALGOLIA_INDEX_ROOMS } = require('../../../constant/post')
 const { db } = require('../../../utility/admin')
 const adminAuthContext = require('../../../utility/adminAuthContext')
-const { server, client } = require('../../../utility/algolia')
+const { client } = require('../../../utility/algolia')
 
 module.exports = {
     Mutation: {

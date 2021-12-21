@@ -1,4 +1,4 @@
-const { server } = require('../../../utility/algolia')
+const { server, client } = require('../../../utility/algolia')
 const { db } = require('../../../utility/admin')
 const { get } = require('lodash')
 const axios = require('axios')
@@ -83,7 +83,7 @@ module.exports = {
       const status = get(filters, 'status', 0);
       const media = get(filters, 'media', []);
 
-      const index = server.initIndex(ALGOLIA_INDEX_POSTS);
+      const index = client.initIndex(ALGOLIA_INDEX_POSTS);
 
       const defaultPayload = {
         "attributesToRetrieve": "*",
@@ -134,12 +134,12 @@ module.exports = {
       }
       const facetFilters = []
 
-      if (status) facetFilters.push([`status.active:${status == "active" ? 'true': 'false'}`])
+      if (status) facetFilters.push([`status.active:${status == "active" ? 'true' : 'false'}`])
 
       if (timestampFrom) {
         const dateFrom = new Date(timestampFrom).getTime();
         const dateTo = new Date(timestampTo).getTime();
-        
+
         facetFilters.push([`date_timestamp >= ${dateFrom} AND date_timestamp <= ${dateTo}`]);
       }
       if (ratingFrom && ratingTo) {
@@ -165,10 +165,7 @@ module.exports = {
           ...pagination
         };
 
-        console.log(facetFilters)
-
         if (facetFilters.length) payload.facetFilters = facetFilters
-
         return await index.search(search, payload)
       } catch (err) {
         return err
