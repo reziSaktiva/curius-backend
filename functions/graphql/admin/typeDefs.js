@@ -135,6 +135,7 @@ module.exports = gql`
         getAdmin: [Admin]
         searchUser(search: String, status: String, perPage: Int, page: Int ): SearchUser!
         getSinglePost(id: ID! room: String): Post!
+        getReportedByIdPost(idPost: ID!, lastId: ID, perPage: Int): [ReportPost]
     }
 
     type SearchPosts {
@@ -169,12 +170,18 @@ module.exports = gql`
         status: String
     }
 
+    type ReportPost {
+        content: String
+        userIdReporter: ID
+    }
+
     type Mutation {
         checkEmail(email: String): Boolean
         registerAdmin(email: String level: Int): String
         changeUserStatus(status: String!, username: String!): User!
         setStatusPost(active: Boolean, flags: [String], takedown: Boolean, postId: String): Post!
-        
+        reportPostById(idPost: ID!, content: String, userIdReporter: ID!): ReportPost!
+
         # Search
         searchPosts(search: String, perPage: Int, page: Int, range: Float, location: String, filters: RequestFilter ): SearchPosts!
     }

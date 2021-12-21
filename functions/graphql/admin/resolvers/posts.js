@@ -18,6 +18,24 @@ const getEndpointPost = (room, id, target = '') => {
 
 module.exports = {
   Query: {
+    async getReportedByIdPost(_, { idPost, lastId, perPage }, _ctx) {
+      if (!idPost) UserInputError('id post is required')
+
+      let lastDoc = null;
+
+      if  (lastId) lastDoc = await db.doc(`/reports/${lastId}/`).get()
+  
+      const reportCollection = db.collection('/reports')
+      
+      let query;
+      if (lastId) query = await reportCollection.startAfter(lastDoc).limit(perPage).get()
+      else query = await reportCollection.get();
+
+
+      const parseSnapshot = query.docs.map(doc => doc.data())
+
+      return parseSnapshot;
+    },
     async getSinglePost(_, { id, room }, _ctx) {
       if (!id) throw new Error('id is Required')
 
@@ -228,6 +246,24 @@ module.exports = {
       } catch (err) {
         return err
       }
-    }
+    },
+    async reportPostById(_, { idPost, content, userIdReporter }, _ctx) {
+      if (!content) throw new UserInputError('required to fill reason this post')
+      
+      try {
+        const payload = {
+          idPost,
+          content,
+          userIdReporter
+        }
+        const writeRequest = await db.collection('/reports').add(payload)
+       
+        const parseSnapshot = await (await writeRequest.get()).data()
+
+        return parseSnapshot;
+      } catch (err) {
+        return err;
+      }
+    },
   }
 }
