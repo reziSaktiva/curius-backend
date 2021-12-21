@@ -108,3 +108,71 @@ Payload
   }
 }
 ```
+
+
+### Create Report Post 
+
+```javascript
+mutation createReportPost($postId: ID!, $content: String, $userIdReporter: ID!) {
+  reportPostById(idPost: $postId, content: $content, userIdReporter:  $userIdReporter) {
+    content
+    userIdReporter
+  }
+}
+```
+
+Payload
+```json
+{
+  "postId": "3IKxgYE7bZvV1IqOn3G1",
+  "content": "Test Report 7",
+  "userIdReporter": "oEmHbr7adFd5p5j7OAQf34HZXAw1"
+}
+```
+
+### Get Single Post
+
+```javascript
+query getSinglePost($id: ID!, $room: String) {
+  getSinglePost(id: $id, room: $room) {
+    id
+    text
+    repost {
+      id
+    }
+    media {
+      content
+    }
+    comments {
+      displayName
+    }
+  }
+}
+```
+
+Payload
+```json
+{
+  "id": "Q1pXUsZaigyB1QwQWoGb",
+  "room": ""
+}
+```
+
+
+### Get Reported By Id
+
+```javascript
+query getPostReportedById($idPost: ID!, $lastId: ID){
+  getReportedByIdPost(idPost: $idPost, lastId: $lastId) {
+    content
+    userIdReporter
+  }
+}
+```
+
+Payload
+```json
+{
+  "idPost": "3IKxgYE7bZvV1IqOn3G1"
+}
+```
