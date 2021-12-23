@@ -12,66 +12,142 @@ const { ALGOLIA_INDEX_POSTS } = require('../../../constant/post')
 
 module.exports = {
   Query: {
-    async getPosts(_, { lat, lng, range, type }) {
+    async getPosts(_, { lat, lng, range, type, page }) {
       if (!lat || !lng) {
         throw new UserInputError('Lat and Lng is Required')
       }
 
-      const center = [lat, lng]
-      const radiusInM = range ? range * 1000 : 1 * 1000
+      const index = client.initIndex(ALGOLIA_INDEX_POSTS)
 
-      const bounds = geofire.geohashQueryBounds(center, radiusInM);
-      let posts = []
-      let lastId;
+      const defaultPayload = {
+        "getRankingInfo": true,
+        "analytics": false,
+        "enableABTest": false,
+        "hitsPerPage": 10,
+        "attributesToRetrieve": "*",
+        "attributesToSnippet": "*:20",
+        "snippetEllipsisText": "…",
+        "responseFields": "*",
+        "explain": "*",
+        "maxValuesPerFacet": 100,
+        "page": 0,
+        "facets": [
+          "*"
+        ],
+        "facetFilters": [
+          [
+            "status.active:true"
+          ]
+        ]
+      };
 
-      for (const b of bounds) {
-        const q = db.collection('posts')
-          .orderBy('geohash')
-          .orderBy("createdAt", 'desc')
-          .startAt(b[0])
-          .endAt(b[1])
-          .limit(20);
+      const geoLocPayload = {
+        "aroundLatLng": `${lat}, ${lng}`,
+        "aroundRadius": range ? range * 1000 : 1 * 1000,
+      };
 
-        posts.push(q.get());
+      const pagination = {
+        "hitsPerPage": 8,
+        "page": page || 0,
       }
 
-      let latest = []
       try {
-        const docs = await Promise.all(posts).then((snapshots) => {
-          const matchingDocs = [];
+        return new Promise(async (resolve, reject) => {
+          index.search("", { ...defaultPayload, ...geoLocPayload, ...pagination }).setSettings({
+            ranking: [
+              'desc(date_timestamp)',
+              'typo',
+              'geo',
+              'words',
+              'filters',
+              'proximity',
+              'attribute',
+              'exact',
+              'custom'
+            ]
+          })
+            .then(async res => {
+              const { hits, page, nbHits, nbPages, hitsPerPage, processingTimeMS } = res;
 
-          for (const snap of snapshots) {
-            for (const doc of snap.docs) {
-              // const lat = doc.get('location').lat;
-              // const lng = doc.get('location').lng;
+              const postIds = []
+              if (hits.length) {
+                hits.forEach(async doc => {
+                  postIds.push(doc.objectID);
+                })
+              }
 
-              // // We have to filter out a few false positives due to GeoHash
-              // // accuracy, but most will match
-              // const distanceInKm = geofire.distanceBetween([lat, lng], center);
-              // const distanceInM = distanceInKm * 1000;
+              if (postIds.length) {
+                const getPosts = await db.collection('posts').where('id', 'in', postIds).get()
+                const posts = getPosts.docs.map(doc => doc.data())
 
-              // if (distanceInM <= radiusInM) {
-              //   matchingDocs.push(doc);
-              // }
+                const newHits = []
 
-              matchingDocs.push(doc);
-            }
-          }
-          return matchingDocs;
+                posts.forEach(async data => {
+                  const { repost: repostId } = data;
+
+                  const repostData = async () => {
+                    if (repostId) {
+                      const repostData = await db.doc(`/posts/${repostId}`).get()
+                      return repostData.data() || {}
+                    }
+                  }
+
+                  // Likes
+                  const likes = async () => {
+
+                    const likesData = await db.collection(`/posts/${data.id}/likes`).get()
+                    const likes = likesData.docs.map(doc => doc.data())
+
+                    return likes;
+                  };
+
+                  // Comments
+                  const comments = async () => {
+                    const commentsData = await db.collection(`/posts/${data.id}/comments`).get()
+                    return commentsData.docs.map(doc => doc.data())
+                  }
+
+                  // Muted
+                  const muted = async () => {
+                    const mutedData = await db.collection(`/posts/${data.id}/muted`).get();
+                    return mutedData.docs.map(doc => doc.data());
+                  }
+
+                  const subscribe = async () => {
+                    const subscribeData = await db.collection(`/posts/${data.id}/subscribes`).get();
+                    return subscribeData.docs.map(doc => doc.data());
+                  }
+
+                  const newData = { ...data, likes: likes(), comments: comments(), muted: muted(), repost: repostData(), subscribe: subscribe() }
+
+                  newHits.push(newData)
+                })
+
+                resolve({ posts: newHits, nextPage: page + 1, hasMore: page + 1 !== nbPages })
+              }
+              resolve({ posts: [], nextPage: 0, hasMore: false })
+            })
         })
+      }
+      catch (err) {
+        throw new Error(err)
+      }
+    },
+    async getRoomPosts(_, { room }, context) {
+      const data = await db.collection(`/posts`).orderBy('createdAt', 'desc').limit(20).get()
+      const docs = data.docs.map((doc) => doc.data())
 
-        docs.forEach(async (doc, index) => {
-          const data = doc.data()
-          const { repostedPost } = data;
+      if (docs.length) {
+        const nearby = []
+
+        docs.forEach(async data => {
+          const { repost: repostId } = data;
+
           const repostData = async () => {
-            if (repostedPost) {
-              const repostData = await db.doc(`/${repostedPost.fromRoom ? `room/${repostedPost.fromRoom}/posts` : 'posts'}/${repostedPost.idReposted}`).get()
+            if (repostId) {
+              const repostData = await db.doc(`/posts/${repostId}`).get()
               return repostData.data() || {}
             }
-          }
-
-          if (index === 19) {
-            lastId = data.id
           }
 
           // Likes
@@ -97,73 +173,6 @@ module.exports = {
 
           const subscribe = async () => {
             const subscribeData = await db.collection(`/posts/${data.id}/subscribes`).get();
-            return subscribeData.docs.map(doc => doc.data());
-          }
-
-          const newData = { ...data, likes: likes(), comments: comments(), muted: muted(), repost: repostData(), subscribe: subscribe() }
-
-          latest.push(newData)
-        });
-
-        switch (type) {
-          case 'Latest':
-            latest.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-            break;
-          case 'Popular':
-            latest.sort((a, b) => b.rank - a.rank)
-            break;
-        }
-
-        return {
-          posts: latest,
-          lastId,
-          hasMore: latest.length === 20
-        }
-      }
-      catch (err) {
-        console.log(err);
-      }
-    },
-    async getRoomPosts(_, { room }, context) {
-      const data = await db.collection(`/room${room}/posts`).orderBy('createdAt', 'desc').limit(20).get()
-      const docs = data.docs.map((doc) => doc.data())
-
-      if (docs.length) {
-        const nearby = []
-
-        docs.forEach(async data => {
-          const { repost: repostId } = data;
-
-          const repostData = async () => {
-            if (repostId) {
-              const repostData = await db.doc(`/room${room}/posts/${repostId}`).get()
-              return repostData.data() || {}
-            }
-          }
-
-          // Likes
-          const likes = async () => {
-
-            const likesData = await db.collection(`/room${room}/posts/${data.id}/likes`).get()
-            const likes = likesData.docs.map(doc => doc.data())
-
-            return likes;
-          };
-
-          // Comments
-          const comments = async () => {
-            const commentsData = await db.collection(`/room${room}/posts/${data.id}/comments`).get()
-            return commentsData.docs.map(doc => doc.data())
-          }
-
-          // Muted
-          const muted = async () => {
-            const mutedData = await db.collection(`/room${room}/posts/${data.id}/muted`).get();
-            return mutedData.docs.map(doc => doc.data());
-          }
-
-          const subscribe = async () => {
-            const subscribeData = await db.collection(`/room${room}/posts/${data.id}/subscribes`).get();
             return subscribeData.docs.map(doc => doc.data());
           }
 

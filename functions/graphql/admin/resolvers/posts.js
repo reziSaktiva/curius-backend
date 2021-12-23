@@ -105,7 +105,7 @@ module.exports = {
     async setStatusPost(_, { active, flags = [], takedown, postId }, _ctx) {
       if (!postId) throw new Error('postId is Required')
 
-      const index = server.initIndex(ALGOLIA_INDEX_POSTS);
+      const index = client.initIndex(ALGOLIA_INDEX_POSTS);
       const targetCollection = `/posts/${postId}`
       const data = await db.doc(targetCollection).get()
       const status = {}
@@ -147,7 +147,7 @@ module.exports = {
         status
       }
     },
-    async searchPosts(_, { perPage = 5, page, location, range = 40, search, filters }, _ctx) {
+    async searchPosts(_, { perPage = 10, page, location, range = 40, search, filters }, _ctx) {
       const googleMapsClient = new Client({ axiosInstance: axios });
       const timestampFrom = get(filters, 'timestamp.from', '');
       const timestampTo = get(filters, 'timestamp.to', '');

@@ -178,7 +178,7 @@ module.exports = gql`
     }
     type dataPost {
         hasMore: Boolean
-        lastId: ID
+        nextPage: Float
         posts: [Post]
     }
     type DeleteData {
@@ -195,7 +195,7 @@ module.exports = gql`
     }
     type Query {
         moreForYou: dataPost
-        getPosts(lat: Float, lng: Float, range: Float type: String): dataPost
+        getPosts(lat: Float, lng: Float, range: Float page: Float type: String): dataPost
         getPopularPosts(lat: Float, lng: Float range: Float): dataPost
         getVisited: [GeoLocation]
         getProfilePosts(username: String): dataPost
