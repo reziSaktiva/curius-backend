@@ -21,6 +21,16 @@ module.exports = gql`
         hastags: [String]
         room: String
     }
+    type Room {
+        id: ID
+        createdAt: String
+        createdBy: String
+        description: String
+        displayPicture: String
+        roomName: String
+        startingDate: String
+        tillDate: String
+    }
     type StatusPost {
         active: Boolean
         flag: [String]
@@ -175,6 +185,14 @@ module.exports = gql`
         id: ID!,
         room: String
     }
+    type SearchRoom {
+        hits: [Room]
+        page: Int
+        nbHits: Int
+        nbPages: Int
+        hitsPerPage: Int
+        processingTimeMS: Float
+    }
     type Query {
         moreForYou: dataPost
         getPosts(lat: Float, lng: Float, range: Float type: String): dataPost
@@ -186,6 +204,8 @@ module.exports = gql`
         getPost(id: ID! room: String): Post!
         getUserData(username: String): UserData
         getPostBasedOnNearestLoc(lat: String, lng: String): [Post]
+        getAllRoom: [Room]
+        searchRoom(search: String, status: String, perPage: Int, page: Int): SearchRoom
         mutedPosts: [Post]!
         getSubscribePosts: [Post]!
         setRulesSearchAlgolia(index: String!, rank: [String]!): String

@@ -26,6 +26,16 @@ module.exports = gql`
         hastags: [String]
         room: String
     }
+    type Room {
+        id: ID
+        createdAt: String
+        createdBy: String
+        description: String
+        displayPicture: String
+        roomName: String
+        startingDate: String
+        tillDate: String
+    }
     type Media {
         content: [String]
         meta: String
@@ -133,7 +143,7 @@ module.exports = gql`
     }
     type Query {
         getAdmin: [Admin]
-        searchUser(search: String, status: String, perPage: Int, page: Int ): SearchUser!
+        searchUser( search: String, status: String, perPage: Int, page: Int ): SearchUser!
         getSinglePost(id: ID! room: String): Post!
         getReportedByIdPost(idPost: ID!, lastId: ID, perPage: Int): [ReportPost]
     }
