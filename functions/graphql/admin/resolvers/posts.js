@@ -86,66 +86,6 @@ module.exports = {
         console.log(err)
         throw new Error(err)
       }
-    }
-  },
-  Mutation: {
-    /** example payload
-     * {
-          "search": "",
-          "page": 0,
-          "perPage": 10,
-          "location":  "bandung",
-          "filters":{
-            "timestamp": "10-01-2022",
-            "ratingFrom": 0,
-            "ratingTo": 10
-         }
-       }
-     */
-    async setStatusPost(_, { active, flags = [], takedown, postId }, _ctx) {
-      if (!postId) throw new Error('postId is Required')
-
-      const index = server.initIndex(ALGOLIA_INDEX_POSTS);
-      const targetCollection = `/posts/${postId}`
-      const data = await db.doc(targetCollection).get()
-      const status = {}
-
-      try {
-        await db.doc(targetCollection)
-          .get()
-          .then(doc => {
-            const oldPost = data.data()
-
-            if (flags) {
-              status.flag = [...(oldPost.status.flag || []), ...flags]
-            }
-
-            if (isNullOrUndefined(takedown)) {
-              status.takedown = takedown
-            }
-
-            if (isNullOrUndefined(active)) {
-              status.active = active
-            }
-
-            return doc.ref.update({ status })
-          })
-
-        // Update Algolia Search Posts
-        await index.partialUpdateObjects([{
-          objectID: postId,
-          status,
-        }]);
-
-      } catch (err) {
-        console.log(err)
-        throw new Error(err)
-      }
-
-      return {
-        ...data.data(),
-        status
-      }
     },
     async searchPosts(_, { perPage = 5, page, location, range = 40, search, filters }, _ctx) {
       const googleMapsClient = new Client({ axiosInstance: axios });
@@ -242,6 +182,53 @@ module.exports = {
         return await index.search(search, payload)
       } catch (err) {
         return err
+      }
+    },
+  },
+  Mutation: {
+    async setStatusPost(_, { active, flags = [], takedown, postId }, _ctx) {
+      if (!postId) throw new Error('postId is Required')
+
+      const index = server.initIndex(ALGOLIA_INDEX_POSTS);
+      const targetCollection = `/posts/${postId}`
+      const data = await db.doc(targetCollection).get()
+      const status = {}
+
+      try {
+        await db.doc(targetCollection)
+          .get()
+          .then(doc => {
+            const oldPost = data.data()
+
+            if (flags) {
+              status.flag = [...(oldPost.status.flag || []), ...flags]
+            }
+
+            if (isNullOrUndefined(takedown)) {
+              status.takedown = takedown
+            }
+
+            if (isNullOrUndefined(active)) {
+              status.active = active
+            }
+
+            return doc.ref.update({ status })
+          })
+
+        // Update Algolia Search Posts
+        await index.partialUpdateObjects([{
+          objectID: postId,
+          status,
+        }]);
+
+      } catch (err) {
+        console.log(err)
+        throw new Error(err)
+      }
+
+      return {
+        ...data.data(),
+        status
       }
     },
     async reportPostById(_, { idPost, content, userIdReporter }, _ctx) {
