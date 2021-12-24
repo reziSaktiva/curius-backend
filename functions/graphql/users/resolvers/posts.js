@@ -41,7 +41,7 @@ module.exports = {
         ]
       };
 
-      const geoLocPayload = {
+      const geoLocPayload = lng && lat && {
         "aroundLatLng": `${lat}, ${lng}`,
         "aroundRadius": range ? range * 1000 : 1 * 1000,
       };
@@ -51,24 +51,15 @@ module.exports = {
         "page": page || 0,
       }
 
+      const rank = type !== "Popular" ? 'desc(date_timestamp)' : 'desc(rank)'
+
       try {
         return new Promise(async (resolve, reject) => {
-          index.search("", { ...defaultPayload, ...geoLocPayload, ...pagination }).setSettings({
-            ranking: [
-              'desc(date_timestamp)',
-              'typo',
-              'geo',
-              'words',
-              'filters',
-              'proximity',
-              'attribute',
-              'exact',
-              'custom'
-            ]
-          })
+          index.setSettings({ customRanking: [rank] })
+          index.search("", { ...defaultPayload, ...geoLocPayload, ...pagination })
             .then(async res => {
               const { hits, page, nbHits, nbPages, hitsPerPage, processingTimeMS } = res;
-
+              console.log(hits);
               const postIds = []
               if (hits.length) {
                 hits.forEach(async doc => {
@@ -77,7 +68,7 @@ module.exports = {
               }
 
               if (postIds.length) {
-                const getPosts = await db.collection('posts').where('id', 'in', postIds).get()
+                const getPosts = await db.collection('posts').where('id', 'in', postIds).orderBy("createdAt", "desc").get()
                 const posts = getPosts.docs.map(doc => doc.data())
 
                 const newHits = []
