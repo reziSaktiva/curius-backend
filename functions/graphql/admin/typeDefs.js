@@ -133,7 +133,11 @@ module.exports = gql`
     }
     type Query {
         getAdmin: [Admin]
+        # Search
         searchUser(search: String, status: String, perPage: Int, page: Int ): SearchUser!
+        searchPosts(search: String, perPage: Int, page: Int, range: Float, location: String, filters: RequestFilter ): SearchPosts!
+        
+        # Posts
         getSinglePost(id: ID! room: String): Post!
         getReportedByIdPost(idPost: ID!, lastId: ID, perPage: Int): [ReportPost]
     }
@@ -182,8 +186,5 @@ module.exports = gql`
         setStatusPost(active: Boolean, flags: [String], takedown: Boolean, postId: String): Post!\
         createRoom(roomName: String, description: String, startingDate: String, tillDate: String, displayPicture: String): String
         reportPostById(idPost: ID!, content: String, userIdReporter: ID!): ReportPost!
-        
-        # Search
-        searchPosts(search: String, perPage: Int, page: Int, range: Float, location: String, filters: RequestFilter ): SearchPosts!
     }
 `
