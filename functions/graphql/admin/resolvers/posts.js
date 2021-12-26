@@ -86,7 +86,7 @@ module.exports = {
         throw new Error(err)
       }
     },
-    async searchPosts(_, { perPage = 5, page, location, range = 40, searchPosts = false, search, filters }, _ctx) {
+    async searchPosts(_, { perPage = 5, page, location, range = 40, hasReported = false, search, filters }, _ctx) {
       const googleMapsClient = new Client({ axiosInstance: axios });
       const timestampFrom = get(filters, 'timestamp.from', '');
       const timestampTo = get(filters, 'timestamp.to', '');
@@ -147,6 +147,7 @@ module.exports = {
       const facetFilters = []
 
       if (status) facetFilters.push([`status.active:${status == "active" ? 'true' : 'false'}`])
+      if (hasReported) facetFilters.push([`reportedCount > 1`])
 
       if (timestampFrom) {
         const dateFrom = new Date(timestampFrom).getTime();
@@ -260,6 +261,7 @@ module.exports = {
           userIdReporter
         }
         const index = server.initIndex(ALGOLIA_INDEX_REPORT_POSTS);
+        const indexPost = server.initIndex(ALGOLIA_INDEX_POSTS);
 
         const writeRequest = await db.collection('/reports').add(payload)
         
@@ -267,6 +269,12 @@ module.exports = {
         await index.saveObjects([payload], {
           autoGenerateObjectIDIfNotExist: true,
         })
+
+        // Update Algolia Search Posts
+        await indexPost.partialUpdateObjects([{
+          objectID: posts.id,
+          reportedCount: posts.reportedCount,
+        }]);
 
         const parseSnapshot = await (await writeRequest.get()).data()
 
