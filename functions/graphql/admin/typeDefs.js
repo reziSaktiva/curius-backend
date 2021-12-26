@@ -17,6 +17,7 @@ module.exports = gql`
         likeCount: Int
         commentCount: Int
         repostCount: Int
+        reportedCount: Int
         status: StatusPost
         comments: [Comment]
         likes: [Like]
@@ -176,7 +177,9 @@ module.exports = gql`
 
     type ReportPost {
         content: String
+        idPost: ID
         userIdReporter: ID
+        totalReported: Int
     }
 
     type Mutation {
@@ -185,6 +188,6 @@ module.exports = gql`
         changeUserStatus(status: String!, username: String!): User!
         setStatusPost(active: Boolean, flags: [String], takedown: Boolean, postId: String): Post!\
         createRoom(roomName: String, description: String, startingDate: String, tillDate: String, displayPicture: String): String
-        reportPostById(idPost: ID!, content: String, userIdReporter: ID!): ReportPost!
+        createReportPostById(idPost: ID!, content: String, userIdReporter: ID!): ReportPost
     }
 `
