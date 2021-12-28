@@ -17,7 +17,9 @@ module.exports = {
         throw new UserInputError('Lat and Lng is Required')
       }
 
-      const index = client.initIndex(ALGOLIA_INDEX_POSTS)
+      const rank = type !== "Popular" ? 'posts_date_desc' : 'posts_rank_desc'
+
+      const index = client.initIndex(rank)
 
       const defaultPayload = {
         "getRankingInfo": true,
@@ -51,15 +53,14 @@ module.exports = {
         "page": page || 0,
       }
 
-      const rank = type !== "Popular" ? 'desc(date_timestamp)' : 'desc(rank)'
+      const filters = rank === 'posts_rank_desc' ? 'rank > 0' : ''
 
       try {
         return new Promise(async (resolve, reject) => {
-          index.setSettings({ customRanking: [rank] })
-          index.search("", { ...defaultPayload, ...geoLocPayload, ...pagination })
+          index.search("", { ...defaultPayload, ...geoLocPayload, ...pagination, filters })
             .then(async res => {
               const { hits, page, nbHits, nbPages, hitsPerPage, processingTimeMS } = res;
-              console.log(hits);
+
               const postIds = []
               if (hits.length) {
                 hits.forEach(async doc => {
@@ -68,7 +69,7 @@ module.exports = {
               }
 
               if (postIds.length) {
-                const getPosts = await db.collection('posts').where('id', 'in', postIds).orderBy("createdAt", "desc").get()
+                const getPosts = await db.collection('posts').where('id', 'in', postIds).orderBy(type !== "Popular" ? "createdAt" : "rank", "desc").get()
                 const posts = getPosts.docs.map(doc => doc.data())
 
                 const newHits = []
@@ -1326,7 +1327,7 @@ module.exports = {
         id,
         room
       );
-
+      const index = client.initIndex(ALGOLIA_INDEX_POSTS);
       const postDocument = db.doc(`/${room ? `room/${room}/posts` : 'posts'}/${id}`);
       const likeCollection = db.collection(`/${room ? `room/${room}/posts` : 'posts'}/${id}/likes`);
       const subscribeCollection = db.collection(`/${room ? `room/${room}/posts` : 'posts'}/${id}/subscribes`);
@@ -1357,8 +1358,12 @@ module.exports = {
 
             if (!isLiked) {
               // Unlike
-              post.likeCount--;
-              doc.ref.update({ likeCount: doc.data().likeCount - 1, rank: doc.data().rank - 1 });
+              doc.ref.update({ likeCount: post.likeCount - 1, rank: post.rank - 1 })
+              index.partialUpdateObject({
+                objectID: post.id,
+                likeCount: post.likeCount - 1,
+                rank: post.rank - 1
+              })
 
               likeData = {
                 owner: username,
@@ -1411,8 +1416,13 @@ module.exports = {
               });
             } else {
               // Like
-              post.likeCount++;
-              doc.ref.update({ likeCount: doc.data().likeCount + 1, rank: doc.data().rank + 1 });
+              doc.ref.update({ likeCount: post.likeCount + 1, rank: post.rank + 1 });
+              index.partialUpdateObject({
+                objectID: post.id,
+                likeCount: post.likeCount + 1,
+                rank: post.rank + 1
+              })
+
               return likeCollection
                 .add({
                   owner: username,
