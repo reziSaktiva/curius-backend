@@ -12,7 +12,7 @@ const { ALGOLIA_INDEX_POSTS } = require('../../../constant/post')
 
 module.exports = {
   Query: {
-    async getPosts(_, { lat, lng, range, type, page }) {
+    async getPosts(_, { lat, lng, range = 1, type, page }) {
       if (!lat || !lng) {
         throw new UserInputError('Lat and Lng is Required')
       }
@@ -45,7 +45,7 @@ module.exports = {
 
       const geoLocPayload = lng && lat && {
         "aroundLatLng": `${lat}, ${lng}`,
-        "aroundRadius": range ? range * 1000 : 1 * 1000,
+        "aroundRadius": range * 1000,
       };
 
       const pagination = {

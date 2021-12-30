@@ -4,7 +4,7 @@ const { ALGOLIA_INDEX_ROOMS } = require('../../../constant/post')
 
 module.exports = {
     Query: {
-        async getAllRoom(_, _args, _context) {
+        async getAllRoom(_, { lat, lng }, _context) {
             const getRooms = await db.collection('room').get()
             try {
 
