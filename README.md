@@ -179,3 +179,95 @@ Payload
   "idPost": "3IKxgYE7bZvV1IqOn3G1"
 }
 ```
+
+
+### Create new Theme
+
+```javascript
+mutation CreateNewTheme($name: String, $colors: [Colors], $adjective: [String], $nouns: [Nouns]) {
+  createNewTheme(name: $name, colors: $colors, adjective: $adjective, nouns: $nouns) {
+    name
+    id
+    colors {
+      name
+      hex
+    }
+    nouns {
+      avatarUrl
+      name
+    }
+    isDeleted
+    isActive
+    adjective
+  }
+}
+```
+
+Payload
+```json
+{
+  "name": "Test2",
+  "colors": [{
+    "name": "testColor",
+    "hex": "white"
+  }],
+  "adjective": ["A"],
+  "nouns": [{
+    "avatarUrl": "https://curious.app.com",
+    "name": "A"
+  }]
+}
+```
+
+
+### Update new Theme
+
+```javascript
+mutation UpdateNewTheme($id: ID, $name: String, $colors: [Colors], $adjective: [String], $nouns: [Nouns]) {
+  updateThemesById(id: $id, name: $name, colors: $colors, adjective: $adjective, nouns: $nouns) {
+    name
+    id
+    colors {
+      name
+      hex
+    }
+    nouns {
+      avatarUrl
+      name
+    }
+    isDeleted
+    isActive
+    adjective
+  }
+}
+```
+
+Payload
+```json
+{
+ "id": "af8bD6HAepEo80JBc5Ez",
+  "adjective": ["A","B"]
+}
+```
+
+
+### Search Themes
+
+```javascript
+query SearchThemes($name: String) {
+  searchThemes(name: $name) {
+    id
+    name
+    isActive
+    isDeleted
+  }
+}
+```
+
+Payload
+```json
+{
+  "name": "Test2"
+}
+```
+

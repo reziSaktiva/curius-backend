@@ -138,6 +138,9 @@ module.exports = gql`
         searchUser(search: String, status: String, perPage: Int, page: Int ): SearchUser!
         searchPosts(search: String, perPage: Int, page: Int, hasReported: Boolean, range: Float, location: String, filters: RequestFilter ): SearchPosts!
         
+        # Randomization
+        searchThemes(name: String): [ThemeType]
+
         # Posts
         getSinglePost(id: ID! room: String): Post!
         getReportedByIdPost(idPost: ID!, lastId: ID, perPage: Int): [ReportPost]
@@ -182,12 +185,49 @@ module.exports = gql`
         totalReported: Int
     }
 
+    input Colors {
+        name: String
+        hex: String
+    }
+
+    type ColorsType {
+        name: String
+        hex: String
+    }
+
+    input Nouns {
+        avatarUrl: String
+        name: String
+    }
+
+    type NounsType {
+        avatarUrl: String
+        name: String
+    }
+
+    type ThemeType {
+        id: ID
+        name: String
+        isDeleted: Boolean
+        isActive: Boolean
+        colors: [ColorsType]
+        adjective: [String]
+        nouns: [NounsType]
+    }
+
     type Mutation {
         checkEmail(email: String uid: String name: String): Boolean
         registerAdmin(email: String level: Int): String
         changeUserStatus(status: String!, username: String!): User!
         setStatusPost(active: Boolean, flags: [String], takedown: Boolean, postId: String): Post!\
+
+        # Randomization
+        updateThemesById(id: ID, name: String, colors: [Colors], adjective: [String], nouns: [Nouns], isDeleted: Boolean, isActive: Boolean): ThemeType 
+
+        # Create New Data
         createRoom(roomName: String, description: String, startingDate: String, tillDate: String, displayPicture: String): String
+        reportPostById(idPost: ID!, content: String, userIdReporter: ID!): ReportPost!
         createReportPostById(idPost: ID!, content: String, userIdReporter: ID!): ReportPost
+        createNewTheme(name: String, colors: [Colors], adjective: [String], nouns: [Nouns]): ThemeType
     }
 `
