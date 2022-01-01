@@ -5,7 +5,7 @@ const { server, client } = require('../../../utility/algolia')
 const { db } = require('../../../utility/admin')
 const { UserInputError } = require('apollo-server-express');
 
-const { ALGOLIA_INDEX_POSTS } = require('../../../constant/post')
+const { ALGOLIA_INDEX_POSTS, ALGOLIA_INDEX_REPORT_POSTS } = require('../../../constant/post')
 const { API_KEY_GEOCODE } = require('../../../utility/secret/API')
 
 const isNullOrUndefined = data => {
@@ -28,9 +28,8 @@ module.exports = {
       const reportCollection = db.collection('/reports')
 
       let query;
-      if (lastId) query = await reportCollection.startAfter(lastDoc).limit(perPage).get()
-      else query = await reportCollection.get();
-
+      if (lastId) query = await reportCollection.where('idPost', '==', idPost).startAfter(lastDoc).limit(perPage).get()
+      else query = await reportCollection.where('idPost', '==', idPost).get();
 
       const parseSnapshot = query.docs.map(doc => doc.data())
 
@@ -87,7 +86,7 @@ module.exports = {
         throw new Error(err)
       }
     },
-    async searchPosts(_, { perPage = 5, page, location, range = 40, search, filters }, _ctx) {
+    async searchPosts(_, { perPage = 5, page, location, range = 40, hasReported = false, search, filters }, _ctx) {
       const googleMapsClient = new Client({ axiosInstance: axios });
       const timestampFrom = get(filters, 'timestamp.from', '');
       const timestampTo = get(filters, 'timestamp.to', '');
@@ -148,6 +147,7 @@ module.exports = {
       const facetFilters = []
 
       if (status) facetFilters.push([`status.active:${status == "active" ? 'true' : 'false'}`])
+      if (hasReported) facetFilters.push([`reportedCount > 1`])
 
       if (timestampFrom) {
         const dateFrom = new Date(timestampFrom).getTime();
@@ -179,7 +179,15 @@ module.exports = {
         };
 
         if (facetFilters.length) payload.facetFilters = facetFilters
-        return await index.search(search, payload)
+        const searchDocs = await index.search(search, payload)
+
+        const ids = searchDocs.hits.map(doc => doc.objectID)
+        if (!ids.length) return searchDocs
+
+        const getPosts = await db.collection('posts').where('id', 'in', ids).get()
+        const posts = getPosts.docs.map(doc => doc.data())
+
+        return { ...searchDocs, hits: posts }
       } catch (err) {
         return err
       }
@@ -231,20 +239,49 @@ module.exports = {
         status
       }
     },
-    async reportPostById(_, { idPost, content, userIdReporter }, _ctx) {
+    async createReportPostById(_, { idPost, content, userIdReporter }, _ctx) {
+      // TODO: makesure which level can reported post
+      // const { name, level } = await adminAuthContext(context)
       if (!content) throw new UserInputError('required to fill reason this post')
 
       try {
+        const posts = await db.doc(`/posts/${idPost}`).get().then(
+          doc => {
+            doc.ref.update({
+              reportedCount: (doc.data().reportedCount || 0) + 1
+            })
+
+            return doc.data()
+          }
+        )
+
         const payload = {
-          idPost,
+          idPost: posts.id,
           content,
           userIdReporter
         }
+        const index = server.initIndex(ALGOLIA_INDEX_REPORT_POSTS);
+        const indexPost = server.initIndex(ALGOLIA_INDEX_POSTS);
+
         const writeRequest = await db.collection('/reports').add(payload)
+        
+        // Save index
+        await index.saveObjects([payload], {
+          autoGenerateObjectIDIfNotExist: true,
+        })
+
+        // Update Algolia Search Posts
+        await indexPost.partialUpdateObjects([{
+          objectID: posts.id,
+          reportedCount: posts.reportedCount,
+        }]);
 
         const parseSnapshot = await (await writeRequest.get()).data()
 
-        return parseSnapshot;
+        return {
+          ... parseSnapshot,
+          totalReported: posts.reportedCount
+        }
       } catch (err) {
         return err;
       }

@@ -81,6 +81,7 @@ mutation SearchPost($search: String, $perPage: Int, $page: Int, $range: Float, $
       likeCount
       commentCount
       repostCount
+      reportedCount
       room
       hastags
       location{
@@ -114,9 +115,10 @@ Payload
 
 ```javascript
 mutation createReportPost($postId: ID!, $content: String, $userIdReporter: ID!) {
-  reportPostById(idPost: $postId, content: $content, userIdReporter:  $userIdReporter) {
+  createReportPostById(idPost: $postId, content: $content, userIdReporter:  $userIdReporter) {
     content
     userIdReporter
+    idPost
   }
 }
 ```
@@ -166,6 +168,7 @@ query getPostReportedById($idPost: ID!, $lastId: ID){
   getReportedByIdPost(idPost: $idPost, lastId: $lastId) {
     content
     userIdReporter
+    idPost
   }
 }
 ```
