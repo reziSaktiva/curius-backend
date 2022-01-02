@@ -30,6 +30,7 @@ module.exports = gql`
         roomName: String
         startingDate: String
         tillDate: String
+        location: LatLong
     }
     type StatusPost {
         active: Boolean
@@ -61,6 +62,7 @@ module.exports = gql`
         lat: Float
         lng: Float
         detail: DetailLatLong
+        range: Float
     }
     type DetailLatLong {
         city: String
@@ -204,7 +206,7 @@ module.exports = gql`
         getPost(id: ID! room: String): Post!
         getUserData(username: String): UserData
         getPostBasedOnNearestLoc(lat: String, lng: String): [Post]
-        getAllRoom(lat: Float, lng: Float): [Room]
+        getNearRoom(lat: Float, lng: Float): [Room]
         searchRoom(search: String, status: String, perPage: Int, page: Int): SearchRoom
         mutedPosts: [Post]!
         getSubscribePosts: [Post]!

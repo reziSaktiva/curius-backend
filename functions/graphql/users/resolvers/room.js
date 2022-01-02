@@ -1,13 +1,27 @@
 const { db } = require('../../../utility/admin')
 const { client, server } = require('../../../utility/algolia')
+const { computeDistanceBetween, LatLng } = require('spherical-geometry-js')
 const { ALGOLIA_INDEX_ROOMS } = require('../../../constant/post')
 
 module.exports = {
     Query: {
-        async getAllRoom(_, { lat, lng }, _context) {
+        async getNearRoom(_, { lat, lng }, _context) {
             const getRooms = await db.collection('room').get()
             try {
+                let nearRoom = []
+                getRooms.docs.forEach(doc => {
+                    const { location } = doc.data();
+                    console.log(doc.data);
+                    const currentLatlng = new LatLng(parseFloat(location.lat), parseFloat(location.lng));
+                    const contentLocation = new LatLng(parseFloat(lat), parseFloat(lng));
 
+                    const distance = computeDistanceBetween(currentLatlng, contentLocation)
+                    console.log(distance / 1000);
+                    if((distance / 1000) <= location.range){
+                        nearRoom.push(doc.data());
+                    }
+                })
+                return nearRoom
             }
             catch (err) {
                 console.log(err);
