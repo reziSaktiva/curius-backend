@@ -132,6 +132,10 @@ module.exports = gql`
         hitsPerPage: Int
         processingTimeMS: Float
     }
+    type SinglePostDetail {
+        owner: User
+        post: Post
+    }
     type Query {
         getAdmin: [Admin]
         # Search
@@ -142,7 +146,7 @@ module.exports = gql`
         searchThemes(name: String): [ThemeType]
 
         # Posts
-        getSinglePost(id: ID! room: String): Post!
+        getSinglePost(id: ID! room: String): SinglePostDetail!
         getReportedByIdPost(idPost: ID!, lastId: ID, perPage: Int): [ReportPost]
     }
 
@@ -176,6 +180,7 @@ module.exports = gql`
         rating: Rating
         media: [String]
         status: String
+        owner: String
     }
 
     type ReportPost {

@@ -110,21 +110,21 @@ module.exports = {
                 return err;
             }
         },
-        async updateThemesById(_, { id, name, colors, adjective, nouns, isDeleted, isActive }) {
+        async updateThemesById(_, { id, name, colors, adjective, nouns, isDeleted, isActive }, ctx) {
             try {
                 if (!id) throw new Error("Id Theme is required")
 
                 let newThemes = {}
-                const theme = await db.doc(`/themes/${id}`).get().then(
+                await db.doc(`/themes/${id}`).get().then(
                     doc => {
                         if (name) newThemes.name = name
-                        if (isNullOrUndefined(isDeleted)) {
-                            newThemes.isDeleted = isDeleted || true
+                        if (isDeleted) {
+                            newThemes.isDeleted = isDeleted
                             newThemes.isActive = false
                         }
-                        if (isNullOrUndefined(isActive)) {
+                        if (isActive) {
                             newThemes.isDeleted = false;
-                            newThemes.isActive = isActive || true
+                            newThemes.isActive = isActive
                         }
         
                         if (!isNullOrUndefined(colors)) {

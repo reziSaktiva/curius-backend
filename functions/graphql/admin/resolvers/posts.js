@@ -51,6 +51,10 @@ module.exports = {
         if (!dataPost.exists) {
           throw new UserInputError('Post not found')
         } else {
+
+          const userDocument = await db.doc(`/users/${post.owner}`).get();
+          const owner = userDocument.data()
+
           let repost = {}
           const repostId = get(post, 'repost') || {};
           if (repostId) {
@@ -72,12 +76,15 @@ module.exports = {
           const subscribe = subscribePost.docs.map(doc => doc.data()) || [];
 
           return {
-            ...post,
-            repost,
-            likes,
-            comments: comments,
-            muted,
-            subscribe
+            post: {
+              ...post,
+              repost,
+              likes,
+              comments: comments,
+              muted,
+              subscribe
+            },
+            owner
           }
         }
       }
@@ -89,6 +96,7 @@ module.exports = {
     async searchPosts(_, { perPage = 5, page, location, range = 40, hasReported = false, search, filters }, _ctx) {
       const googleMapsClient = new Client({ axiosInstance: axios });
       const timestampFrom = get(filters, 'timestamp.from', '');
+      const ownerPost = get(filters, 'owner', '');
       const timestampTo = get(filters, 'timestamp.to', '');
       const ratingFrom = get(filters, 'ratingFrom', 0);
       const ratingTo = get(filters, 'ratingTo', 0);
@@ -146,6 +154,7 @@ module.exports = {
       }
       const facetFilters = []
 
+      if (ownerPost) facetFilters.push([`owner:${ownerPost}`])
       if (status) facetFilters.push([`status.active:${status == "active" ? 'true' : 'false'}`])
       if (hasReported) facetFilters.push([`reportedCount > 1`])
 
@@ -179,6 +188,7 @@ module.exports = {
         };
 
         if (facetFilters.length) payload.facetFilters = facetFilters
+        console.log('payload: ', payload)
         const searchDocs = await index.search(search, payload)
 
         const ids = searchDocs.hits.map(doc => doc.objectID)
