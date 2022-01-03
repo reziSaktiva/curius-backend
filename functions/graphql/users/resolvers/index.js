@@ -1,13 +1,15 @@
 const userResolvers = require('./users')
 const postResolvers = require('./posts')
 const commentResolvers = require('./comments')
+const roomResolvers = require('./room')
 
 module.exports = {
-    Query:{
+    Query: {
         ...postResolvers.Query,
-        ...userResolvers.Query
+        ...userResolvers.Query,
+        ...roomResolvers.Query
     },
-    Mutation:{
+    Mutation: {
         ...userResolvers.Mutation,
         ...postResolvers.Mutation,
         ...commentResolvers.Mutation

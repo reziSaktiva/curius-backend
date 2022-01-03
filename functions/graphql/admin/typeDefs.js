@@ -27,6 +27,16 @@ module.exports = gql`
         hastags: [String]
         room: String
     }
+    type Room {
+        id: ID
+        createdAt: String
+        createdBy: String
+        description: String
+        displayPicture: String
+        roomName: String
+        startingDate: String
+        tillDate: String
+    }
     type Media {
         content: [String]
         meta: String
@@ -162,7 +172,6 @@ module.exports = gql`
     input Location {
         lat: Float
         lng: Float
-        name: String
     }
 
     input Timestamp {
@@ -230,7 +239,7 @@ module.exports = gql`
         updateThemesById(id: ID, name: String, colors: [Colors], adjective: [String], nouns: [Nouns], isDeleted: Boolean, isActive: Boolean): ThemeType 
 
         # Create New Data
-        createRoom(roomName: String, description: String, startingDate: String, tillDate: String, displayPicture: String): String
+        createRoom(roomName: String, description: String, startingDate: String, tillDate: String, displayPicture: String, location: Location, range: Int): String
         reportPostById(idPost: ID!, content: String, userIdReporter: ID!): ReportPost!
         createReportPostById(idPost: ID!, content: String, userIdReporter: ID!): ReportPost
         createNewTheme(name: String, colors: [Colors], adjective: [String], nouns: [Nouns]): ThemeType

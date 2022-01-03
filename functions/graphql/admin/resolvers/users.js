@@ -5,7 +5,7 @@ const { ALGOLIA_INDEX_USERS } = require('../../../constant/post')
 module.exports = {
     Query: {
         async searchUser(_, { search, status, perPage, page }, _context) {
-            const index = client.initIndex('users');
+            const index = client.initIndex(ALGOLIA_INDEX_USERS);
 
             const defaultPayload = {
                 "attributesToRetrieve": "*",
@@ -25,11 +25,11 @@ module.exports = {
             }
             let facetFilters = []
             if (status) facetFilters.push([`status:${status}`])
-            
+
             try {
                 return new Promise(async (resolve, reject) => {
                     const payload = { ...defaultPayload, ...pagination }
-                    
+
                     if (facetFilters.length) payload.facetFilters = facetFilters
                     index.search(search, payload)
                         .then(async res => {
@@ -44,12 +44,12 @@ module.exports = {
                             if (userIds.length) {
                                 const getUsers = await db.collection('users').where('id', 'in', userIds).get()
                                 const users = getUsers.docs.map(doc => doc.data())
-    
+
                                 // return following structure data algolia
                                 resolve({ hits: users, page: nbPage, nbHits, nbPages: nbPages - 1, hitsPerPage, processingTimeMS })
                                 return;
                             }
-                            
+
                             resolve({ hits: [], page: nbPage, nbHits, nbPages: nbPages - 1, hitsPerPage, processingTimeMS })
                         }).catch(err => {
                             reject(err)
@@ -58,6 +58,7 @@ module.exports = {
             }
             catch (err) {
                 console.log(err);
+                throw new Error(err)
             }
         }
     },
@@ -74,7 +75,7 @@ module.exports = {
             }
 
             try {
-                const index = server.initIndex(ALGOLIA_INDEX_USERS);
+                const index = client.initIndex(ALGOLIA_INDEX_USERS);
                 await db.doc(`/users/${username}`)
                     .get()
                     .then(doc => {
@@ -83,7 +84,7 @@ module.exports = {
 
                 const user = await db.doc(`/users/${username}`).get()
                 const userData = user.data()
-                
+
                 await index.partialUpdateObjects([{
                     objectID: userData.id,
                     status

@@ -197,20 +197,20 @@ module.exports = {
         const posts = await getPosts.docs.map(async doc => {
           const dataParse = doc.data()
           if (!useDetailLocation) return dataParse
-          
+
           const request = await googleMapsClient
             .reverseGeocode({
-                params: {
-                    latlng: `${dataParse?.location?.lat}, ${dataParse?.location?.lng}`,
-                    language: 'en',
-                    result_type: 'street_address|administrative_area_level_4',
-                    location_type: 'APPROXIMATE',
-                    key: API_KEY_GEOCODE
-                },
-                timeout: 5000 // milliseconds
+              params: {
+                latlng: `${dataParse?.location?.lat}, ${dataParse?.location?.lng}`,
+                language: 'en',
+                result_type: 'street_address|administrative_area_level_4',
+                location_type: 'APPROXIMATE',
+                key: API_KEY_GEOCODE
+              },
+              timeout: 5000 // milliseconds
             }, axios)
           const address = request.data.results[0].formatted_address
-          
+
           return {
             ...dataParse,
             location: {
@@ -300,7 +300,7 @@ module.exports = {
         const indexPost = server.initIndex(ALGOLIA_INDEX_POSTS);
 
         const writeRequest = await db.collection('/reports').add(payload)
-        
+
         // Save index
         await index.saveObjects([payload], {
           autoGenerateObjectIDIfNotExist: true,
@@ -315,7 +315,7 @@ module.exports = {
         const parseSnapshot = await (await writeRequest.get()).data()
 
         return {
-          ... parseSnapshot,
+          ...parseSnapshot,
           totalReported: posts.reportedCount
         }
       } catch (err) {
