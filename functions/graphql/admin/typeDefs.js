@@ -160,7 +160,6 @@ module.exports = gql`
     input Location {
         lat: Float
         lng: Float
-        name: String
     }
 
     input Timestamp {
@@ -190,7 +189,7 @@ module.exports = gql`
         registerAdmin(email: String level: Int): String
         changeUserStatus(status: String!, username: String!): User!
         setStatusPost(active: Boolean, flags: [String], takedown: Boolean, postId: String): Post!\
-        createRoom(roomName: String, description: String, startingDate: String, tillDate: String, displayPicture: String): String
+        createRoom(roomName: String, description: String, startingDate: String, tillDate: String, displayPicture: String, location: Location, range: Int): String
         reportPostById(idPost: ID!, content: String, userIdReporter: ID!): ReportPost!
         
         # Search

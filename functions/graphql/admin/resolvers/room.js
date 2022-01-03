@@ -6,7 +6,7 @@ const { client } = require('../../../utility/algolia')
 
 module.exports = {
     Mutation: {
-        async createRoom(_, { roomName, description, startingDate, tillDate, displayPicture }, context) {
+        async createRoom(_, { roomName, description, startingDate, tillDate, displayPicture, location, range }, context) {
             const { name, level } = await adminAuthContext(context)
             const index = client.initIndex(ALGOLIA_INDEX_ROOMS)
 
@@ -15,6 +15,10 @@ module.exports = {
                 description,
                 startingDate,
                 tillDate,
+                location: {
+                    ...location,
+                    range
+                },
                 displayPicture,
                 createdBy: name,
                 createdAt: new Date().toISOString()
