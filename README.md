@@ -10,10 +10,10 @@
 - [ ] create actions for post 
   - [x] active/nonactive
   - [x] takedown
-  - [ ] setRating
+  - [x] setRating
   - [x] setFlag
-  - [ ] Delete - for takedown, delete
-  - [ ] and setFlag send notif to owner
+  - [x] Delete - for takedown, delete
+  - [x] and setFlag send notif to owner
 - [x] search for all
 
 &nbsp;
