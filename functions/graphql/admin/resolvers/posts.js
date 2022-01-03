@@ -201,7 +201,7 @@ module.exports = {
           const request = await googleMapsClient
             .reverseGeocode({
               params: {
-                latlng: `${dataParse?.location?.lat}, ${dataParse?.location?.lng}`,
+                latlng: `${dataParse.location.lat}, ${dataParse.location.lng}`,
                 language: 'en',
                 result_type: 'street_address|administrative_area_level_4',
                 location_type: 'APPROXIMATE',
