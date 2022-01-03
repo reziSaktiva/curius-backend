@@ -93,7 +93,7 @@ module.exports = {
         throw new Error(err)
       }
     },
-    async searchPosts(_, { perPage = 5, page, location, range = 40, hasReported = false, search, filters }, _ctx) {
+    async searchPosts(_, { perPage = 5, page, location, range = 40, hasReported = false, useDetailLocation = false, search, filters }, _ctx) {
       const googleMapsClient = new Client({ axiosInstance: axios });
       const timestampFrom = get(filters, 'timestamp.from', '');
       const ownerPost = get(filters, 'owner', '');
@@ -188,14 +188,40 @@ module.exports = {
         };
 
         if (facetFilters.length) payload.facetFilters = facetFilters
-        console.log('payload: ', payload)
         const searchDocs = await index.search(search, payload)
 
         const ids = searchDocs.hits.map(doc => doc.objectID)
         if (!ids.length) return searchDocs
 
         const getPosts = await db.collection('posts').where('id', 'in', ids).get()
-        const posts = getPosts.docs.map(doc => doc.data())
+        const posts = await getPosts.docs.map(async doc => {
+          const dataParse = doc.data()
+          if (!useDetailLocation) return dataParse
+          
+          const request = await googleMapsClient
+            .reverseGeocode({
+                params: {
+                    latlng: `${dataParse?.location?.lat}, ${dataParse?.location?.lng}`,
+                    language: 'en',
+                    result_type: 'street_address|administrative_area_level_4',
+                    location_type: 'APPROXIMATE',
+                    key: API_KEY_GEOCODE
+                },
+                timeout: 5000 // milliseconds
+            }, axios)
+          const address = request.data.results[0].formatted_address
+          
+          return {
+            ...dataParse,
+            location: {
+              ...dataParse.location,
+              detail: {
+                ...dataParse.location.detail,
+                formattedAddress: address
+              }
+            }
+          }
+        })
 
         return { ...searchDocs, hits: posts }
       } catch (err) {

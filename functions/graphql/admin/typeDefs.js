@@ -140,7 +140,7 @@ module.exports = gql`
         getAdmin: [Admin]
         # Search
         searchUser(search: String, status: String, perPage: Int, page: Int ): SearchUser!
-        searchPosts(search: String, perPage: Int, page: Int, hasReported: Boolean, range: Float, location: String, filters: RequestFilter ): SearchPosts!
+        searchPosts(search: String, perPage: Int, page: Int, hasReported: Boolean, useDetailLocation: Boolean, range: Float, location: String, filters: RequestFilter ): SearchPosts!
         
         # Randomization
         searchThemes(name: String): [ThemeType]
