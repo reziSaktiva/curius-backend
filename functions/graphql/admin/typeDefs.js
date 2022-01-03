@@ -231,7 +231,7 @@ module.exports = gql`
 
     type Mutation {
         checkEmail(email: String uid: String name: String): Boolean
-        registerAdmin(email: String level: Int): String
+        registerAdmin(email: String! level: Int! name: String!): String
         changeUserStatus(status: String!, username: String!): User!
         setStatusPost(active: Boolean, flags: [String], takedown: Boolean, postId: String): Post!\
 
