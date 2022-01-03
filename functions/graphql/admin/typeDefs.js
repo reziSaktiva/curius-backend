@@ -132,17 +132,21 @@ module.exports = gql`
         hitsPerPage: Int
         processingTimeMS: Float
     }
+    type SinglePostDetail {
+        owner: User
+        post: Post
+    }
     type Query {
         getAdmin: [Admin]
         # Search
         searchUser(search: String, status: String, perPage: Int, page: Int ): SearchUser!
-        searchPosts(search: String, perPage: Int, page: Int, hasReported: Boolean, range: Float, location: String, filters: RequestFilter ): SearchPosts!
+        searchPosts(search: String, perPage: Int, page: Int, hasReported: Boolean, useDetailLocation: Boolean, range: Float, location: String, filters: RequestFilter ): SearchPosts!
         
         # Randomization
         searchThemes(name: String): [ThemeType]
 
         # Posts
-        getSinglePost(id: ID! room: String): Post!
+        getSinglePost(id: ID! room: String): SinglePostDetail!
         getReportedByIdPost(idPost: ID!, lastId: ID, perPage: Int): [ReportPost]
     }
 
@@ -176,6 +180,7 @@ module.exports = gql`
         rating: Rating
         media: [String]
         status: String
+        owner: String
     }
 
     type ReportPost {
