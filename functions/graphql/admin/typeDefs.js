@@ -17,6 +17,7 @@ module.exports = gql`
         likeCount: Int
         commentCount: Int
         repostCount: Int
+        reportedCount: Int
         status: StatusPost
         comments: [Comment]
         likes: [Like]
@@ -25,6 +26,16 @@ module.exports = gql`
         subscribe: [Subscribe],
         hastags: [String]
         room: String
+    }
+    type Room {
+        id: ID
+        createdAt: String
+        createdBy: String
+        description: String
+        displayPicture: String
+        roomName: String
+        startingDate: String
+        tillDate: String
     }
     type Media {
         content: [String]
@@ -131,8 +142,22 @@ module.exports = gql`
         hitsPerPage: Int
         processingTimeMS: Float
     }
+    type SinglePostDetail {
+        owner: User
+        post: Post
+    }
     type Query {
         getAdmin: [Admin]
+        # Search
+        searchUser(search: String, status: String, perPage: Int, page: Int ): SearchUser!
+        searchPosts(search: String, perPage: Int, page: Int, hasReported: Boolean, useDetailLocation: Boolean, range: Float, location: String, filters: RequestFilter ): SearchPosts!
+        
+        # Randomization
+        searchThemes(name: String): [ThemeType]
+
+        # Posts
+        getSinglePost(id: ID! room: String): SinglePostDetail!
+        getReportedByIdPost(idPost: ID!, lastId: ID, perPage: Int): [ReportPost]
     }
 
     type SearchPosts {
@@ -147,7 +172,6 @@ module.exports = gql`
     input Location {
         lat: Float
         lng: Float
-        name: String
     }
 
     input Timestamp {
@@ -165,16 +189,59 @@ module.exports = gql`
         rating: Rating
         media: [String]
         status: String
+        owner: String
+    }
+
+    type ReportPost {
+        content: String
+        idPost: ID
+        userIdReporter: ID
+        totalReported: Int
+    }
+
+    input Colors {
+        name: String
+        hex: String
+    }
+
+    type ColorsType {
+        name: String
+        hex: String
+    }
+
+    input Nouns {
+        avatarUrl: String
+        name: String
+    }
+
+    type NounsType {
+        avatarUrl: String
+        name: String
+    }
+
+    type ThemeType {
+        id: ID
+        name: String
+        isDeleted: Boolean
+        isActive: Boolean
+        colors: [ColorsType]
+        adjective: [String]
+        nouns: [NounsType]
     }
 
     type Mutation {
-        checkEmail(email: String): Boolean
+        checkEmail(email: String uid: String name: String): Boolean
         registerAdmin(email: String! level: Int! name: String!): String
         changeUserStatus(status: String!, username: String!): User!
-        setStatusPost(active: Boolean, flags: [String], takedown: Boolean, postId: String): Post!
-        
-        # Search
-        searchUser(search: String, status: String, perPage: Int, page: Int ): SearchUser!
-        searchPosts(search: String, perPage: Int, page: Int, range: Float, location: String, filters: RequestFilter ): SearchPosts!
+        setStatusPost(active: Boolean, flags: [String], takedown: Boolean, postId: String): Post!\
+
+        # Randomization
+        updateThemesById(id: ID, name: String, colors: [Colors], adjective: [String], nouns: [Nouns], isDeleted: Boolean, isActive: Boolean): ThemeType 
+
+        # Create New Data
+        createRoom(roomName: String, description: String, startingDate: String, tillDate: String, displayPicture: String, location: Location, range: Int): String
+        reportPostById(idPost: ID!, content: String, userIdReporter: ID!): ReportPost!
+        createReportPostById(idPost: ID!, content: String, userIdReporter: ID!): ReportPost
+        createNewTheme(name: String, colors: [Colors], adjective: [String], nouns: [Nouns]): ThemeType
     }
 `

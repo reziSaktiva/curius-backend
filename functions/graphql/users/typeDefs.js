@@ -21,6 +21,17 @@ module.exports = gql`
         hastags: [String]
         room: String
     }
+    type Room {
+        id: ID
+        createdAt: String
+        createdBy: String
+        description: String
+        displayPicture: String
+        roomName: String
+        startingDate: String
+        tillDate: String
+        location: LatLong
+    }
     type StatusPost {
         active: Boolean
         flag: [String]
@@ -51,6 +62,7 @@ module.exports = gql`
         lat: Float
         lng: Float
         detail: DetailLatLong
+        range: Float
     }
     type DetailLatLong {
         city: String
@@ -168,16 +180,24 @@ module.exports = gql`
     }
     type dataPost {
         hasMore: Boolean
-        lastId: ID
+        nextPage: Float
         posts: [Post]
     }
     type DeleteData {
         id: ID!,
         room: String
     }
+    type SearchRoom {
+        hits: [Room]
+        page: Int
+        nbHits: Int
+        nbPages: Int
+        hitsPerPage: Int
+        processingTimeMS: Float
+    }
     type Query {
         moreForYou: dataPost
-        getPosts(lat: Float, lng: Float, range: Float type: String): dataPost
+        getPosts(lat: Float, lng: Float, range: Float page: Int type: String): dataPost
         getPopularPosts(lat: Float, lng: Float range: Float): dataPost
         getVisited: [GeoLocation]
         getProfilePosts(username: String): dataPost
@@ -186,6 +206,8 @@ module.exports = gql`
         getPost(id: ID! room: String): Post!
         getUserData(username: String): UserData
         getPostBasedOnNearestLoc(lat: String, lng: String): [Post]
+        getNearRooms(lat: Float, lng: Float): [Room]
+        searchRoom(search: String, status: String, perPage: Int, page: Int): SearchRoom
         mutedPosts: [Post]!
         getSubscribePosts: [Post]!
         setRulesSearchAlgolia(index: String!, rank: [String]!): String
