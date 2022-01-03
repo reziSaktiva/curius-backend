@@ -5,7 +5,7 @@ const { server, client } = require('../../../utility/algolia')
 const { db } = require('../../../utility/admin')
 const { UserInputError } = require('apollo-server-express');
 
-const { ALGOLIA_INDEX_POSTS } = require('../../../constant/post')
+const { ALGOLIA_INDEX_POSTS, ALGOLIA_INDEX_REPORT_POSTS } = require('../../../constant/post')
 const { API_KEY_GEOCODE } = require('../../../utility/secret/API')
 
 const isNullOrUndefined = data => {
@@ -28,9 +28,8 @@ module.exports = {
       const reportCollection = db.collection('/reports')
 
       let query;
-      if (lastId) query = await reportCollection.startAfter(lastDoc).limit(perPage).get()
-      else query = await reportCollection.get();
-
+      if (lastId) query = await reportCollection.where('idPost', '==', idPost).startAfter(lastDoc).limit(perPage).get()
+      else query = await reportCollection.where('idPost', '==', idPost).get();
 
       const parseSnapshot = query.docs.map(doc => doc.data())
 
@@ -52,6 +51,10 @@ module.exports = {
         if (!dataPost.exists) {
           throw new UserInputError('Post not found')
         } else {
+
+          const userDocument = await db.doc(`/users/${post.owner}`).get();
+          const owner = userDocument.data()
+
           let repost = {}
           const repostId = get(post, 'repost') || {};
           if (repostId) {
@@ -73,12 +76,15 @@ module.exports = {
           const subscribe = subscribePost.docs.map(doc => doc.data()) || [];
 
           return {
-            ...post,
-            repost,
-            likes,
-            comments: comments,
-            muted,
-            subscribe
+            post: {
+              ...post,
+              repost,
+              likes,
+              comments: comments,
+              muted,
+              subscribe
+            },
+            owner
           }
         }
       }
@@ -86,70 +92,11 @@ module.exports = {
         console.log(err)
         throw new Error(err)
       }
-    }
-  },
-  Mutation: {
-    /** example payload
-     * {
-          "search": "",
-          "page": 0,
-          "perPage": 10,
-          "location":  "bandung",
-          "filters":{
-            "timestamp": "10-01-2022",
-            "ratingFrom": 0,
-            "ratingTo": 10
-         }
-       }
-     */
-    async setStatusPost(_, { active, flags = [], takedown, postId }, _ctx) {
-      if (!postId) throw new Error('postId is Required')
-
-      const index = client.initIndex(ALGOLIA_INDEX_POSTS);
-      const targetCollection = `/posts/${postId}`
-      const data = await db.doc(targetCollection).get()
-      const status = {}
-
-      try {
-        await db.doc(targetCollection)
-          .get()
-          .then(doc => {
-            const oldPost = data.data()
-
-            if (flags) {
-              status.flag = [...(oldPost.status.flag || []), ...flags]
-            }
-
-            if (isNullOrUndefined(takedown)) {
-              status.takedown = takedown
-            }
-
-            if (isNullOrUndefined(active)) {
-              status.active = active
-            }
-
-            return doc.ref.update({ status })
-          })
-
-        // Update Algolia Search Posts
-        await index.partialUpdateObjects([{
-          objectID: postId,
-          status,
-        }]);
-
-      } catch (err) {
-        console.log(err)
-        throw new Error(err)
-      }
-
-      return {
-        ...data.data(),
-        status
-      }
     },
-    async searchPosts(_, { perPage = 10, page, location, range = 40, search, filters }, _ctx) {
+    async searchPosts(_, { perPage = 5, page, location, range = 40, hasReported = false, useDetailLocation = false, search, filters }, _ctx) {
       const googleMapsClient = new Client({ axiosInstance: axios });
       const timestampFrom = get(filters, 'timestamp.from', '');
+      const ownerPost = get(filters, 'owner', '');
       const timestampTo = get(filters, 'timestamp.to', '');
       const ratingFrom = get(filters, 'ratingFrom', 0);
       const ratingTo = get(filters, 'ratingTo', 0);
@@ -207,7 +154,9 @@ module.exports = {
       }
       const facetFilters = []
 
+      if (ownerPost) facetFilters.push([`owner:${ownerPost}`])
       if (status) facetFilters.push([`status.active:${status == "active" ? 'true' : 'false'}`])
+      if (hasReported) facetFilters.push([`reportedCount > 1`])
 
       if (timestampFrom) {
         const dateFrom = new Date(timestampFrom).getTime();
@@ -239,25 +188,136 @@ module.exports = {
         };
 
         if (facetFilters.length) payload.facetFilters = facetFilters
-        return await index.search(search, payload)
+        const searchDocs = await index.search(search, payload)
+
+        const ids = searchDocs.hits.map(doc => doc.objectID)
+        if (!ids.length) return searchDocs
+
+        const getPosts = await db.collection('posts').where('id', 'in', ids).get()
+        const posts = await getPosts.docs.map(async doc => {
+          const dataParse = doc.data()
+          if (!useDetailLocation) return dataParse
+
+          const request = await googleMapsClient
+            .reverseGeocode({
+              params: {
+                latlng: `${dataParse?.location?.lat}, ${dataParse?.location?.lng}`,
+                language: 'en',
+                result_type: 'street_address|administrative_area_level_4',
+                location_type: 'APPROXIMATE',
+                key: API_KEY_GEOCODE
+              },
+              timeout: 5000 // milliseconds
+            }, axios)
+          const address = request.data.results[0].formatted_address
+
+          return {
+            ...dataParse,
+            location: {
+              ...dataParse.location,
+              detail: {
+                ...dataParse.location.detail,
+                formattedAddress: address
+              }
+            }
+          }
+        })
+
+        return { ...searchDocs, hits: posts }
       } catch (err) {
         return err
       }
     },
-    async reportPostById(_, { idPost, content, userIdReporter }, _ctx) {
+  },
+  Mutation: {
+    async setStatusPost(_, { active, flags = [], takedown, postId }, _ctx) {
+      if (!postId) throw new Error('postId is Required')
+
+      const index = server.initIndex(ALGOLIA_INDEX_POSTS);
+      const targetCollection = `/posts/${postId}`
+      const data = await db.doc(targetCollection).get()
+      const status = {}
+
+      try {
+        await db.doc(targetCollection)
+          .get()
+          .then(doc => {
+            const oldPost = data.data()
+
+            if (flags) {
+              status.flag = [...(oldPost.status.flag || []), ...flags]
+            }
+
+            if (isNullOrUndefined(takedown)) {
+              status.takedown = takedown
+            }
+
+            if (isNullOrUndefined(active)) {
+              status.active = active
+            }
+
+            return doc.ref.update({ status })
+          })
+
+        // Update Algolia Search Posts
+        await index.partialUpdateObjects([{
+          objectID: postId,
+          status,
+        }]);
+
+      } catch (err) {
+        console.log(err)
+        throw new Error(err)
+      }
+
+      return {
+        ...data.data(),
+        status
+      }
+    },
+    async createReportPostById(_, { idPost, content, userIdReporter }, _ctx) {
+      // TODO: makesure which level can reported post
+      // const { name, level } = await adminAuthContext(context)
       if (!content) throw new UserInputError('required to fill reason this post')
 
       try {
+        const posts = await db.doc(`/posts/${idPost}`).get().then(
+          doc => {
+            doc.ref.update({
+              reportedCount: (doc.data().reportedCount || 0) + 1
+            })
+
+            return doc.data()
+          }
+        )
+
         const payload = {
-          idPost,
+          idPost: posts.id,
           content,
           userIdReporter
         }
+        const index = server.initIndex(ALGOLIA_INDEX_REPORT_POSTS);
+        const indexPost = server.initIndex(ALGOLIA_INDEX_POSTS);
+
         const writeRequest = await db.collection('/reports').add(payload)
+
+        // Save index
+        await index.saveObjects([payload], {
+          autoGenerateObjectIDIfNotExist: true,
+        })
+
+        // Update Algolia Search Posts
+        await indexPost.partialUpdateObjects([{
+          objectID: posts.id,
+          reportedCount: posts.reportedCount,
+        }]);
 
         const parseSnapshot = await (await writeRequest.get()).data()
 
-        return parseSnapshot;
+        return {
+          ...parseSnapshot,
+          totalReported: posts.reportedCount
+        }
       } catch (err) {
         return err;
       }
