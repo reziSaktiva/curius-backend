@@ -144,16 +144,16 @@ module.exports = {
                             newThemes.isActive = isActive
                         }
         
-                        if (!isNullOrUndefined(colors)) {
+                        if (colors && colors.length) {
                             newThemes.colors = (oldData.colors || []).map(updateNewDataArray(colors))
                         }
         
                         if (adjective && adjective.length) {
-                            newThemes.adjective = (oldData.colors || []).map(updateNewDataArray(adjective))
+                            newThemes.adjective = (oldData.adjective || []).map(updateNewDataArray(adjective))
                         }
         
-                        if (!isNullOrUndefined(nouns)) {
-                            newThemes.nouns = (oldData.colors || []).map(updateNewDataArray(nouns))
+                        if (nouns && nouns.length) {
+                            newThemes.nouns = (oldData.nouns || []).map(updateNewDataArray(nouns))
                         }
 
                         newThemes = {
