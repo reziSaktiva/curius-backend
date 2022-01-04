@@ -15,6 +15,20 @@ const updateNewDataArray = newDataEntry => (oldData = []) => {
     return oldData
 }
 
+const separateNewAndUpdateData = (oldData, newData, target = '') => {
+    const dataNeedUpdateNouns = []
+    const newDataNouns = []
+    newData.filter(noun => {
+        const isMatch = oldData[target].filter(old => old.id === noun.id)
+        if (isMatch.length) {
+            dataNeedUpdateNouns.push(noun)
+        }
+        else newDataNouns.push(noun)
+    })
+
+    return { update: dataNeedUpdateNouns, newData: newDataNouns}
+}
+
 module.exports = {
     Query: {
         async getAdmin() {
@@ -145,15 +159,24 @@ module.exports = {
                         }
         
                         if (colors && colors.length) {
-                            newThemes.colors = (oldData.colors || []).map(updateNewDataArray(colors))
+                            const { update, newData } = separateNewAndUpdateData(oldData, colors, 'colors')
+
+                            newThemes.colors = (oldData.colors || []).map(updateNewDataArray(update))
+                            if (newData.length) newThemes.colors = [ ...newThemes.colors, ...newData]
                         }
         
                         if (adjective && adjective.length) {
-                            newThemes.adjective = (oldData.adjective || []).map(updateNewDataArray(adjective))
+                            const { update, newData } = separateNewAndUpdateData(oldData, adjective, 'adjective')
+
+                            newThemes.adjective = (oldData.adjective || []).map(updateNewDataArray(update))
+                            if (newData.length) newThemes.adjective = [ ...newThemes.adjective, ...newData]
                         }
         
                         if (nouns && nouns.length) {
-                            newThemes.nouns = (oldData.nouns || []).map(updateNewDataArray(nouns))
+                            const { update, newData } = separateNewAndUpdateData(oldData, nouns, 'nouns')
+
+                            newThemes.nouns = (oldData.nouns || []).map(updateNewDataArray(update))
+                            if (newData.length) newThemes.nouns = [ ...newThemes.nouns, ...newData]
                         }
 
                         newThemes = {
