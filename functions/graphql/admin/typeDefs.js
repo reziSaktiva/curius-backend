@@ -149,7 +149,7 @@ module.exports = gql`
     type Query {
         getAdmin: [Admin]
         # Search
-        searchUser(search: String, status: String, perPage: Int, page: Int ): SearchUser!
+        searchUser(search: String, status: String, perPage: Int, page: Int, filters: RequestFilterUser ): SearchUser!
         searchPosts(search: String, perPage: Int, page: Int, hasReported: Boolean, useDetailLocation: Boolean, range: Float, location: String, filters: RequestFilter ): SearchPosts!
         
         # Randomization
@@ -192,6 +192,11 @@ module.exports = gql`
         owner: String
     }
 
+    input RequestFilterUser {
+        hasEmail: Boolean
+        hasPhoneNumber: Boolean
+    }
+
     type ReportPost {
         content: String
         idPost: ID
@@ -202,21 +207,35 @@ module.exports = gql`
     input Colors {
         name: String
         hex: String
+        id: ID
+    }
+
+    input Adjective {
+        name: String
+        id: ID
+    }
+
+    type AdjectiveType {
+        name: String
+        id: ID
     }
 
     type ColorsType {
         name: String
         hex: String
+        id: ID
     }
 
     input Nouns {
         avatarUrl: String
         name: String
+        id: ID
     }
 
     type NounsType {
         avatarUrl: String
         name: String
+        id: ID
     }
 
     type ThemeType {
@@ -225,7 +244,7 @@ module.exports = gql`
         isDeleted: Boolean
         isActive: Boolean
         colors: [ColorsType]
-        adjective: [String]
+        adjective: [AdjectiveType]
         nouns: [NounsType]
     }
 
@@ -236,12 +255,12 @@ module.exports = gql`
         setStatusPost(active: Boolean, flags: [String], takedown: Boolean, postId: String): Post!\
 
         # Randomization
-        updateThemesById(id: ID, name: String, colors: [Colors], adjective: [String], nouns: [Nouns], isDeleted: Boolean, isActive: Boolean): ThemeType 
+        updateThemesById(id: ID, name: String, colors: [Colors], adjective: [Adjective], nouns: [Nouns], isDeleted: Boolean, isActive: Boolean): ThemeType 
 
         # Create New Data
         createRoom(roomName: String, description: String, startingDate: String, tillDate: String, displayPicture: String, location: Location, range: Int): String
         reportPostById(idPost: ID!, content: String, userIdReporter: ID!): ReportPost!
         createReportPostById(idPost: ID!, content: String, userIdReporter: ID!): ReportPost
-        createNewTheme(name: String, colors: [Colors], adjective: [String], nouns: [Nouns]): ThemeType
+        createNewTheme(name: String, colors: [Colors], adjective: [Adjective], nouns: [Nouns]): ThemeType
     }
 `

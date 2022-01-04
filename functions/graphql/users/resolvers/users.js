@@ -10,7 +10,7 @@ const firebase = require('firebase')
 const config = require('../../../utility/secret/config')
 const fbAuthContext = require('../../../utility/fbAuthContext')
 
-const { client } = require('../../../utility/algolia')
+const { client, server } = require('../../../utility/algolia')
 
 const { validateLoginInput } = require('../../../utility/validators')
 
@@ -836,20 +836,25 @@ module.exports = {
                                 dob,
                                 joinDate: new Date().toISOString(),
                                 profilePicture: '',
-                                _private: []
+                                _private: [],
                             }
 
-                            const index = client.initIndex('users');
+                            const index = server.initIndex('users');
 
-                            index.saveObjects([{
+                            const payload = {
                                 objectID: saveUserData.id,
                                 username,
                                 joinDate: saveUserData.joinDate,
                                 dob,
                                 fullName,
                                 email,
-                                mobileNumber
-                            }], { autoGenerateObjectIDIfNotExist: false })
+                                mobileNumber,
+                                _tags: []
+                            }
+
+                            if (mobileNumber) payload._tags.push('has_mobile_number')
+                            if (email) payload._tags.push('has_email')
+                            index.saveObjects([payload], { autoGenerateObjectIDIfNotExist: false })
                                 .then(({ objectIDs }) => {
                                     (objectIDs);
                                 })
@@ -931,7 +936,7 @@ module.exports = {
             try {
                 let newUserData
                 await db.doc(`users/${oldName}`).get()
-                    .then(doc => {
+                    .then(async doc => {
                         newUserData = newName ? {
                             profilePicture: url ? url : userData.profilePicture,
                             mobileNumber: phoneNumber ? phoneNumber : userData.mobileNumber,
@@ -944,6 +949,18 @@ module.exports = {
                             gender: gender ? gender : userData.gender,
                             birthday: birthday ? birthday : userData.birthday
                         }
+
+                        const _tags = []
+                        if (phoneNumber) _tags.push('has_phone_number')
+
+                        await index.partialUpdateObjects([{
+                            objectID: doc.id,
+                            ...newUserData,
+                            _tags: {
+                                value: _tags,
+                                _operation: 'Add'
+                            }
+                        }]);
 
                         return doc.ref.update(newUserData)
                     })

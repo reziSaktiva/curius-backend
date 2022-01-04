@@ -4,9 +4,8 @@ const { ALGOLIA_INDEX_USERS } = require('../../../constant/post')
 
 module.exports = {
     Query: {
-        async searchUser(_, { search, status, perPage, page }, _context) {
+        async searchUser(_, { search, status, perPage, page, filters = {} }, _context) {
             const index = client.initIndex(ALGOLIA_INDEX_USERS);
-
             const defaultPayload = {
                 "attributesToRetrieve": "*",
                 "attributesToSnippet": "*:20",
@@ -24,7 +23,12 @@ module.exports = {
                 "page": page || 0,
             }
             let facetFilters = []
+            const _tags = []
             if (status) facetFilters.push([`status:${status}`])
+            if (filters?.hasEmail) _tags.push(`has_email`)
+            if (filters?.hasPhoneNumber) _tags.push(`has_mobile_number`)
+
+            if (_tags.length) facetFilters.push([`_tags:${_tags.join(',')}`])
 
             try {
                 return new Promise(async (resolve, reject) => {

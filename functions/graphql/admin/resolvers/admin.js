@@ -3,6 +3,18 @@ const { db } = require('../../../utility/admin')
 const adminAuthContext = require('../../../utility/adminAuthContext')
 const { isNullOrUndefined } = require('../../../utility/validators')
 
+const updateNewDataArray = newDataEntry => (oldData = []) => {
+    const newData = newDataEntry.filter(v => v.id == oldData.id)
+    if (newData.length) {
+        return {
+            ...oldData,
+            ...newData[0]
+        }
+    }
+
+    return oldData
+}
+
 module.exports = {
     Query: {
         async getAdmin() {
@@ -121,6 +133,7 @@ module.exports = {
                 let newThemes = {}
                 await db.doc(`/themes/${id}`).get().then(
                     doc => {
+                        const oldData = doc.data();
                         if (name) newThemes.name = name
                         if (isDeleted) {
                             newThemes.isDeleted = isDeleted
@@ -132,15 +145,15 @@ module.exports = {
                         }
         
                         if (!isNullOrUndefined(colors)) {
-                            newThemes.colors = colors
+                            newThemes.colors = (oldData.colors || []).map(updateNewDataArray(colors))
                         }
         
                         if (adjective && adjective.length) {
-                            newThemes.adjective = adjective
+                            newThemes.adjective = (oldData.colors || []).map(updateNewDataArray(adjective))
                         }
         
                         if (!isNullOrUndefined(nouns)) {
-                            newThemes.nouns = nouns
+                            newThemes.nouns = (oldData.colors || []).map(updateNewDataArray(nouns))
                         }
 
                         newThemes = {
