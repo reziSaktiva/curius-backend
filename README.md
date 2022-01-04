@@ -184,7 +184,7 @@ Payload
 ### Create new Theme
 
 ```javascript
-mutation CreateNewTheme($name: String, $colors: [Colors], $adjective: [String], $nouns: [Nouns]) {
+mutation CreateNewTheme($name: String, $colors: [Colors], $adjective: [Adjective], $nouns: [Nouns]) {
   createNewTheme(name: $name, colors: $colors, adjective: $adjective, nouns: $nouns) {
     name
     id
@@ -198,7 +198,10 @@ mutation CreateNewTheme($name: String, $colors: [Colors], $adjective: [String], 
     }
     isDeleted
     isActive
-    adjective
+    adjective {
+      id
+      name
+    }
   }
 }
 ```
@@ -206,15 +209,17 @@ mutation CreateNewTheme($name: String, $colors: [Colors], $adjective: [String], 
 Payload
 ```json
 {
-  "name": "Test2",
+  "name": "Test New 3",
   "colors": [{
     "name": "testColor",
-    "hex": "white"
+    "hex": "white",
+    "id": "1"
   }],
-  "adjective": ["A"],
+  "adjective": [{ "name": "A", "id": "1" }],
   "nouns": [{
     "avatarUrl": "https://curious.app.com",
-    "name": "A"
+    "name": "A",
+    "id": "1"
   }]
 }
 ```
@@ -223,7 +228,7 @@ Payload
 ### Update new Theme
 
 ```javascript
-mutation UpdateNewTheme($id: ID, $name: String, $colors: [Colors], $adjective: [String], $nouns: [Nouns]) {
+mutation UpdateNewTheme($id: ID, $name: String, $colors: [Colors], $adjective: [Adjective], $nouns: [Nouns]) {
   updateThemesById(id: $id, name: $name, colors: $colors, adjective: $adjective, nouns: $nouns) {
     name
     id
@@ -237,7 +242,10 @@ mutation UpdateNewTheme($id: ID, $name: String, $colors: [Colors], $adjective: [
     }
     isDeleted
     isActive
-    adjective
+    adjective {
+      id
+      name
+    }
   }
 }
 ```
@@ -245,8 +253,11 @@ mutation UpdateNewTheme($id: ID, $name: String, $colors: [Colors], $adjective: [
 Payload
 ```json
 {
- "id": "af8bD6HAepEo80JBc5Ez",
-  "adjective": ["A","B"]
+ "id": "wAcxepv3tlPSwAvLF7zb",
+  "adjective": [{
+    "name": "B",
+    "id": "1"
+  }]
 }
 ```
 
@@ -260,6 +271,20 @@ query SearchThemes($name: String) {
     name
     isActive
     isDeleted
+    colors {
+      hex
+      id
+      name
+    }
+    adjective {
+      id
+      name
+    }
+    nouns {
+      id
+      avatarUrl
+      name
+    }
   }
 }
 ```
