@@ -79,7 +79,7 @@ module.exports = {
             }
 
             try {
-                const index = client.initIndex(ALGOLIA_INDEX_USERS);
+                const index = server.initIndex(ALGOLIA_INDEX_USERS);
                 await db.doc(`/users/${username}`)
                     .get()
                     .then(doc => {
@@ -98,6 +98,7 @@ module.exports = {
                     status
                 }
             } catch (err) {
+                console.log(err)
                 throw new Error(err)
             }
         },
