@@ -93,7 +93,7 @@ module.exports = {
         throw new Error(err)
       }
     },
-    async searchPosts(_, { perPage = 5, page, location, range = 40, hasReported = false, useDetailLocation = false, search, filters }, _ctx) {
+    async searchPosts(_, { perPage = 5, page, location, range = 40, hasReported = false, useDetailLocation = false, search, filters, room }, _ctx) {
       const googleMapsClient = new Client({ axiosInstance: axios });
       const timestampFrom = get(filters, 'timestamp.from', '');
       const ownerPost = get(filters, 'owner', '');
@@ -155,6 +155,7 @@ module.exports = {
       const facetFilters = []
 
       if (ownerPost) facetFilters.push([`owner:${ownerPost}`])
+      if (room) facetFilters.push([`room:${room}`])
       if (status) facetFilters.push([`status.active:${status == "active" ? 'true' : 'false'}`])
       if (hasReported) facetFilters.push([`_tags:has_reported`])
 
@@ -188,6 +189,7 @@ module.exports = {
         };
 
         if (facetFilters.length) payload.facetFilters = facetFilters
+        console.log(payload)
         const searchDocs = await index.search(search, payload)
 
         const ids = searchDocs.hits.map(doc => doc.objectID)
@@ -239,6 +241,11 @@ module.exports = {
       const data = await db.doc(targetCollection).get()
       const status = {}
 
+      const oldDocAlgolia = await index.getObject(postId, {
+        attributesToRetrieve: ['_tags']
+      });
+      let _tags = oldDocAlgolia._tags || []
+
       try {
         await db.doc(targetCollection)
           .get()
@@ -249,12 +256,14 @@ module.exports = {
               status.flag = [...(oldPost.status.flag || []), ...flags]
             }
 
-            if (isNullOrUndefined(takedown)) {
+            if (takedown) {
               status.takedown = takedown
+              if (_tags.filter((tag) => tag !== 'has_reported')) _tags.push('has_reported')
             }
 
-            if (isNullOrUndefined(active)) {
+            if (active) {
               status.active = active
+              _tags = _tags.filter(tag => tag !== 'has_reported')
             }
 
             return doc.ref.update({ status })
@@ -264,6 +273,7 @@ module.exports = {
         await index.partialUpdateObjects([{
           objectID: postId,
           status,
+          _tags
         }]);
 
       } catch (err) {

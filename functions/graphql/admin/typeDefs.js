@@ -39,6 +39,8 @@ module.exports = gql`
         roomName: String
         startingDate: String
         tillDate: String
+        address: String
+        isDeactive: Boolean
     }
     type Media {
         content: [String]
@@ -137,6 +139,14 @@ module.exports = gql`
         hitsPerPage: Int
         processingTimeMS: Float
     }
+    type SearchRoom {
+        hits: [Room]
+        page: Int
+        nbHits: Int
+        nbPages: Int
+        hitsPerPage: Int
+        processingTimeMS: Float
+    }
     type SearchPost {
         hits: [Post]
         page: Int
@@ -153,8 +163,9 @@ module.exports = gql`
         getAdmin: [Admin]
         # Search
         searchUser(search: String, status: String, perPage: Int, page: Int, filters: RequestFilterUser ): SearchUser!
-        searchPosts(search: String, perPage: Int, page: Int, hasReported: Boolean, useDetailLocation: Boolean, range: Float, location: String, filters: RequestFilter ): SearchPosts!
-        
+        searchPosts(search: String, perPage: Int, page: Int, hasReported: Boolean, useDetailLocation: Boolean, range: Float, location: String, filters: RequestFilter, room: String ): SearchPosts!
+        searchRoom(name: String, location: String, useDetailLocation: Boolean, page: Int, perPage: Int): SearchRoom
+
         # Randomization
         searchThemes(name: String): [ThemeType]
 
@@ -263,6 +274,7 @@ module.exports = gql`
 
         # Create New Data
         createRoom(roomName: String, description: String, startingDate: String, tillDate: String, displayPicture: String, location: Location, range: Int): String
+        updateRoom(isDeactive: Boolean, roomId: ID, roomName: String, description: String, startingDate: String, tillDate: String, displayPicture: String, location: Location, range: Int): Room
         reportPostById(idPost: ID!, content: String, userIdReporter: ID!): ReportPost!
         createReportPostById(idPost: ID!, content: String, userIdReporter: ID!): ReportPost
         createNewTheme(name: String, colors: [Colors], adjective: [Adjective], nouns: [Nouns]): ThemeType

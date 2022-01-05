@@ -7,7 +7,8 @@ module.exports = {
     Query: {
         ...adminResolvers.Query,
         ...usersResolvers.Query,
-        ...postsResolvers.Query
+        ...postsResolvers.Query,
+        ...roomResolvers.Query
     },
     Mutation: {
         ...adminResolvers.Mutation,
