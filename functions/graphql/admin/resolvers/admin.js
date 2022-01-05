@@ -33,7 +33,10 @@ module.exports = {
     Query: {
         async getAdmin() {
             const getAdmin = await db.collection('admin').get()
-            const admin = getAdmin.docs.map(doc => doc.data())
+            const admin = getAdmin.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }))
 
             try {
                 return admin
@@ -110,6 +113,31 @@ module.exports = {
             }
             catch (err) {
                 throw new Error(err)
+            }
+        },
+        async setStatusAdmin(_, { adminId, isActive, isBanned }, ctx) {
+            const { name, level } = await adminAuthContext(ctx) // TODO: add condition action only for some privilage
+            if (!name) throw new Error('Access Denied')
+
+            let newDataAdmin = {}
+            try {
+                await db.doc(`/admin/${adminId}`).get().then(
+                    doc => {
+                        const oldData = doc.data();
+                        const payload = {
+                            ...oldData,
+                            isActive: isBanned ? false : true,
+                            isBanned: isActive ? true : false
+                        }
+                        
+                        newDataAdmin = { id: adminId, ...payload };
+                        doc.ref.update({ ...oldData, isActive: isBanned ? false : true, isBanned })
+                    }
+                )
+    
+                return newDataAdmin;
+            } catch (err) {
+                return err;
             }
         },
         async createNewTheme(_, { name, colors, adjective, nouns }, context) {

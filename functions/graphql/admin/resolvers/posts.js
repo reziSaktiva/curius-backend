@@ -156,7 +156,7 @@ module.exports = {
 
       if (ownerPost) facetFilters.push([`owner:${ownerPost}`])
       if (status) facetFilters.push([`status.active:${status == "active" ? 'true' : 'false'}`])
-      if (hasReported) facetFilters.push([`reportedCount > 1`])
+      if (hasReported) facetFilters.push([`_tags:has_reported`])
 
       if (timestampFrom) {
         const dateFrom = new Date(timestampFrom).getTime();
@@ -194,7 +194,7 @@ module.exports = {
         if (!ids.length) return searchDocs
 
         const getPosts = await db.collection('posts').where('id', 'in', ids).get()
-        const posts = await getPosts.docs.map(async doc => {
+        const posts = await getPosts.docs.map(async (doc, idx) => {
           const dataParse = doc.data()
           if (!useDetailLocation) return dataParse
 
@@ -213,6 +213,7 @@ module.exports = {
 
           return {
             ...dataParse,
+            reportedCount: searchDocs[idx].reportedCount,
             location: {
               ...dataParse.location,
               detail: {
