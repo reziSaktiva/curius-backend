@@ -1157,13 +1157,13 @@ module.exports = {
               newPost.id = doc.id;
               newId = doc.id;
 
-              const { lat, lng } = location
               // Set Posts on algolia
               const newPostPayload = {
                 ...newPost,
                 objectID: newId,
                 _geoloc: {
-                  lat, lng
+                  lat: location.lat,
+                  lng: location.lng
                 },
                 // field algolia
                 date_timestamp: Date.now()
@@ -1291,7 +1291,7 @@ module.exports = {
                 return subcribeCollection.get();
               })
               .then((data) => {
-                index.deleteObject(document.id.toString())
+                // index.deleteObject(document.id.toString())
                 document.delete();
                 return data.docs.forEach((doc) => {
                   const docOwner = doc.data().owner;
