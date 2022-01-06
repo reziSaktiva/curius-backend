@@ -8,8 +8,6 @@ const randomGenerator = require("../../../utility/randomGenerator");
 
 const { server, client } = require('../../../utility/algolia')
 
-const { ALGOLIA_INDEX_POSTS } = require('../../../constant/post')
-
 module.exports = {
   Query: {
     async getPosts(_, { lat, lng, range = 1, type, page }) {
@@ -36,11 +34,6 @@ module.exports = {
         "facets": [
           "*"
         ],
-        "facetFilters": [
-          [
-            "status.active:true"
-          ]
-        ]
       };
 
       const geoLocPayload = lng && lat && {
@@ -1149,27 +1142,11 @@ module.exports = {
             newPost.repostedPost = repostedPost
           }
 
-          const index = client.initIndex(ALGOLIA_INDEX_POSTS);
-          let newId = null;
           await db.collection(`${room ? `/room/${room}/posts` : "posts"}`)
             .add(newPost)
             .then((doc) => {
               newPost.id = doc.id;
-              newId = doc.id;
 
-              const { lat, lng } = location
-              // Set Posts on algolia
-              const newPostPayload = {
-                ...newPost,
-                objectID: newId,
-                _geoloc: {
-                  lat, lng
-                },
-                // field algolia
-                date_timestamp: Date.now()
-              };
-
-              index.saveObjects([newPostPayload], { autoGenerateObjectIDIfNotExist: false })
               doc.update({ id: doc.id });
             });
 
@@ -1241,8 +1218,6 @@ module.exports = {
       const subcribeCollection = db.collection(`/${room ? `room/${room}/posts` : 'posts'}/${id}/subscribes`);
       const likesData = db.collection(`/${room ? `room/${room}/posts` : 'posts'}/${id}/likes`);
 
-      const index = client.initIndex('posts');
-
       try {
         await document.get().then(async (doc) => {
           if (!doc.exists) {
@@ -1291,7 +1266,6 @@ module.exports = {
                 return subcribeCollection.get();
               })
               .then((data) => {
-                index.deleteObject(document.id.toString())
                 document.delete();
                 return data.docs.forEach((doc) => {
                   const docOwner = doc.data().owner;
@@ -1327,7 +1301,7 @@ module.exports = {
         id,
         room
       );
-      const index = client.initIndex(ALGOLIA_INDEX_POSTS);
+
       const postDocument = db.doc(`/${room ? `room/${room}/posts` : 'posts'}/${id}`);
       const likeCollection = db.collection(`/${room ? `room/${room}/posts` : 'posts'}/${id}/likes`);
       const subscribeCollection = db.collection(`/${room ? `room/${room}/posts` : 'posts'}/${id}/subscribes`);
@@ -1359,11 +1333,6 @@ module.exports = {
             if (!isLiked) {
               // Unlike
               doc.ref.update({ likeCount: post.likeCount - 1, rank: post.rank - 1 })
-              index.partialUpdateObject({
-                objectID: post.id,
-                likeCount: post.likeCount - 1,
-                rank: post.rank - 1
-              })
 
               likeData = {
                 owner: username,
@@ -1417,11 +1386,6 @@ module.exports = {
             } else {
               // Like
               doc.ref.update({ likeCount: post.likeCount + 1, rank: post.rank + 1 });
-              index.partialUpdateObject({
-                objectID: post.id,
-                likeCount: post.likeCount + 1,
-                rank: post.rank + 1
-              })
 
               return likeCollection
                 .add({
