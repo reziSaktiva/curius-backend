@@ -17,7 +17,6 @@ module.exports = {
                     const contentLocation = new LatLng(parseFloat(lat), parseFloat(lng));
 
                     const distance = computeDistanceBetween(currentLatlng, contentLocation)
-                    console.log(distance / 1000);
                     if ((distance / 1000) <= location.range) {
                         nearRoom.push(doc.data());
                     }
