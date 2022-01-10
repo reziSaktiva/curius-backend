@@ -59,7 +59,7 @@ exports.onPostCreate = functions.region('asia-southeast2')
     .firestore
     .document('/posts/{id}')
     .onCreate(async (snapshot, context) => {
-        try{
+        try {
             const newData = snapshot.data();
             const id = context.params.id
 
@@ -73,8 +73,7 @@ exports.onPostCreate = functions.region('asia-southeast2')
                 // field algolia
                 date_timestamp: new Date(newData.createdAt).getTime()
             }
-
-            postsIndex.saveObject(newPostPayload)
+            postsIndex.saveObjects([newPostPayload], { autoGenerateObjectIDIfNotExist: false })
         }
         catch (err) {
             functions.logger.log(err)
@@ -85,16 +84,16 @@ exports.onPostUpdate = functions.region('asia-southeast2')
     .firestore
     .document('/posts/{id}')
     .onUpdate(async (snapshot, context) => {
-        try{
+        try {
             const newData = snapshot.after.data();
             const objectID = snapshot.after.id
 
-            postsIndex.saveObject({...newData, objectID})
+            postsIndex.saveObject({ ...newData, objectID })
         }
         catch (err) {
             functions.logger.log(err)
         }
-    })   
+    })
 
 exports.graphql = functions.region('asia-southeast2').https.onRequest(client)
 exports.admin = functions.region('asia-southeast2').https.onRequest(admin)
