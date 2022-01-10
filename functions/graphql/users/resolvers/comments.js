@@ -23,8 +23,8 @@ module.exports = {
                     createdAt: new Date().toISOString(),
                     text,
                     reply,
-                    photo
-
+                    photo,
+                    reportedCount: 0
                 }
 
                 let postOwner;
