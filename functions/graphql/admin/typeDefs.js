@@ -159,13 +159,32 @@ module.exports = gql`
         owner: User
         post: Post
     }
+    type CommentReported {
+        id: ID
+        text: String
+        owner: String
+        timestamp: String
+        reportedCount: Int
+        status: String
+    }
+    type SearchCommentReported {
+        hits: [CommentReported]
+        page: Int
+        nbHits: Int
+        nbPages: Int
+        hitsPerPage: Int
+        processingTimeMS: Float
+    }
     type Query {
         getAdmin: [Admin]
+        getReportedListByCommentId(search: String, commentId: ID, page: Int, perPage: Int): SearchCommentReported
+
         # Search
         searchUser(search: String, status: String, perPage: Int, page: Int, filters: RequestFilterUser ): SearchUser!
-        searchPosts(search: String, perPage: Int, page: Int, hasReported: Boolean, useDetailLocation: Boolean, range: Float, location: String, filters: RequestFilter, room: String ): SearchPosts!
+        searchPosts(search: String, perPage: Int, page: Int, hasReported: Boolean, useDetailLocation: Boolean, range: Float, location: String, filters: RequestFilter, room: String, sortBy: String ): SearchPosts!
         searchRoom(name: String, location: String, useDetailLocation: Boolean, page: Int, perPage: Int): SearchRoom
-
+        searchCommentReported(search: String, sortBy: String, page: Int, perPage: Int, filters: RequestFilterUser): SearchCommentReported
+        
         # Randomization
         searchThemes(name: String): [ThemeType]
 
@@ -266,6 +285,7 @@ module.exports = gql`
         checkEmail(email: String uid: String name: String): Boolean
         registerAdmin(email: String! level: Int! name: String!): String
         changeUserStatus(status: String!, username: String!): User!
+        setStatusComment(idComment: ID, active: Boolean, takedown: Boolean, deleted: Boolean): CommentReported
         setStatusPost(active: Boolean, flags: [String], takedown: Boolean, postId: String): Post!\
 
         # Randomization
@@ -276,7 +296,11 @@ module.exports = gql`
         createRoom(roomName: String, description: String, startingDate: String, tillDate: String, displayPicture: String, location: Location, range: Int): String
         updateRoom(isDeactive: Boolean, roomId: ID, roomName: String, description: String, startingDate: String, tillDate: String, displayPicture: String, location: Location, range: Int): Room
         reportPostById(idPost: ID!, content: String, userIdReporter: ID!): ReportPost!
+        reportedComment(idComment: ID!, idPost: ID, reason: String!, roomId: ID, username: String!): String
         createReportPostById(idPost: ID!, content: String, userIdReporter: ID!): ReportPost
         createNewTheme(name: String, colors: [Colors], adjective: [Adjective], nouns: [Nouns]): ThemeType
+        
+        # Replication
+        createReplicatePostAscDesc: String
     }
 `

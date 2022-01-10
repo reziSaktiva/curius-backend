@@ -5,7 +5,7 @@ const { server, client } = require('../../../utility/algolia')
 const { db } = require('../../../utility/admin')
 const { UserInputError } = require('apollo-server-express');
 
-const { ALGOLIA_INDEX_POSTS, ALGOLIA_INDEX_REPORT_POSTS } = require('../../../constant/post')
+const { ALGOLIA_INDEX_POSTS, ALGOLIA_INDEX_REPORT_POSTS, ALGOLIA_INDEX_POSTS_ASC, ALGOLIA_INDEX_POSTS_DESC } = require('../../../constant/post')
 const { API_KEY_GEOCODE } = require('../../../utility/secret/API')
 
 const isNullOrUndefined = data => {
@@ -93,7 +93,61 @@ module.exports = {
         throw new Error(err)
       }
     },
-    async searchPosts(_, { perPage = 5, page, location, range = 40, hasReported = false, useDetailLocation = false, search, filters, room }, _ctx) {
+    async getReportedListByCommentId(_, { search = "", commentId, perPage, page }, _ctx) {
+      const index = client.initIndex('report_comments');
+      
+      const defaultPayload = {
+        "attributesToRetrieve": "*",
+        "attributesToSnippet": "*:20",
+        "snippetEllipsisText": "…",
+        "responseFields": "*",
+        "getRankingInfo": true,
+        "analytics": false,
+        "enableABTest": false,
+        "explain": "*",
+        "facets": ["*"]
+      };
+
+      const pagination = {
+        "hitsPerPage": perPage || 10,
+        "page": page || 0,
+      }
+
+      try {
+        const facetFilters = []
+        facetFilters.push([`idComment:${commentId}`])
+        const payload = {
+          ...defaultPayload,
+          ...pagination
+        };
+        payload.facetFilters = facetFilters
+        const searchDocs = await index.search(search, payload)
+  
+        const comments = await searchDocs.hits.map(async doc => {
+          const comment = await db.doc(`/posts/${doc.idPost}/comments/${doc.idComment}`).get()
+          const dataParse = await comment.data()
+          console.log('entrypoint: ', `/posts/${doc.idPost}/comments/${doc.idComment}`)
+          console.log('dataParse: ', dataParse)
+          return ({
+            text: dataParse.text,
+            owner: dataParse.owner,
+            id: doc.idComment,
+            timestamp: dataParse.timestamp,
+            reportedCount: dataParse.reportedCount,
+            status: dataParse.status.active ? 'Active' : (dataParse.status.takedown && 'Takedown')
+          })
+        })
+  
+        console.log(await comments)
+        return {
+          ...searchDocs,
+          hits: comments
+        }
+      } catch (err) {
+        return err
+      }
+    },
+    async searchPosts(_, { perPage = 5, page, location, range = 40, hasReported = false, useDetailLocation = false, search, filters, room, sortBy = 'desc' }, _ctx) {
       const googleMapsClient = new Client({ axiosInstance: axios });
       const timestampFrom = get(filters, 'timestamp.from', '');
       const ownerPost = get(filters, 'owner', '');
@@ -103,7 +157,12 @@ module.exports = {
       const status = get(filters, 'status', 0);
       const media = get(filters, 'media', []);
 
-      const index = client.initIndex(ALGOLIA_INDEX_POSTS);
+      let indexKey = ALGOLIA_INDEX_POSTS
+      if (sortBy === 'desc') indexKey = ALGOLIA_INDEX_POSTS_DESC
+      if (sortBy === 'asc') indexKey = ALGOLIA_INDEX_POSTS_ASC
+
+      console.log(indexKey)
+      const index = client.initIndex(indexKey);
 
       const defaultPayload = {
         "attributesToRetrieve": "*",
@@ -158,6 +217,7 @@ module.exports = {
       if (room) facetFilters.push([`room:${room}`])
       if (status) facetFilters.push([`status.active:${status == "active" ? 'true' : 'false'}`])
       if (hasReported) facetFilters.push([`_tags:has_reported`])
+      // if (hasReported) facetFilters.push([`reportedCount > 1`])
 
       if (timestampFrom) {
         const dateFrom = new Date(timestampFrom).getTime();
@@ -198,6 +258,7 @@ module.exports = {
         const getPosts = await db.collection('posts').where('id', 'in', ids).get()
         const posts = await getPosts.docs.map(async (doc, idx) => {
           const dataParse = doc.data()
+          console.log('timestamp: ', dataParse?.createdAt)
           if (!useDetailLocation) return dataParse
 
           const request = await googleMapsClient
@@ -231,6 +292,73 @@ module.exports = {
         return err
       }
     },
+    async searchCommentReported(_, { search, sortBy = 'desc', page, perPage, filters }){
+      const timestampTo = get(filters, 'timestamp.to', '');
+      const timestampFrom = get(filters, 'timestamp.from', '');
+      let indexKey = 'report_comments'
+      if (sortBy === 'desc') indexKey = 'report_comments_date_desc'
+      if (sortBy === 'asc') indexKey = 'report_comments_date_asc'
+
+      const index = client.initIndex(indexKey);
+
+      const defaultPayload = {
+        "attributesToRetrieve": "*",
+        "attributesToSnippet": "*:20",
+        "snippetEllipsisText": "…",
+        "responseFields": "*",
+        "getRankingInfo": true,
+        "analytics": false,
+        "enableABTest": false,
+        "explain": "*",
+        "facets": ["*"]
+      };
+
+      const pagination = {
+        "hitsPerPage": perPage || 10,
+        "page": page || 0,
+      }
+      
+      const facetFilters = []
+
+      if (timestampFrom) {
+        const dateFrom = new Date(timestampFrom).getTime();
+        const dateTo = new Date(timestampTo).getTime();
+
+        facetFilters.push([`date_timestamp >= ${dateFrom} AND date_timestamp <= ${dateTo}`]);
+      }
+
+      try {
+        const payload = {
+          ...defaultPayload,
+          ...pagination
+        };
+        if (facetFilters.length) payload.facetFilters = facetFilters
+        console.log('payload: ', payload)
+        const searchDocs = await index.search(search, payload)
+        console.log('search: ', searchDocs)
+
+        const comments = searchDocs.hits.map(async doc => {
+          const comment = await db.doc(`/posts/${doc.idPost}/comments/${doc.idComment}`).get()
+          const dataParse = await comment.data()
+          return ({
+            text: dataParse.text,
+            owner: dataParse.owner,
+            timestamp: dataParse.createAt,
+            reportedCount: dataParse.reportedCount,
+            id: doc.idComment,
+            status: dataParse.status.active ? 'Active' : (dataParse.status.takedown && 'Takedown')
+          })
+        })
+
+        return {
+          ...searchDocs,
+          hits: comments
+        }
+
+      } catch(err) {
+        return err
+      }
+    },
   },
   Mutation: {
     async setStatusPost(_, { active, flags = [], takedown, postId }, _ctx) {
@@ -258,12 +386,10 @@ module.exports = {
 
             if (takedown) {
               status.takedown = takedown
-              if (_tags.filter((tag) => tag !== 'has_reported')) _tags.push('has_reported')
             }
 
             if (active) {
               status.active = active
-              _tags = _tags.filter(tag => tag !== 'has_reported')
             }
 
             return doc.ref.update({ status })
@@ -286,6 +412,45 @@ module.exports = {
         status
       }
     },
+    async setStatusComment(_, { idComment, active, takedown, deleted }, _ctx) {
+      const dataReported = db.collection('/reports_comment').where('idComment', '==', idComment).get()
+      const parseData = (await dataReported).docs.map(doc => doc.data())
+
+      const type = parseData[0].parentTypePost;
+      const postId = parseData[0].idPost || '';
+
+      const commentCollection = db.doc(`/${type === 'room' ? `room/${parseData[0].idRoom}/posts` : 'posts'}/${postId}/comments/${idComment}`)
+
+      let newData = {}
+      await commentCollection.get().then(
+        doc => {
+          const oldData = doc.data()
+          const status = {}
+          if (active) {
+            status.active = true;
+            status.takedown = false;
+          }
+
+          if (takedown) {
+            status.active = false;
+            status.takedown = true
+          }
+
+          newData = { id: doc.id, ...oldData, status }
+          return doc.ref.update({ status })
+        }
+      )
+
+      return {
+        id: newData.id,
+        text: newData.text,
+        owner: newData.owner,
+        timestamp: newData.createAt,
+        reportedCount: newData.reportedCount,
+        status: newData.status.active ? 'Active': (newData.status.takedown && 'Takedown')
+      }
+
+    },
     async createReportPostById(_, { idPost, content, userIdReporter }, _ctx) {
       // TODO: makesure which level can reported post
       // const { name, level } = await adminAuthContext(context)
@@ -301,6 +466,12 @@ module.exports = {
             return doc.data()
           }
         )
+
+        const oldDocAlgolia = await index.getObject(postId, {
+          attributesToRetrieve: ['_tags']
+        });
+        let _tags = oldDocAlgolia._tags || []
+        _tags.push('has_reported')
 
         const payload = {
           idPost: posts.id,
@@ -321,17 +492,141 @@ module.exports = {
         await indexPost.partialUpdateObjects([{
           objectID: posts.id,
           reportedCount: posts.reportedCount,
+          _tags,
         }]);
 
         const parseSnapshot = await (await writeRequest.get()).data()
 
         return {
           ...parseSnapshot,
-          totalReported: posts.reportedCount
+          totalReported: posts.reportedCount,
+          _tags,
         }
       } catch (err) {
         return err;
       }
     },
+    async createReplicatePostAscDesc(_, { } , _ctx) {
+      const index = server.initIndex('posts');
+
+      await index.setSettings({
+        replicas: [
+          'posts_date_desc',
+          'posts_date_asc'
+        ]
+      })
+
+      const replicasIndexDesc = server.initIndex('posts_date_desc')
+      const replicasIndexAsc = server.initIndex('posts_date_asc')
+      
+      await replicasIndexAsc.setSettings({
+        ranking: [
+          "asc(date_timestamp)",
+          "typo",
+          "geo",
+          "words",
+          "filters",
+          "proximity",
+          "attribute",
+          "exact",
+          "custom"
+        ]
+      })
+
+      await replicasIndexDesc.setSettings({
+        ranking: [
+          "desc(date_timestamp)",
+          "typo",
+          "geo",
+          "words",
+          "filters",
+          "proximity",
+          "attribute",
+          "exact",
+          "custom"
+        ]
+      })
+
+      return "Success Replication Posts Index Algolia"
+    },
+    async reportedComment(_, { idComment, idPost, reason, roomId, username }) {
+      /**
+       * Get Comment 
+       */
+      try {
+        let commentText = ''
+        let flagHasReportedBefore = false;
+        const commentCollection = db.doc(`/${roomId ? `room/${roomId}/posts` : 'posts'}/${idPost}/comments/${idComment}`)
+        await commentCollection.get().then(
+          doc => {
+            if (!doc.exists) throw new UserInputError('Postingan tidak ditemukan/sudah dihapus')
+  
+            const oldData = doc.data()
+            const listOfReported = oldData.logReported || []
+            const hasReportedBefore = listOfReported.filter(user => user === username)
+            console.log('hasReportedBefore: ', !hasReportedBefore.length)
+            flagHasReportedBefore = hasReportedBefore.length;
+  
+            if (!hasReportedBefore.length) {
+              const increment = (oldData.reportedCount || 0) + 1
+              commentText = oldData.text;
+    
+              return doc.ref.update({
+                reportedCount: increment,
+                status: { takedown: false, active: true },
+                logReported: [...listOfReported, username]
+              })
+            }
+          }
+        )
+  
+        if (flagHasReportedBefore) return `Already reported this comment before`
+  
+        const payload = {
+          objectID: idComment,
+          idComment,
+          idPost,
+          idRoom: roomId,
+          parentTypePost: roomId ? 'room' : 'global-posts',
+          text: commentText,
+          date_timestamp: new Date().getTime(),
+          reason,
+          totalReported: 1,
+          isTakedown: false,
+          isActive: true
+        }
+
+        const writeRequest = await db.collection('/reports_comment').add(payload)
+        await (await writeRequest.get()).data()
+  
+        const index = server.initIndex('report_comments');
+        await index.getObject(idComment).then(
+          async () => {
+            await index.partialUpdateObject({
+              count: {
+                _operation: 'Increment',
+                value: 1
+              },
+              objectID:  idComment
+            })
+          }
+        ).catch(
+          async err => {
+            await index.saveObjects([payload], { autoGenerateObjectIDIfNotExist: false }).catch(err => {
+              console.log(err);
+            })
+          }
+        )
+  
+        return `Success Reported Comment ${idComment} in Post ${idPost}`;
+      } catch (err) {
+        console.log(err)
+        throw new Error(err)
+      }
+    },
   }
 }
+
+/**
+ * 
+ */
