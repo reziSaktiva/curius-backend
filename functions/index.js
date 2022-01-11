@@ -42,17 +42,13 @@ serverUsers.applyMiddleware({ app: client, path: '/', cors: true })
 serverAdmin.applyMiddleware({ app: admin, path: '/', cors: true })
 
 const postsIndex = algoliaClient.initIndex(ALGOLIA_INDEX_POSTS)
-const roomPostsIndex = algoliaClient.initIndex(ALGOLIA_INDEX_POSTS_ROOMS)
 
 exports.onPostDelete = functions.region('asia-southeast2')
     .firestore
     .document('/posts/{id}')
-    .onDelete(async (snapshot, context) => {
+    .onDelete(async (_snapshot, context) => {
         try {
-            const data = snapshot.data()
-            const index = data.room ? roomPostsIndex : postsIndex;
-
-            index.deleteObject(context.params.id.toString())
+            postsIndex.deleteObject(context.params.id.toString())
         }
         catch (err) {
             functions.logger.log(err)
@@ -65,12 +61,19 @@ exports.onPostCreate = functions.region('asia-southeast2')
     .onCreate(async (snapshot, context) => {
         try {
             const newData = snapshot.data();
-            const id = context.params.id
-            const index = newData.room ? roomPostsIndex : postsIndex;
+            const id = context.params.id;
+            let tags = []
+
+            if(newData.room){
+                tags.push('has_post-room')
+            } else {
+                tags.push('is_not_post_room')
+            }
 
             const newPostPayload = {
                 ...newData,
                 objectID: id,
+                _tags: tags,
                 _geoloc: {
                     lat: newData.location.lat,
                     lng: newData.location.lng
@@ -78,7 +81,7 @@ exports.onPostCreate = functions.region('asia-southeast2')
                 // field algolia
                 date_timestamp: new Date(newData.createdAt).getTime()
             }
-            index.saveObjects([newPostPayload], { autoGenerateObjectIDIfNotExist: false })
+            postsIndex.saveObjects([newPostPayload], { autoGenerateObjectIDIfNotExist: false })
         }
         catch (err) {
             functions.logger.log(err)
@@ -88,13 +91,12 @@ exports.onPostCreate = functions.region('asia-southeast2')
 exports.onPostUpdate = functions.region('asia-southeast2')
     .firestore
     .document('/posts/{id}')
-    .onUpdate(async (snapshot, context) => {
+    .onUpdate(async (snapshot, _context) => {
         try {
             const newData = snapshot.after.data();
-            const objectID = snapshot.after.id
-            const index = newData.room ? roomPostsIndex : postsIndex;
+            const objectID = snapshot.after.id;
 
-            index.saveObject({ ...newData, objectID })
+            postsIndex.saveObject({ ...newData, objectID })
         }
         catch (err) {
             functions.logger.log(err)

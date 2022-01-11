@@ -10,7 +10,7 @@ const { server, client } = require('../../../utility/algolia')
 
 module.exports = {
   Query: {
-    async getPosts(_, { lat, lng, range = 1, type, page }) {
+    async getPosts(_, { lat, lng, range = 1, type, page, room }) {
       if (!lat || !lng) {
         throw new UserInputError('Lat and Lng is Required')
       }
@@ -18,6 +18,15 @@ module.exports = {
       const rank = type !== "Popular" ? 'posts_date_desc' : 'posts_rank_desc'
 
       const index = client.initIndex(rank)
+
+      const facetFilters = []
+
+      if(room){
+        facetFilters.push(['_tags:has_post_room'])
+        facetFilters.push([`room:${room}`])
+      } else {
+        facetFilters.push(['_tags:is_not_post_room'])
+      }
 
       const defaultPayload = {
         "getRankingInfo": true,
@@ -46,11 +55,11 @@ module.exports = {
         "page": page || 0,
       }
 
-      const filters = rank === 'posts_rank_desc' ? 'rank > 0' : ''
+      const filters = rank === 'posts_rank_desc' ? 'rank > 0' : '' 
 
       try {
         return new Promise(async (resolve, reject) => {
-          index.search("", { ...defaultPayload, ...geoLocPayload, ...pagination, filters })
+          index.search("", { ...defaultPayload, ...geoLocPayload, ...pagination, filters, facetFilters })
             .then(async res => {
               const { hits, page, nbHits, nbPages, hitsPerPage, processingTimeMS } = res;
 
