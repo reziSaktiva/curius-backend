@@ -418,14 +418,14 @@ module.exports = {
           })
       })
     },
-    async getPost(_, { id, room }, context) {
+    async getPost(_, { id }, context) {
       const { username } = await fbAuthContext(context)
 
-      const postDocument = db.doc(`/${room ? `room/${room}/posts` : 'posts'}/${id}`)
-      const commentCollection = db.collection(`/${room ? `room/${room}/posts` : 'posts'}/${id}/comments`).orderBy('createdAt', 'asc')
-      const likeCollection = db.collection(`/${room ? `room/${room}/posts` : 'posts'}/${id}/likes`)
-      const mutedCollection = db.collection(`/${room ? `room/${room}/posts` : 'posts'}/${id}/muted`)
-      const subscribeCollection = db.collection(`/${room ? `room/${room}/posts` : 'posts'}/${id}/subscribes`)
+      const postDocument = db.doc(`/posts/${id}`)
+      const commentCollection = db.collection(`/posts/${id}/comments`).orderBy('createdAt', 'asc')
+      const likeCollection = db.collection(`/posts/${id}/likes`)
+      const mutedCollection = db.collection(`/posts/${id}/muted`)
+      const subscribeCollection = db.collection(`/posts/${id}/subscribes`)
 
       if (username) {
         try {
@@ -1142,7 +1142,7 @@ module.exports = {
             newPost.repostedPost = repostedPost
           }
 
-          await db.collection(`${room ? `/room/${room}/posts` : "posts"}`)
+          await db.collection("posts")
             .add(newPost)
             .then((doc) => {
               newPost.id = doc.id;
@@ -1151,7 +1151,7 @@ module.exports = {
             });
 
           if (repostedPost.idReposted) {
-            db.doc(`/${repostedPost.fromRoom ? `room/${repostedPost.fromRoom}/posts` : 'posts'}/${repostedPost.idReposted}`).get()
+            db.doc(`/posts/${repostedPost.idReposted}`).get()
               .then(async doc => {
                 doc.ref.update({ repostCount: doc.data().repostCount + 1, rank: doc.data().rank + 1 })
                 if (doc.data().owner !== username) {
@@ -1211,12 +1211,12 @@ module.exports = {
     async deletePost(_, { id, room }, context) {
       const { username } = await fbAuthContext(context);
 
-      const document = db.doc(`/${room ? `room/${room}/posts` : 'posts'}/${id}`);
-      const commentsCollection = db.collection(`/${room ? `room/${room}/posts` : 'posts'}/${id}/comments`);
-      const likesCollection = db.collection(`/${room ? `room/${room}/posts` : 'posts'}/${id}/likes`);
-      const randomizedCollection = db.collection(`/${room ? `room/${room}/posts` : 'posts'}/${id}/randomizedData`);
-      const subcribeCollection = db.collection(`/${room ? `room/${room}/posts` : 'posts'}/${id}/subscribes`);
-      const likesData = db.collection(`/${room ? `room/${room}/posts` : 'posts'}/${id}/likes`);
+      const document = db.doc(`/posts/${id}`);
+      const commentsCollection = db.collection(`/posts/${id}/comments`);
+      const likesCollection = db.collection(`/posts/${id}/likes`);
+      const randomizedCollection = db.collection(`/posts/${id}/randomizedData`);
+      const subcribeCollection = db.collection(`/posts/${id}/subscribes`);
+      const likesData = db.collection(`/posts/${id}/likes`);
 
       try {
         await document.get().then(async (doc) => {
@@ -1240,19 +1240,19 @@ module.exports = {
               })
               .then((data) => {
                 data.forEach((doc) => {
-                  db.doc(`/${room ? `room/${room}/posts` : 'posts'}/${id}/comments/${doc.data().id}`).delete();
+                  db.doc(`/posts/${id}/comments/${doc.data().id}`).delete();
                 });
                 return likesCollection.get();
               })
               .then((data) => {
                 data.forEach((doc) => {
-                  db.doc(`/${room ? `room/${room}/posts` : 'posts'}/${id}/likes/${doc.data().id}`).delete();
+                  db.doc(`/posts/${id}/likes/${doc.data().id}`).delete();
                 });
                 return randomizedCollection.get();
               })
               .then((data) => {
                 data.forEach((doc) => {
-                  db.doc(`/${room ? `room/${room}/posts` : 'posts'}/${id}/randomizedData/${doc.data().id}`).delete();
+                  db.doc(`/posts/${id}/randomizedData/${doc.data().id}`).delete();
                 });
                 return db
                   .collection(`/users/${username}/notifications`)
@@ -1269,7 +1269,7 @@ module.exports = {
                 document.delete();
                 return data.docs.forEach((doc) => {
                   const docOwner = doc.data().owner;
-                  db.doc(`/${room ? `room/${room}/posts` : 'posts'}/${id}/subscribes/${doc.data().id}/`).delete();
+                  db.doc(`/posts/${id}/subscribes/${doc.data().id}/`).delete();
                   return db
                     .collection(`/users/${doc.data().owner}/notifications`)
                     .where("postId", "==", id)
@@ -1294,17 +1294,13 @@ module.exports = {
         throw new Error(err);
       }
     },
-    async likePost(_, { id, room }, context) {
+    async likePost(_, { id }, context) {
       const { username } = await fbAuthContext(context);
-      const { name, displayImage, colorCode } = await randomGenerator(
-        username,
-        id,
-        room
-      );
+      const { name, displayImage, colorCode } = await randomGenerator(username, id);
 
-      const postDocument = db.doc(`/${room ? `room/${room}/posts` : 'posts'}/${id}`);
-      const likeCollection = db.collection(`/${room ? `room/${room}/posts` : 'posts'}/${id}/likes`);
-      const subscribeCollection = db.collection(`/${room ? `room/${room}/posts` : 'posts'}/${id}/subscribes`);
+      const postDocument = db.doc(`/posts/${id}`);
+      const likeCollection = db.collection(`/posts/${id}/likes`);
+      const subscribeCollection = db.collection(`/posts/${id}/subscribes`);
 
       try {
         const { isLiked, likeId } = await likeCollection
@@ -1344,7 +1340,7 @@ module.exports = {
                 colorCode
               };
 
-              db.doc(`/${room ? `room/${room}/posts` : 'posts'}/${id}/likes/${likeId}`).delete();
+              db.doc(`/posts/${id}/likes/${likeId}`).delete();
               db.doc(`/users/${username}/liked/${likeId}`).delete();
 
               return subscribeCollection.get().then((data) => {
@@ -1409,7 +1405,7 @@ module.exports = {
 
                   db.doc(`/users/${username}/liked/${data.id}`).set(likeData);
 
-                  if (post.owner !== username && !room) {
+                  if (post.owner !== username) {
                     const notification = {
                       owner: post.owner,
                       recipient: post.owner,
@@ -1427,7 +1423,6 @@ module.exports = {
                       .add(notification)
                       .then((data) => {
                         data.update({ id: data.id });
-                        pubSub.publish(NOTIFICATION_ADDED, { notificationAdded: { ...notification, id: data.id } })
                       });
                   }
 
@@ -1455,7 +1450,6 @@ module.exports = {
                             .add(subNotif)
                             .then((data) => {
                               data.update({ id: data.id });
-                              pubSub.publish(NOTIFICATION_ADDED, { notificationAdded: { ...subNotif, id: data.id } })
                             });
                         }
                       });
@@ -1470,8 +1464,7 @@ module.exports = {
 
         return {
           ...likeData,
-          isLiked,
-          room
+          isLiked
         };
       } catch (err) {
         console.log(err);
@@ -1479,8 +1472,8 @@ module.exports = {
       }
     }, async mutePost(_, { postId, room }, context) {
       const { username } = await fbAuthContext(context)
-      const postDocument = db.doc(`/${room ? `room/${room}/posts` : 'posts'}/${postId}`)
-      const muteDocument = db.collection(`/${room ? `room/${room}/posts` : 'posts'}/${postId}/muted`)
+      const postDocument = db.doc(`/posts/${postId}`)
+      const muteDocument = db.collection(`/posts/${postId}/muted`)
 
       try {
         const { isMuted, muteId } = await muteDocument.where("owner", "==", username).limit(1).get()
@@ -1510,7 +1503,7 @@ module.exports = {
               throw new UserInputError('Postingan tidak di temukan')
             } else {
               if (!isMuted) {
-                db.doc(`/${room ? `room/${room}/posts` : 'posts'}/${postId}/muted/${muteId}`).delete()
+                db.doc(`/posts/${postId}/muted/${muteId}`).delete()
                 db.doc(`/users/${username}/muted/${muteId}`).delete()
                 mute = {
                   ...mute,
@@ -1540,16 +1533,15 @@ module.exports = {
 
 
     },
-    async subscribePost(_, { postId, room }, context) {
+    async subscribePost(_, { postId }, context) {
       const { username } = await fbAuthContext(context);
       const { name, displayImage, colorCode } = await randomGenerator(
         username,
-        postId,
-        room
+        postId
       );
 
-      const postDocument = db.doc(`/${room ? `room/${room}/posts` : 'posts'}/${postId}`);
-      const subscribeCollection = db.collection(`/${room ? `room/${room}/posts` : 'posts'}/${postId}/subscribes`);
+      const postDocument = db.doc(`/posts/${postId}`);
+      const subscribeCollection = db.collection(`/posts/${postId}/subscribes`);
 
       let postOwner;
       let subscribe;
@@ -1591,14 +1583,13 @@ module.exports = {
                 postOwner = doc.data().owner;
 
                 return db
-                  .collection(`/${room ? `room/${room}/posts` : 'posts'}/${postId}/subscribes`)
+                  .collection(`/posts/${postId}/subscribes`)
                   .add(subscribe)
                   .then((data) => {
                     data.update({ id: data.id });
 
                     db.collection(`/users/${username}/subscribed`).add({
-                      ...subscribe,
-                      room
+                      ...subscribe
                     }).then(data => {
                       data.update({ id: data.id })
                     })
@@ -1626,7 +1617,7 @@ module.exports = {
                     }
                   });
               } else {
-                db.doc(`/${room ? `room/${room}/posts` : 'posts'}/${postId}/subscribes/${subId}/`).delete();
+                db.doc(`/posts/${postId}/subscribes/${subId}/`).delete();
                 db.collection(`/users/${username}/subscribed/`).where('postId', '==', postId).get()
                   .then(data => {
                     db.doc(`/users/${username}/subscribed/${data.docs[0].id}`).delete()

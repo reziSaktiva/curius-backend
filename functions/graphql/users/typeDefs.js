@@ -30,6 +30,7 @@ module.exports = gql`
         roomName: String
         startingDate: String
         tillDate: String
+        postsCount: Int
         location: LatLong
     }
     type StatusPost {
@@ -135,7 +136,6 @@ module.exports = gql`
         displayImage: String!
         colorCode: String!
         postId: String!
-        room: String
         isLiked: Boolean
     },
     type Notification {
@@ -203,7 +203,7 @@ module.exports = gql`
         getProfilePosts(username: String): dataPost
         getRoomPosts(room: String!):[Post]!
         getProfileLikedPost(username: String): dataPost
-        getPost(id: ID! room: String): Post!
+        getPost(id: ID!): Post!
         getUserData(username: String): UserData
         getPostBasedOnNearestLoc(lat: String, lng: String): [Post]
         getNearRooms(lat: Float, lng: Float): [Room]
@@ -293,11 +293,11 @@ module.exports = gql`
         nextRoomPosts( id:ID!, room: String ): [Post]!
         nextPopularPosts( id:ID! lat: Float, lng: Float, range: Float): dataPost
         nextMoreForYou (id: ID): dataPost
-        createPost(text:String, media: [String] location: Location! repostedPost: Data room: String): Post!
-        subscribePost( postId: ID! room: String ): Subscribe!
+        createPost(text:String, media: [String] location: Location! repostedPost: Data room: ID): Post!
+        subscribePost( postId: ID! ): Subscribe!
         mutePost ( postId: ID! room: String ): Mute!
         deletePost( id: ID! room: String ): DeleteData
-        likePost(id: ID! room: String): Like
+        likePost(id: ID!): Like
         textSearch(search: String, perPage: Int, page: Int, range: Float, location: Location ): Search!
 
         # comments mutation

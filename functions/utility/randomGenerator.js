@@ -1,19 +1,19 @@
 const { UserInputError } = require('apollo-server-express')
 const { db } = require('./admin')
 
-module.exports = async (username, postId, room) => {
+module.exports = async (username, postId) => {
     const benda = [
-    "Hammer", "Ball", "Cow","Monkey","Dolphin",
-    "Horse", "Bowl", "Scissor","Camera","Glass",
-    "Tree", "Clover", "Star", "Rabbit", "Diamonds",
-    "Cat","Spades","Battery","Bear","Butterfly", 
-    "Donuts", "Eight", "Five","Flower","Foot", 
-    "Four", "Gifts","Headphones", "Heart", "Koala", 
-    "Moon", "Mushroom", "Nine","One", "Panda", 
-    "Pants","Pig", "Seven", "Six", "Socks",
-    "Sunglasses", "Strawberry", "T-shirt","Pumpkin", "Three",
-    "Tiger", "Two", "Unicorn", "X", "Zero" 
-]
+        "Hammer", "Ball", "Cow", "Monkey", "Dolphin",
+        "Horse", "Bowl", "Scissor", "Camera", "Glass",
+        "Tree", "Clover", "Star", "Rabbit", "Diamonds",
+        "Cat", "Spades", "Battery", "Bear", "Butterfly",
+        "Donuts", "Eight", "Five", "Flower", "Foot",
+        "Four", "Gifts", "Headphones", "Heart", "Koala",
+        "Moon", "Mushroom", "Nine", "One", "Panda",
+        "Pants", "Pig", "Seven", "Six", "Socks",
+        "Sunglasses", "Strawberry", "T-shirt", "Pumpkin", "Three",
+        "Tiger", "Two", "Unicorn", "X", "Zero"
+    ]
     const warna = [
         {
             namaWarna: "Yellow",
@@ -140,11 +140,11 @@ module.exports = async (username, postId, room) => {
             kode: "#43C6DB"
         }
     ]
-    const ajektif = ["Smelly", "Fat", "Broken", "Tall", "Short", 
-     "Grumpy", "Cute", "Adorable", "Stiff", "Chubby", "Annoying", "Disturbing",
-      "Big", "Small", "Calm", "Chaotic", "Disgusting", "Smart", "Crazy", "Beautiful", "Wise", "Rotten", "Bitter", "Fluffy", "Creepy", "Elegant",
-      "Unstable", "Arrogant", "Dying", "Chewy", "Happy", "Sad", "Crying", "Ripped", "Fake", "Shining", "Pierced", "Flat", "Cheap", "Suspicious",
-       "Coward", "Spooky", "Dirty", "Delicious", "Naughty", "Hansome", "Perfect", "Fast", "Slow", "Itchy" 
+    const ajektif = ["Smelly", "Fat", "Broken", "Tall", "Short",
+        "Grumpy", "Cute", "Adorable", "Stiff", "Chubby", "Annoying", "Disturbing",
+        "Big", "Small", "Calm", "Chaotic", "Disgusting", "Smart", "Crazy", "Beautiful", "Wise", "Rotten", "Bitter", "Fluffy", "Creepy", "Elegant",
+        "Unstable", "Arrogant", "Dying", "Chewy", "Happy", "Sad", "Crying", "Ripped", "Fake", "Shining", "Pierced", "Flat", "Cheap", "Suspicious",
+        "Coward", "Spooky", "Dirty", "Delicious", "Naughty", "Hansome", "Perfect", "Fast", "Slow", "Itchy"
     ]
 
     const randomNumber = Math.floor(Math.random() * 50)
@@ -155,8 +155,8 @@ module.exports = async (username, postId, room) => {
 
     const randomNama = `${ajektif[randomNumber]} ${warnaRandom.namaWarna} ${bendaRandom}`
 
-    const postDocument = db.doc(`/${room ? `room/${room}/posts` : 'posts'}/${postId}`)
-    const randomNameCollection = db.collection(`/${room ? `room/${room}/posts` : 'posts'}/${postId}/randomizedData`)
+    const postDocument = db.doc(`/posts/${postId}`)
+    const randomNameCollection = db.collection(`/posts/${postId}/randomizedData`)
     const randomNameData = {
         displayName: '',
         owner: username
@@ -171,7 +171,7 @@ module.exports = async (username, postId, room) => {
                 if (data.empty) {
                     return postDocument.get()
                         .then(doc => {
-                            if(!doc.exists){
+                            if (!doc.exists) {
                                 throw new UserInputError('Postingan tidak ditemukan/sudah dihapus')
                             } else {
                                 if (username === doc.data().owner) {
@@ -181,7 +181,7 @@ module.exports = async (username, postId, room) => {
                                 } else {
                                     randomNameData.displayName = randomNama
                                     randomNameData.colorCode = warnaRandom.kode
-                                    randomNameData.displayImage =  `https://firebasestorage.googleapis.com/v0/b/insvire-curious-app.appspot.com/o/images%2F${bendaRandom}.png?alt=media`
+                                    randomNameData.displayImage = `https://firebasestorage.googleapis.com/v0/b/insvire-curious-app.appspot.com/o/images%2F${bendaRandom}.png?alt=media`
                                 }
                                 return randomNameCollection.add(randomNameData)
                             }
