@@ -65,9 +65,9 @@ exports.onPostCreate = functions.region('asia-southeast2')
             let tags = []
 
             if(newData.room){
-                tags.push('has_post-room')
+                tags.push("has_post_room")
             } else {
-                tags.push('is_not_post_room')
+                tags.push("is_not_post_room")
             }
 
             const newPostPayload = {
@@ -75,8 +75,8 @@ exports.onPostCreate = functions.region('asia-southeast2')
                 objectID: id,
                 _tags: tags,
                 _geoloc: {
-                    lat: newData.location.lat,
-                    lng: newData.location.lng
+                    lat: newData.location.lat.toString(),
+                    lng: newData.location.lng.toString()
                 },
                 // field algolia
                 date_timestamp: new Date(newData.createdAt).getTime()
