@@ -12,7 +12,7 @@ const resolversClient = require('./graphql/users/resolvers/index');
 
 const typeDefsAdmin = require('./graphql/admin/typeDefs')
 const resolversAdmin = require('./graphql/admin/resolvers/index');
-const { ALGOLIA_INDEX_POSTS } = require('./constant/post');
+const { ALGOLIA_INDEX_POSTS, ALGOLIA_INDEX_POSTS_ROOMS } = require('./constant/post');
 
 // Global Config
 require('dotenv').config()
@@ -42,13 +42,17 @@ serverUsers.applyMiddleware({ app: client, path: '/', cors: true })
 serverAdmin.applyMiddleware({ app: admin, path: '/', cors: true })
 
 const postsIndex = algoliaClient.initIndex(ALGOLIA_INDEX_POSTS)
+const roomPostsIndex = algoliaClient.initIndex(ALGOLIA_INDEX_POSTS_ROOMS)
 
 exports.onPostDelete = functions.region('asia-southeast2')
     .firestore
     .document('/posts/{id}')
-    .onDelete(async (_snapshot, context) => {
+    .onDelete(async (snapshot, context) => {
         try {
-            postsIndex.deleteObject(context.params.id.toString())
+            const data = snapshot.data()
+            const index = data.room ? roomPostsIndex : postsIndex;
+
+            index.deleteObject(context.params.id.toString())
         }
         catch (err) {
             functions.logger.log(err)
@@ -62,6 +66,7 @@ exports.onPostCreate = functions.region('asia-southeast2')
         try {
             const newData = snapshot.data();
             const id = context.params.id
+            const index = newData.room ? roomPostsIndex : postsIndex;
 
             const newPostPayload = {
                 ...newData,
@@ -73,7 +78,7 @@ exports.onPostCreate = functions.region('asia-southeast2')
                 // field algolia
                 date_timestamp: new Date(newData.createdAt).getTime()
             }
-            postsIndex.saveObjects([newPostPayload], { autoGenerateObjectIDIfNotExist: false })
+            index.saveObjects([newPostPayload], { autoGenerateObjectIDIfNotExist: false })
         }
         catch (err) {
             functions.logger.log(err)
@@ -87,8 +92,9 @@ exports.onPostUpdate = functions.region('asia-southeast2')
         try {
             const newData = snapshot.after.data();
             const objectID = snapshot.after.id
+            const index = newData.room ? roomPostsIndex : postsIndex;
 
-            postsIndex.saveObject({ ...newData, objectID })
+            index.saveObject({ ...newData, objectID })
         }
         catch (err) {
             functions.logger.log(err)
