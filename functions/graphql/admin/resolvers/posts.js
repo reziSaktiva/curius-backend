@@ -4,9 +4,11 @@ const axios = require('axios')
 const { server, client } = require('../../../utility/algolia')
 const { db } = require('../../../utility/admin')
 const { UserInputError } = require('apollo-server-express');
+const adminAuthContext = require('../../../utility/adminAuthContext')
 
 const { ALGOLIA_INDEX_POSTS, ALGOLIA_INDEX_REPORT_POSTS, ALGOLIA_INDEX_POSTS_ASC, ALGOLIA_INDEX_POSTS_DESC } = require('../../../constant/post')
-const { API_KEY_GEOCODE } = require('../../../utility/secret/API')
+const { API_KEY_GEOCODE } = require('../../../utility/secret/API');
+const { createLogs } = require('../usecase/admin');
 
 const isNullOrUndefined = data => {
   return typeof data !== undefined || data !== null
@@ -362,6 +364,7 @@ module.exports = {
   },
   Mutation: {
     async setStatusPost(_, { active, flags = [], takedown, postId }, _ctx) {
+      const { name, level, id } = await adminAuthContext(_ctx)
       if (!postId) throw new Error('postId is Required')
 
       const index = server.initIndex(ALGOLIA_INDEX_POSTS);
@@ -375,6 +378,7 @@ module.exports = {
       let _tags = oldDocAlgolia._tags || []
 
       try {
+        let docId = ''
         await db.doc(targetCollection)
           .get()
           .then(doc => {
@@ -392,9 +396,15 @@ module.exports = {
               status.active = active
             }
 
+            docId = doc.id
             return doc.ref.update({ status })
           })
+        let message = ''
+        if (takedown) message = `Admin ${name} has reported Post Id ${docId}`
+        if (active) message = `Admin ${name} has activate Post Id ${docId}`
+        if (flags.length) message = `Admin ${name} has set flag ${flag.join(',')} to Post Id ${docId}`
 
+        await createLogs({ adminId: id, role: level, message })
         // Update Algolia Search Posts
         await index.partialUpdateObjects([{
           objectID: postId,
@@ -453,7 +463,10 @@ module.exports = {
     },
     async createReportPostById(_, { idPost, content, userIdReporter }, _ctx) {
       // TODO: makesure which level can reported post
-      // const { name, level } = await adminAuthContext(context)
+      const { name, level } = await adminAuthContext(context)
+
+      if (!name) throw new Error('permission denied')
+
       if (!content) throw new UserInputError('required to fill reason this post')
 
       try {
@@ -507,17 +520,17 @@ module.exports = {
       }
     },
     async createReplicatePostAscDesc(_, { } , _ctx) {
-      const index = server.initIndex('posts');
+      const index = server.initIndex('users');
 
       await index.setSettings({
         replicas: [
-          'posts_date_desc',
-          'posts_date_asc'
+          'users_date_desc',
+          'users_date_asc'
         ]
       })
 
-      const replicasIndexDesc = server.initIndex('posts_date_desc')
-      const replicasIndexAsc = server.initIndex('posts_date_asc')
+      const replicasIndexDesc = server.initIndex('users_date_desc')
+      const replicasIndexAsc = server.initIndex('users_date_asc')
       
       await replicasIndexAsc.setSettings({
         ranking: [

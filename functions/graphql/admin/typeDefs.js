@@ -191,6 +191,27 @@ module.exports = gql`
         # Posts
         getSinglePost(id: ID! room: String): SinglePostDetail!
         getReportedByIdPost(idPost: ID!, lastId: ID, perPage: Int): [ReportPost]
+
+        # Graph
+        getGraphSummary(graphType: String, state: String): GraphData
+        getAdminLogs(page: Int, perPage: Int, search: String): SearchAdminLogs
+    }
+
+    type AdminLog {
+        adminId: ID
+        name: String
+        message: String
+        createdAt: String
+        role: Int
+    }
+
+    type SearchAdminLogs {
+        hits: [AdminLog]
+        page: Int
+        nbHits: Int
+        nbPages: Int
+        hitsPerPage: Int
+        processingTimeMS: Float
     }
 
     type SearchPosts {
@@ -200,6 +221,32 @@ module.exports = gql`
         nbPages: Int
         hitsPerPage: Int
         processingTimeMS: Float
+    }
+
+    type DataStatistic {
+        date: String
+        total: Int
+    }
+
+    type UserStatistic {
+        total: Int
+        newUser: Int
+        deleted: Int 
+    }
+
+    type PostStatistic {
+        total: Int
+        totalReported: Int
+    }
+
+    type SummaryData {
+        user: UserStatistic
+        post: PostStatistic
+    }
+
+    type GraphData {
+        summary: SummaryData
+        graph: [DataStatistic]
     }
     
     input Location {
