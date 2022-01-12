@@ -64,9 +64,10 @@ exports.onPostCreate = functions.region('asia-southeast2')
             const id = context.params.id;
             let tags = []
 
-            if(newData.room){
+            if (newData.room) {
                 tags.push("has_post_room")
-            } else {
+            }
+            if (!newData.room) {
                 tags.push("is_not_post_room")
             }
 
@@ -94,9 +95,30 @@ exports.onPostUpdate = functions.region('asia-southeast2')
     .onUpdate(async (snapshot, _context) => {
         try {
             const newData = snapshot.after.data();
-            const objectID = snapshot.after.id;
 
-            postsIndex.saveObject({ ...newData, objectID })
+            if (newData.room) {
+                tags.push("has_post_room")
+            }
+            if (!newData.room) {
+                tags.push("is_not_post_room")
+            }
+            if (newData.reportedCount > 0) {
+                tags.push("has_reported")
+            }
+
+            const newPostPayload = {
+                ...newData,
+                objectID: id,
+                _tags: tags,
+                _geoloc: {
+                    lat: newData.location.lat.toString(),
+                    lng: newData.location.lng.toString()
+                },
+                // field algolia
+                date_timestamp: new Date(newData.createdAt).getTime()
+            }
+
+            postsIndex.saveObject(newPostPayload)
         }
         catch (err) {
             functions.logger.log(err)
