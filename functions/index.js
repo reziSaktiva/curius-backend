@@ -95,6 +95,8 @@ exports.onPostUpdate = functions.region('asia-southeast2')
     .onUpdate(async (snapshot, _context) => {
         try {
             const newData = snapshot.after.data();
+            const id = newData.id
+            const tags = [];
 
             if (newData.room) {
                 tags.push("has_post_room")
