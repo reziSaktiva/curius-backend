@@ -21,7 +21,7 @@ module.exports = {
 
       const facetFilters = []
 
-      if(room){
+      if (room) {
         facetFilters.push(['_tags:has_post_room'])
         facetFilters.push([`room:${room}`])
       } else {
@@ -55,7 +55,7 @@ module.exports = {
         "page": page || 0,
       }
 
-      const filters = rank === 'posts_rank_desc' ? 'rank > 0' : '' 
+      const filters = rank === 'posts_rank_desc' ? 'rank > 0' : ''
 
       try {
         return new Promise(async (resolve, reject) => {
