@@ -6,13 +6,13 @@ const randomGenerator = require('../../../utility/randomGenerator')
 
 module.exports = {
     Mutation: {
-        async createComment(_, { id, text, reply, photo, room }, context) {
+        async createComment(_, { id, text, reply, photo }, context) {
             const { username } = await fbAuthContext(context)
-            const { name, displayImage, colorCode } = await randomGenerator(username, id, room)
+            const { name, displayImage, colorCode } = await randomGenerator(username, id)
 
-            const postDocument = db.doc(`/${room ? `room/${room}/posts` : 'posts'}/${id}`)
-            const commentCollection = db.collection(`/${room ? `room/${room}/posts` : 'posts'}/${id}/comments`)
-            const subscribeCollection = db.collection(`/${room ? `room/${room}/posts` : 'posts'}/${id}/subscribes`)
+            const postDocument = db.doc(`/posts/${id}`)
+            const commentCollection = db.collection(`/posts/${id}/comments`)
+            const subscribeCollection = db.collection(`/posts/${id}/subscribes`)
 
             if (text.trim() === '' && !photo) {
                 throw new UserInputError('kamu tidak bisa membuat comment tanpa text', { error: { text: 'kamu tidak bisa membuat comment tanpa text' } })
@@ -24,6 +24,11 @@ module.exports = {
                     text,
                     reply,
                     photo,
+                    status: {
+                        active: true,
+                        flag: [],
+                        takedown: false
+                    },
                     reportedCount: 0
                 }
 
@@ -155,10 +160,10 @@ module.exports = {
         },
         async deleteComment(_, { postId, commentId, room }, context) {
             const { username } = await fbAuthContext(context)
-            const postDocument = await db.doc(`/${room ? `room/${room}/posts` : 'posts'}/${postId}`).get()
+            const postDocument = await db.doc(`/posts/${postId}`).get()
             const getCommentDoc = await db.collection(room ? `/room/${room}/posts` : 'posts').doc(postId).collection('comments').doc(commentId).get()
             const commentDoc = db.collection(room ? `/room/${room}/posts` : 'posts').doc(postId).collection('comments').doc(commentId)
-            const subscribeCollection = await db.collection(`/${room ? `room/${room}/posts` : 'posts'}/${postId}/subscribes`).get()
+            const subscribeCollection = await db.collection(`/posts/${postId}/subscribes`).get()
 
             try {
                 if (!getCommentDoc.exists) {

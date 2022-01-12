@@ -116,14 +116,9 @@ module.exports = gql`
         displayImage: String
         colorCode: String
         reply: ReplyData
+        status: StatusPost
         # replyList: [Comment]
     },
-    
-    input Reply {
-        username: String
-        id: ID
-    },
-    
     type ReplyData {
         username: String
         id: ID
@@ -269,6 +264,11 @@ module.exports = gql`
         gender: String
         birthday: String
     }
+    
+    input Reply {
+        username: String
+        id: ID
+    },
     type Mutation {
         # users mutation
         registerUser(registerInput: RegisterInput): String
@@ -301,7 +301,7 @@ module.exports = gql`
         textSearch(search: String, perPage: Int, page: Int, range: Float, location: Location ): Search!
 
         # comments mutation
-        createComment( id:ID!, text: String!, reply: Reply, photo: String, room: String ): Comment!
+        createComment( id:ID!, text: String!, reply: Reply, photo: String ): Comment!
         deleteComment( postId: ID!, commentId: ID!, room: String ): Comment!
     }
 `
