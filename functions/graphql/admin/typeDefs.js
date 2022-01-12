@@ -163,9 +163,12 @@ module.exports = gql`
         id: ID
         text: String
         owner: String
-        timestamp: String
+        timestamp: Float
         reportedCount: Int
         status: String
+        profilePicture: String
+        isTakedown: Boolean
+        isActive: Boolean
     }
     type SearchCommentReported {
         hits: [CommentReported]
@@ -183,14 +186,35 @@ module.exports = gql`
         searchUser(search: String, status: String, perPage: Int, page: Int, filters: RequestFilterUser ): SearchUser!
         searchPosts(search: String, perPage: Int, page: Int, hasReported: Boolean, useDetailLocation: Boolean, range: Float, location: String, filters: RequestFilter, room: String, sortBy: String ): SearchPosts!
         searchRoom(name: String, location: String, useDetailLocation: Boolean, page: Int, perPage: Int): SearchRoom
-        searchCommentReported(search: String, sortBy: String, page: Int, perPage: Int, filters: RequestFilterUser): SearchCommentReported
+        searchCommentReported(search: String, sortBy: String, page: Int, perPage: Int, filters: RequestFilter): SearchCommentReported
         
         # Randomization
         searchThemes(name: String): [ThemeType]
 
         # Posts
-        getSinglePost(id: ID! room: String): SinglePostDetail!
-        getReportedByIdPost(idPost: ID!, lastId: ID, perPage: Int): [ReportPost]
+        getSinglePost(id: ID! room: String, commentId: ID): SinglePostDetail!
+        getReportedByIdPost(idPost: ID!, lastId: ID, perPage: Int): SearchReportPost
+
+        # Graph
+        getGraphSummary(graphType: String, state: String): GraphData
+        getAdminLogs(page: Int, perPage: Int, search: String): SearchAdminLogs
+    }
+
+    type AdminLog {
+        adminId: ID
+        name: String
+        message: String
+        createdAt: String
+        role: Int
+    }
+
+    type SearchAdminLogs {
+        hits: [AdminLog]
+        page: Int
+        nbHits: Int
+        nbPages: Int
+        hitsPerPage: Int
+        processingTimeMS: Float
     }
 
     type SearchPosts {
@@ -200,6 +224,32 @@ module.exports = gql`
         nbPages: Int
         hitsPerPage: Int
         processingTimeMS: Float
+    }
+
+    type DataStatistic {
+        date: String
+        total: Int
+    }
+
+    type UserStatistic {
+        total: Int
+        newUser: Int
+        deleted: Int 
+    }
+
+    type PostStatistic {
+        total: Int
+        totalReported: Int
+    }
+
+    type SummaryData {
+        user: UserStatistic
+        post: PostStatistic
+    }
+
+    type GraphData {
+        summary: SummaryData
+        graph: [DataStatistic]
     }
     
     input Location {
@@ -234,7 +284,17 @@ module.exports = gql`
         content: String
         idPost: ID
         userIdReporter: ID
+        username: String
         totalReported: Int
+    }
+
+    type SearchReportPost {
+        hits: [ReportPost]
+        page: Int
+        nbHits: Int
+        nbPages: Int
+        hitsPerPage: Int
+        processingTimeMS: Float
     }
 
     input Colors {

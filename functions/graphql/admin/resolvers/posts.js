@@ -4,9 +4,11 @@ const axios = require('axios')
 const { server, client } = require('../../../utility/algolia')
 const { db } = require('../../../utility/admin')
 const { UserInputError } = require('apollo-server-express');
+const adminAuthContext = require('../../../utility/adminAuthContext')
 
 const { ALGOLIA_INDEX_POSTS, ALGOLIA_INDEX_REPORT_POSTS, ALGOLIA_INDEX_POSTS_ASC, ALGOLIA_INDEX_POSTS_DESC } = require('../../../constant/post')
-const { API_KEY_GEOCODE } = require('../../../utility/secret/API')
+const { API_KEY_GEOCODE } = require('../../../utility/secret/API');
+const { createLogs } = require('../usecase/admin');
 
 const isNullOrUndefined = data => {
   return typeof data !== undefined || data !== null
@@ -18,24 +20,52 @@ const getEndpointPost = (room, id, target = '') => {
 
 module.exports = {
   Query: {
-    async getReportedByIdPost(_, { idPost, lastId, perPage }, _ctx) {
+    async getReportedByIdPost(_, { idPost, perPage, page }, _ctx) {
       if (!idPost) UserInputError('id post is required')
 
-      let lastDoc = null;
+      const index = client.initIndex('report_posts');
 
-      if (lastId) lastDoc = await db.doc(`/reports/${lastId}/`).get()
+      const defaultPayload = {
+        "attributesToRetrieve": "*",
+        "attributesToSnippet": "*:20",
+        "snippetEllipsisText": "…",
+        "responseFields": "*",
+        "getRankingInfo": true,
+        "analytics": false,
+        "enableABTest": false,
+        "explain": "*",
+        "facets": ["*"]
+      };
 
-      const reportCollection = db.collection('/reports')
+      const pagination = {
+        "hitsPerPage": perPage || 10,
+        "page": page || 0,
+      };
 
-      let query;
-      if (lastId) query = await reportCollection.where('idPost', '==', idPost).startAfter(lastDoc).limit(perPage).get()
-      else query = await reportCollection.where('idPost', '==', idPost).get();
+      const payload = {
+        ...defaultPayload,
+        ...pagination
+      };
 
-      const parseSnapshot = query.docs.map(doc => doc.data())
+      const searchDocs = await index.search('', payload);
 
-      return parseSnapshot;
+      const ids = searchDocs.hits.reduce((prev, curr) => {
+        if (!prev.includes(curr.userIdReporter)) return [...prev, curr.userIdReporter]
+        return prev
+      }, [])
+      
+      const getUserReported = await db.collection('users').where('id', 'in', ids).get()
+      const userReporter = await getUserReported.docs.map(doc => doc.data());
+
+      const list = searchDocs.hits.map(doc => {
+        const username = userReporter.filter(v => v.id === doc.userIdReporter)[0].username
+
+        return { ...doc, username }
+      })
+
+      return { ...searchDocs, hits: list }
     },
-    async getSinglePost(_, { id, room }, _ctx) {
+    async getSinglePost(_, { id, room, commentId }, _ctx) {
       if (!id) throw new Error('id is Required')
 
       const postDocument = db.doc(getEndpointPost(room, id))
@@ -67,7 +97,8 @@ module.exports = {
           const likes = likesPost.docs.map(doc => doc.data()) || []
 
           const commentsPost = await commentCollection.get();
-          const comments = commentsPost.docs.map(doc => doc.data()) || [];
+          let comments = commentsPost.docs.map(doc => ({ ...doc.data(), id: doc.id })) || [];
+          if (commentId) comments = comments.filter(comment => comment.id === commentId)
 
           const mutedPost = await mutedCollection.get();
           const muted = mutedPost.docs.map(doc => doc.data()) || [];
@@ -333,18 +364,25 @@ module.exports = {
           ...pagination
         };
         if (facetFilters.length) payload.facetFilters = facetFilters
-        console.log('payload: ', payload)
+        // console.log('payload: ', payload)
         const searchDocs = await index.search(search, payload)
         console.log('search: ', searchDocs)
 
         const comments = searchDocs.hits.map(async doc => {
-          const comment = await db.doc(`/posts/${doc.idPost}/comments/${doc.idComment}`).get()
+          const endpoint = doc.parentTypePost === 'global-posts' ? `/posts/${doc.idPost}/comments/${doc.idComment}` : `/room/${doc.idRoom}/posts/${doc.idPost}/comments/${doc.idComment}`
+          const comment = await db.doc(endpoint).get()
           const dataParse = await comment.data()
+          
+          const getUserDetail = dataParse && await db.doc(`/users/${dataParse.owner}`).get()
+          const user = dataParse && await getUserDetail.data()
+
           return ({
+            ...doc,
             text: dataParse.text,
-            owner: dataParse.owner,
-            timestamp: dataParse.createAt,
+            owner: dataParse.username || '',
+            timestamp: dataParse.createdAt,
             reportedCount: dataParse.reportedCount,
+            profilePicture: user.profilePicture || '',
             id: doc.idComment,
             status: dataParse.status.active ? 'Active' : (dataParse.status.takedown && 'Takedown')
           })
@@ -362,6 +400,7 @@ module.exports = {
   },
   Mutation: {
     async setStatusPost(_, { active, flags = [], takedown, postId }, _ctx) {
+      const { name, level, id } = await adminAuthContext(_ctx)
       if (!postId) throw new Error('postId is Required')
 
       const index = server.initIndex(ALGOLIA_INDEX_POSTS);
@@ -375,6 +414,7 @@ module.exports = {
       let _tags = oldDocAlgolia._tags || []
 
       try {
+        let docId = ''
         await db.doc(targetCollection)
           .get()
           .then(doc => {
@@ -392,9 +432,15 @@ module.exports = {
               status.active = active
             }
 
+            docId = doc.id
             return doc.ref.update({ status })
           })
+        let message = ''
+        if (takedown) message = `Admin ${name} has reported Post Id ${docId}`
+        if (active) message = `Admin ${name} has activate Post Id ${docId}`
+        if (flags.length) message = `Admin ${name} has set flag ${flag.join(',')} to Post Id ${docId}`
 
+        await createLogs({ adminId: id, role: level, message })
         // Update Algolia Search Posts
         await index.partialUpdateObjects([{
           objectID: postId,
@@ -419,6 +465,7 @@ module.exports = {
       const type = parseData[0].parentTypePost;
       const postId = parseData[0].idPost || '';
 
+      const index = server.initIndex('report_comments');
       const commentCollection = db.doc(`/${type === 'room' ? `room/${parseData[0].idRoom}/posts` : 'posts'}/${postId}/comments/${idComment}`)
 
       let newData = {}
@@ -440,6 +487,14 @@ module.exports = {
           return doc.ref.update({ status })
         }
       )
+      
+      await index.saveObjects([{
+        objectID: idComment,
+        ...parseData[0],
+        isActive: newData.status.active,
+        isTakedown: newData.status.takedown,
+        status: newData.status,
+      }])
 
       return {
         id: newData.id,
@@ -453,7 +508,10 @@ module.exports = {
     },
     async createReportPostById(_, { idPost, content, userIdReporter }, _ctx) {
       // TODO: makesure which level can reported post
-      // const { name, level } = await adminAuthContext(context)
+      const { name, level } = await adminAuthContext(context)
+
+      if (!name) throw new Error('permission denied')
+
       if (!content) throw new UserInputError('required to fill reason this post')
 
       try {
@@ -467,6 +525,7 @@ module.exports = {
           }
         )
 
+        const index = server.initIndex(ALGOLIA_INDEX_REPORT_POSTS);
         const oldDocAlgolia = await index.getObject(postId, {
           attributesToRetrieve: ['_tags']
         });
@@ -478,7 +537,6 @@ module.exports = {
           content,
           userIdReporter
         }
-        const index = server.initIndex(ALGOLIA_INDEX_REPORT_POSTS);
         const indexPost = server.initIndex(ALGOLIA_INDEX_POSTS);
 
         const writeRequest = await db.collection('/reports').add(payload)
@@ -507,17 +565,17 @@ module.exports = {
       }
     },
     async createReplicatePostAscDesc(_, { } , _ctx) {
-      const index = server.initIndex('posts');
+      const index = server.initIndex('users');
 
       await index.setSettings({
         replicas: [
-          'posts_date_desc',
-          'posts_date_asc'
+          'users_date_desc',
+          'users_date_asc'
         ]
       })
 
-      const replicasIndexDesc = server.initIndex('posts_date_desc')
-      const replicasIndexAsc = server.initIndex('posts_date_asc')
+      const replicasIndexDesc = server.initIndex('users_date_desc')
+      const replicasIndexAsc = server.initIndex('users_date_asc')
       
       await replicasIndexAsc.setSettings({
         ranking: [
