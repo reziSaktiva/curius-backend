@@ -10,7 +10,7 @@ module.exports = {
       role,
       name,
       message,
-      createAt: new Date().toString()
+      createdAt: new Date().getTime()
     };
 
     const index = server.initIndex(ALGOLIA_INDEX_ADMIN_LOGS);

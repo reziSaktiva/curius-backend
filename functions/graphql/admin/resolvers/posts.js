@@ -20,24 +20,52 @@ const getEndpointPost = (room, id, target = '') => {
 
 module.exports = {
   Query: {
-    async getReportedByIdPost(_, { idPost, lastId, perPage }, _ctx) {
+    async getReportedByIdPost(_, { idPost, perPage, page }, _ctx) {
       if (!idPost) UserInputError('id post is required')
 
-      let lastDoc = null;
+      const index = client.initIndex('report_posts');
 
-      if (lastId) lastDoc = await db.doc(`/reports/${lastId}/`).get()
+      const defaultPayload = {
+        "attributesToRetrieve": "*",
+        "attributesToSnippet": "*:20",
+        "snippetEllipsisText": "…",
+        "responseFields": "*",
+        "getRankingInfo": true,
+        "analytics": false,
+        "enableABTest": false,
+        "explain": "*",
+        "facets": ["*"]
+      };
 
-      const reportCollection = db.collection('/reports')
+      const pagination = {
+        "hitsPerPage": perPage || 10,
+        "page": page || 0,
+      };
 
-      let query;
-      if (lastId) query = await reportCollection.where('idPost', '==', idPost).startAfter(lastDoc).limit(perPage).get()
-      else query = await reportCollection.where('idPost', '==', idPost).get();
+      const payload = {
+        ...defaultPayload,
+        ...pagination
+      };
 
-      const parseSnapshot = query.docs.map(doc => doc.data())
+      const searchDocs = await index.search('', payload);
 
-      return parseSnapshot;
+      const ids = searchDocs.hits.reduce((prev, curr) => {
+        if (!prev.includes(curr.userIdReporter)) return [...prev, curr.userIdReporter]
+        return prev
+      }, [])
+      
+      const getUserReported = await db.collection('users').where('id', 'in', ids).get()
+      const userReporter = await getUserReported.docs.map(doc => doc.data());
+
+      const list = searchDocs.hits.map(doc => {
+        const username = userReporter.filter(v => v.id === doc.userIdReporter)[0].username
+
+        return { ...doc, username }
+      })
+
+      return { ...searchDocs, hits: list }
     },
-    async getSinglePost(_, { id, room }, _ctx) {
+    async getSinglePost(_, { id, room, commentId }, _ctx) {
       if (!id) throw new Error('id is Required')
 
       const postDocument = db.doc(getEndpointPost(room, id))
@@ -69,7 +97,8 @@ module.exports = {
           const likes = likesPost.docs.map(doc => doc.data()) || []
 
           const commentsPost = await commentCollection.get();
-          const comments = commentsPost.docs.map(doc => doc.data()) || [];
+          let comments = commentsPost.docs.map(doc => ({ ...doc.data(), id: doc.id })) || [];
+          if (commentId) comments = comments.filter(comment => comment.id === commentId)
 
           const mutedPost = await mutedCollection.get();
           const muted = mutedPost.docs.map(doc => doc.data()) || [];
@@ -335,18 +364,25 @@ module.exports = {
           ...pagination
         };
         if (facetFilters.length) payload.facetFilters = facetFilters
-        console.log('payload: ', payload)
+        // console.log('payload: ', payload)
         const searchDocs = await index.search(search, payload)
         console.log('search: ', searchDocs)
 
         const comments = searchDocs.hits.map(async doc => {
-          const comment = await db.doc(`/posts/${doc.idPost}/comments/${doc.idComment}`).get()
+          const endpoint = doc.parentTypePost === 'global-posts' ? `/posts/${doc.idPost}/comments/${doc.idComment}` : `/room/${doc.idRoom}/posts/${doc.idPost}/comments/${doc.idComment}`
+          const comment = await db.doc(endpoint).get()
           const dataParse = await comment.data()
+          
+          const getUserDetail = dataParse && await db.doc(`/users/${dataParse.owner}`).get()
+          const user = dataParse && await getUserDetail.data()
+
           return ({
+            ...doc,
             text: dataParse.text,
-            owner: dataParse.owner,
-            timestamp: dataParse.createAt,
+            owner: dataParse.username || '',
+            timestamp: dataParse.createdAt,
             reportedCount: dataParse.reportedCount,
+            profilePicture: user.profilePicture || '',
             id: doc.idComment,
             status: dataParse.status.active ? 'Active' : (dataParse.status.takedown && 'Takedown')
           })
@@ -429,6 +465,7 @@ module.exports = {
       const type = parseData[0].parentTypePost;
       const postId = parseData[0].idPost || '';
 
+      const index = server.initIndex('report_comments');
       const commentCollection = db.doc(`/${type === 'room' ? `room/${parseData[0].idRoom}/posts` : 'posts'}/${postId}/comments/${idComment}`)
 
       let newData = {}
@@ -450,6 +487,14 @@ module.exports = {
           return doc.ref.update({ status })
         }
       )
+      
+      await index.saveObjects([{
+        objectID: idComment,
+        ...parseData[0],
+        isActive: newData.status.active,
+        isTakedown: newData.status.takedown,
+        status: newData.status,
+      }])
 
       return {
         id: newData.id,
@@ -480,6 +525,7 @@ module.exports = {
           }
         )
 
+        const index = server.initIndex(ALGOLIA_INDEX_REPORT_POSTS);
         const oldDocAlgolia = await index.getObject(postId, {
           attributesToRetrieve: ['_tags']
         });
@@ -491,7 +537,6 @@ module.exports = {
           content,
           userIdReporter
         }
-        const index = server.initIndex(ALGOLIA_INDEX_REPORT_POSTS);
         const indexPost = server.initIndex(ALGOLIA_INDEX_POSTS);
 
         const writeRequest = await db.collection('/reports').add(payload)

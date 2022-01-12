@@ -141,7 +141,6 @@ module.exports = {
 
       const searchDocs = await index.search(search, payload)
 
-      console.log(searchDocs.hits[0])
       return searchDocs
     }
     // }
