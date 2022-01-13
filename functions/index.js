@@ -12,7 +12,8 @@ const resolversClient = require('./graphql/users/resolvers/index');
 
 const typeDefsAdmin = require('./graphql/admin/typeDefs')
 const resolversAdmin = require('./graphql/admin/resolvers/index');
-const { ALGOLIA_INDEX_POSTS, ALGOLIA_INDEX_POSTS_ROOMS } = require('./constant/post');
+const { ALGOLIA_INDEX_POSTS } = require('./constant/post');
+const { db } = require('./utility/admin');
 
 // Global Config
 require('dotenv').config()
@@ -46,8 +47,16 @@ const postsIndex = algoliaClient.initIndex(ALGOLIA_INDEX_POSTS)
 exports.onPostDelete = functions.region('asia-southeast2')
     .firestore
     .document('/posts/{id}')
-    .onDelete(async (_snapshot, context) => {
+    .onDelete(async (snapshot, context) => {
         try {
+            const data = snapshot.data()
+
+            if (data.room) {
+                db.doc(`/room/${data.room}`).get()
+                    .then(doc => {
+                        doc.ref.update({ postsCount: doc.data().postsCount - 1 })
+                    })
+            }
             postsIndex.deleteObject(context.params.id.toString())
         }
         catch (err) {
@@ -65,6 +74,11 @@ exports.onPostCreate = functions.region('asia-southeast2')
             let tags = []
 
             if (newData.room) {
+                console.log(newData.room);
+                db.doc(`/room/${newData.room}`).get()
+                    .then(doc => {
+                        doc.ref.update({ postsCount: doc.data().postsCount + 1 })
+                    })
                 tags.push("has_post_room")
             }
             if (!newData.room) {
