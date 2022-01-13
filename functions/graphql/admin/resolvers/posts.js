@@ -459,6 +459,9 @@ module.exports = {
       }
     },
     async setStatusComment(_, { idComment, active, takedown, deleted }, _ctx) {
+      const { name, level, id } = await adminAuthContext(_ctx)
+      if (!name) throw new Error('permission denied')
+
       const dataReported = db.collection('/reports_comment').where('idComment', '==', idComment).get()
       const parseData = (await dataReported).docs.map(doc => doc.data())
 
@@ -496,6 +499,13 @@ module.exports = {
         status: newData.status,
       }])
 
+      let message = ''
+      if (takedown) message = `Admin ${name} has reported Comment Id ${idComment}`
+      if (active) message = `Admin ${name} has activate Comment Id ${idComment}`
+      if (deleted) message = `Admin ${name} has deleted Comment Id ${idComment}`
+
+      await createLogs({ adminId: id, role: level, message })
+
       return {
         id: newData.id,
         text: newData.text,
@@ -508,7 +518,7 @@ module.exports = {
     },
     async createReportPostById(_, { idPost, content, userIdReporter }, _ctx) {
       // TODO: makesure which level can reported post
-      const { name, level } = await adminAuthContext(context)
+      const { name, level, id } = await adminAuthContext(_ctx)
 
       if (!name) throw new Error('permission denied')
 
@@ -552,6 +562,13 @@ module.exports = {
           reportedCount: posts.reportedCount,
           _tags,
         }]);
+
+        let message = ''
+        if (takedown) message = `Admin ${name} has reported Post Id ${posts.id}`
+        if (active) message = `Admin ${name} has activate Post Id ${posts.id}`
+        if (deleted) message = `Admin ${name} has deleted Post Id ${posts.id}`
+  
+        await createLogs({ adminId: id, role: level, message })
 
         const parseSnapshot = await (await writeRequest.get()).data()
 
@@ -611,6 +628,9 @@ module.exports = {
       /**
        * Get Comment 
        */
+      const { name, level, id } = await adminAuthContext(_ctx)
+      if (!name) throw new Error('permission denied')
+
       try {
         let commentText = ''
         let flagHasReportedBefore = false;
@@ -667,6 +687,14 @@ module.exports = {
               },
               objectID:  idComment
             })
+
+
+            let message = ''
+            if (takedown) message = `Admin ${name} has reported Comment Id ${idComment}`
+            if (active) message = `Admin ${name} has activate Comment Id ${idComment}`
+            if (deleted) message = `Admin ${name} has deleted Comment Id ${idComment}`
+      
+            await createLogs({ adminId: id, role: level, message })
           }
         ).catch(
           async err => {
