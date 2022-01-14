@@ -125,7 +125,7 @@ module.exports = {
           try {
               if (name) {
                   await db.collection('room').add(data)
-                      .then(doc => {
+                      .then(async doc => {
                           const newRoomPayload = {
                               ...data,
                               id: doc.id,
@@ -138,7 +138,7 @@ module.exports = {
                               // field algolia
                               date_timestamp: Date.now()
                           };
-                          index.saveObjects([newRoomPayload], { autoGenerateObjectIDIfNotExist: false })
+                          await index.saveObjects([newRoomPayload], { autoGenerateObjectIDIfNotExist: false })
                           doc.update({ id: doc.id })
                       })
 
