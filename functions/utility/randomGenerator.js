@@ -2,166 +2,30 @@ const { UserInputError } = require('apollo-server-express')
 const { db } = require('./admin')
 
 module.exports = async (username, postId) => {
-    const benda = [
-        "Hammer", "Ball", "Cow", "Monkey", "Dolphin",
-        "Horse", "Bowl", "Scissor", "Camera", "Glass",
-        "Tree", "Clover", "Star", "Rabbit", "Diamonds",
-        "Cat", "Spades", "Battery", "Bear", "Butterfly",
-        "Donuts", "Eight", "Five", "Flower", "Foot",
-        "Four", "Gifts", "Headphones", "Heart", "Koala",
-        "Moon", "Mushroom", "Nine", "One", "Panda",
-        "Pants", "Pig", "Seven", "Six", "Socks",
-        "Sunglasses", "Strawberry", "T-shirt", "Pumpkin", "Three",
-        "Tiger", "Two", "Unicorn", "X", "Zero"
-    ]
-    const warna = [
-        {
-            namaWarna: "Yellow",
-            kode: "#FFFF00"
-        },
-        {
-            namaWarna: "Green",
-            kode: "#008000"
-        },
-        {
-            namaWarna: "Red",
-            kode: "#FF0000"
-        },
-        {
-            namaWarna: "Blue",
-            kode: "#0000FF"
-        },
-        {
-            namaWarna: "Black",
-            kode: "#010821"
-        },
-        {
-            namaWarna: "Purple",
-            kode: "#9370db"
-        },
-        {
-            namaWarna: "Muddy",
-            kode: "#cfb997"
-        },
-        {
-            namaWarna: "Aqua",
-            kode: "#00FFFF"
-        },
-        {
-            namaWarna: "Chocolate",
-            kode: "#8B4513"
-        },
-        {
-            namaWarna: "Grey",
-            kode: "#8F8F8F"
-        },
-        {
-            namaWarna: "Lime",
-            kode: "#BFFF00"
-        },
-        {
-            namaWarna: "Pink",
-            kode: "#FF3E96"
-        },
-        {
-            namaWarna: "Fuchsia",
-            kode: "#FF00FF"
-        },
-        {
-            namaWarna: "Beige",
-            kode: "#F5F5DC"
-        },
-        {
-            namaWarna: "Khaki",
-            kode: "#ADA96E"
-        },
-        {
-            namaWarna: "Maroon",
-            kode: "#8B1C62"
-        },
-        {
-            namaWarna: "Gold",
-            kode: "#CFB53B"
-        },
-        {
-            namaWarna: "Violet",
-            kode: "#EE82EE"
-        },
-        {
-            namaWarna: "Coffee",
-            kode: "#AA5303"
-        },
-        {
-            namaWarna: "Scarlet",
-            kode: "#FF2400"
-        },
-        {
-            namaWarna: "Lilac",
-            kode: "#C8A2C8"
-        },
-        {
-            namaWarna: "Pearl",
-            kode: "#FDEEF4"
-        },
-        {
-            namaWarna: "Rust",
-            kode: "#C36241"
-        },
-        {
-            namaWarna: "Cyan",
-            kode: "#97FFFF"
-        },
-        {
-            namaWarna: "Dark",
-            kode: "#424242"
-        },
-        {
-            namaWarna: "Bronze",
-            kode: "#CD7F32"
-        },
-        {
-            namaWarna: "Orange",
-            kode: "#0000FF"
-        },
-        {
-            namaWarna: "Mustard",
-            kode: "#FFDB58"
-        },
-        {
-            namaWarna: "Cooper",
-            kode: "#B87333"
-        },
-        {
-            namaWarna: "Vanilla",
-            kode: "#F3E5AB"
-        },
-        {
-            namaWarna: "Turquoise",
-            kode: "#43C6DB"
-        }
-    ]
-    const ajektif = ["Smelly", "Fat", "Broken", "Tall", "Short",
-        "Grumpy", "Cute", "Adorable", "Stiff", "Chubby", "Annoying", "Disturbing",
-        "Big", "Small", "Calm", "Chaotic", "Disgusting", "Smart", "Crazy", "Beautiful", "Wise", "Rotten", "Bitter", "Fluffy", "Creepy", "Elegant",
-        "Unstable", "Arrogant", "Dying", "Chewy", "Happy", "Sad", "Crying", "Ripped", "Fake", "Shining", "Pierced", "Flat", "Cheap", "Suspicious",
-        "Coward", "Spooky", "Dirty", "Delicious", "Naughty", "Hansome", "Perfect", "Fast", "Slow", "Itchy"
-    ]
-
-    const randomNumber = Math.floor(Math.random() * 50)
-    const randomNumberWarna = Math.floor(Math.random() * 31)
-
-    const bendaRandom = benda[randomNumber]
-    const warnaRandom = warna[randomNumberWarna]
-
-    const randomNama = `${ajektif[randomNumber]} ${warnaRandom.namaWarna} ${bendaRandom}`
-
     const postDocument = db.doc(`/posts/${postId}`)
+
     const randomNameCollection = db.collection(`/posts/${postId}/randomizedData`)
     const randomNameData = {
         displayName: '',
         owner: username
     }
+
     try {
+        const { randomName, randomImage, randomCode } = await db.collection('themes').where("isActive", "==", true).get()
+            .then(data => {
+                const theme = data.docs[Math.floor(Math.random() * data.docs.length)].data()
+
+                const randomAdjective = theme.adjective[Math.floor(Math.random() * theme.adjective.length)];
+                const randomNoun = theme.nouns[Math.floor(Math.random() * theme.nouns.length)];
+                const randomColor = theme.colors[Math.floor(Math.random() * theme.colors.length)];
+
+                const randomName = `${randomAdjective.name} ${randomColor.name} ${randomNoun.name}`
+                const randomImage = randomNoun.avatarUrl
+                const randomCode = randomColor.hex
+
+                return { randomName, randomImage, randomCode }
+            })
+
         let name;
         let displayImage;
         let colorCode;
@@ -176,12 +40,12 @@ module.exports = async (username, postId) => {
                             } else {
                                 if (username === doc.data().owner) {
                                     randomNameData.displayName = 'Author'
-                                    randomNameData.colorCode = warnaRandom.kode
+                                    randomNameData.colorCode = randomCode
                                     randomNameData.displayImage = `https://firebasestorage.googleapis.com/v0/b/insvire-curious-app.appspot.com/o/images%2FAuthor.png?alt=media`
                                 } else {
-                                    randomNameData.displayName = randomNama
-                                    randomNameData.colorCode = warnaRandom.kode
-                                    randomNameData.displayImage = `https://firebasestorage.googleapis.com/v0/b/insvire-curious-app.appspot.com/o/images%2F${bendaRandom}.png?alt=media`
+                                    randomNameData.displayName = randomName
+                                    randomNameData.colorCode = randomCode
+                                    randomNameData.displayImage = randomImage
                                 }
                                 return randomNameCollection.add(randomNameData)
                             }
