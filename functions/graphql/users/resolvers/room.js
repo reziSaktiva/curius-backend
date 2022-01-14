@@ -1,5 +1,5 @@
 const { db } = require('../../../utility/admin')
-const { client, server } = require('../../../utility/algolia')
+const { client } = require('../../../utility/algolia')
 const { computeDistanceBetween, LatLng } = require('spherical-geometry-js')
 const { ALGOLIA_INDEX_ROOMS } = require('../../../constant/post')
 

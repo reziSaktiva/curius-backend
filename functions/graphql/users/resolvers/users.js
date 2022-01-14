@@ -10,8 +10,6 @@ const firebase = require('firebase')
 const config = require('../../../utility/secret/config')
 const fbAuthContext = require('../../../utility/fbAuthContext')
 
-const { client, server } = require('../../../utility/algolia')
-
 const { validateLoginInput } = require('../../../utility/validators')
 
 firebase.initializeApp(config)
@@ -839,29 +837,6 @@ module.exports = {
                                 _private: [],
                             }
 
-                            const index = server.initIndex('users');
-
-                            const payload = {
-                                objectID: saveUserData.id,
-                                username,
-                                joinDate: saveUserData.joinDate,
-                                dob,
-                                fullName,
-                                email,
-                                mobileNumber,
-                                _tags: []
-                            }
-
-                            if (mobileNumber) payload._tags.push('has_mobile_number')
-                            if (email) payload._tags.push('has_email')
-                            index.saveObjects([payload], { autoGenerateObjectIDIfNotExist: false })
-                                .then(({ objectIDs }) => {
-                                    (objectIDs);
-                                })
-                                .catch(err => {
-                                    console.log(err);
-                                });
-
                             saveUserData._private.push({
                                 hash,
                                 lastUpdate: new Date().toISOString()
@@ -883,24 +858,6 @@ module.exports = {
                         joinDate: new Date().toISOString(),
                         profilePicture: ''
                     }
-
-                    const index = client.initIndex('users');
-
-                    index.saveObjects([{
-                        objectID: id,
-                        username,
-                        joinDate: newUser.joinDate,
-                        dob,
-                        fullName,
-                        email,
-                        mobileNumber
-                    }], { autoGenerateObjectIDIfNotExist: false })
-                        .then(({ objectIDs }) => {
-                            (objectIDs);
-                        })
-                        .catch(err => {
-                            console.log(err);
-                        });
 
                     db.doc(`/users/${username}`).set(newUser)
                     return token
