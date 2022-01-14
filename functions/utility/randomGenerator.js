@@ -41,7 +41,7 @@ module.exports = async (username, postId) => {
                                 if (username === doc.data().owner) {
                                     randomNameData.displayName = 'Author'
                                     randomNameData.colorCode = randomCode
-                                    randomNameData.displayImage = `https://firebasestorage.googleapis.com/v0/b/insvire-curious-app.appspot.com/o/images%2FAuthor.png?alt=media`
+                                    randomNameData.displayImage = `https://firebasestorage.googleapis.com/v0/b/insvire-curious-app.appspot.com/o/avatars%2Fauthor.png?alt=media&token=623d83c1-16e1-401d-8897-39cd485fa685`
                                 } else {
                                     randomNameData.displayName = randomName
                                     randomNameData.colorCode = randomCode
