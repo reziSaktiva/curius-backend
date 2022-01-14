@@ -48,9 +48,9 @@ const usersIndex = algoliaClient.initIndex(ALGOLIA_INDEX_USERS)
 exports.onUserDelete = functions.region('asia-southeast2')
     .firestore
     .document('/users/{id}')
-    .onDelete(async (_snapshot, context) => {
+    .onDelete(async (snapshot, _context) => {
         try {
-            const id = context.params.id
+            const id = snapshot.data().id
             usersIndex.deleteObject(id.toString())
         }
         catch (err) {
@@ -61,9 +61,9 @@ exports.onUserDelete = functions.region('asia-southeast2')
 exports.onUserCreate = functions.region('asia-southeast2')
     .firestore
     .document('/users/{id}')
-    .onCreate(async (snapshot, context) => {
+    .onCreate(async (snapshot, _context) => {
         const newData = snapshot.data();
-        const id = context.params.id;
+        const id = newData.id;
         let tags = []
 
         if (newData.mobileNumber) {
@@ -86,9 +86,9 @@ exports.onUserCreate = functions.region('asia-southeast2')
 exports.onUserUpdate = functions.region('asia-southeast2')
     .firestore
     .document('/users/{id}')
-    .onUpdate(async (snapshot, context) => {
+    .onUpdate(async (snapshot, _context) => {
         const newData = snapshot.after.data();
-        const id = context.params.id;
+        const id = newData.id;
         let tags = []
 
         if (newData.mobileNumber) {
