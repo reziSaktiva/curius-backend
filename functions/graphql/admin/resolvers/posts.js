@@ -178,7 +178,10 @@ module.exports = {
         return err
       }
     },
-    async searchPosts(_, { perPage = 5, page, location, range = 40, hasReported = false, useDetailLocation = false, search, filters, room, sortBy = 'desc' }, _ctx) {
+    async searchPosts(_, {
+      perPage = 5, page, location, range = 40, hasReported = false,
+      useDetailLocation = false, search, filters, room, sortBy = 'desc'
+    }, _ctx) {
       const googleMapsClient = new Client({ axiosInstance: axios });
       const timestampFrom = get(filters, 'timestamp.from', '');
       const ownerPost = get(filters, 'owner', '');
@@ -192,7 +195,6 @@ module.exports = {
       if (sortBy === 'desc') indexKey = ALGOLIA_INDEX_POSTS_DESC
       if (sortBy === 'asc') indexKey = ALGOLIA_INDEX_POSTS_ASC
 
-      console.log(indexKey)
       const index = client.initIndex(indexKey);
 
       const defaultPayload = {
@@ -247,7 +249,6 @@ module.exports = {
       if (ownerPost) facetFilters.push([`owner:${ownerPost}`])
       if (room) facetFilters.push([`room:${room}`])
       if (status) facetFilters.push([`status.active:${status == "active" ? 'true' : 'false'}`])
-      if (hasReported) facetFilters.push([`_tags:has_reported`])
       // if (hasReported) facetFilters.push([`reportedCount > 1`])
 
       if (timestampFrom) {
@@ -260,17 +261,27 @@ module.exports = {
         facetFilters.push([`rank: ${ratingFrom} TO ${ratingTo}`])
       }
 
+      let queryTags = []
       if (media.length) {
-        let queryTags = []
         if (media.includes('video')) {
-          queryTags.push('has_video')
+          queryTags.push('w-video')
         }
-        if (media.includes('image')) {
-          queryTags.push('has_images')
+        if (media.includes('photo')) {
+          queryTags.push('w-photos')
+        }
+        
+        if (media.includes('voice-note')) {
+          queryTags.push('w-voice-note')
         }
 
-        facetFilters.push([`_tags:${queryTags.join(',')}`])
+        if (media.includes('gif')) {
+          queryTags.push('w-gif')
+        }
       }
+
+      if (hasReported) queryTags.push(`has_reported`)
+
+      facetFilters.push([`_tags:${queryTags.join(',')}`])
 
       try {
         const payload = {

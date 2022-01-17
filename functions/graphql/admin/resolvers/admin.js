@@ -1,7 +1,6 @@
 const { UserInputError } = require('apollo-server-express')
 const { db } = require('../../../utility/admin')
 const adminAuthContext = require('../../../utility/adminAuthContext')
-const { isNullOrUndefined } = require('../../../utility/validators')
 
 const updateNewDataArray = newDataEntry => (oldData = []) => {
     const newData = newDataEntry.filter(v => v.id == oldData.id)
@@ -166,6 +165,33 @@ module.exports = {
                 }   
             } catch (err) {
                 return err;
+            }
+        },
+        async deleteConfigThemesById(_, { attr = '', id: idAttr }, ctx) {
+            const attribute = ['colors', 'adjective', 'nouns']
+            if (!attribute.includes(attr)) throw new Error('attribute does not exists')
+
+            try {
+                const newDataTheme = {}
+                await db.doc(`/themes/${id}`).get().then(
+                    doc => {
+                        const oldData = doc.data();
+
+                        newDataTheme[attr] = (oldData[attr] || []).filter(({ id }) => id !== idAttr)
+
+                        newDataTheme = {
+                            id: doc.id,
+                            ...oldData,
+                            ...newDataTheme
+                        }
+                        
+                        return doc.ref.update(newDataTheme)
+                    }
+                )
+
+                return newDataTheme
+            } catch (err) {
+                return err
             }
         },
         async updateThemesById(_, { id, name, colors, adjective, nouns, isDeleted, isActive }, ctx) {
