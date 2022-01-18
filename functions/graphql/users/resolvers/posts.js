@@ -431,7 +431,7 @@ module.exports = {
       const { username } = await fbAuthContext(context)
 
       const postDocument = db.doc(`/posts/${id}`)
-      const commentCollection = db.collection(`/posts/${id}/comments`).orderBy('createdAt', 'asc')
+      const commentCollection = db.collection(`/posts/${id}/comments`).orderBy('createdAt', 'asc').limit(8)
       const likeCollection = db.collection(`/posts/${id}/likes`)
       const mutedCollection = db.collection(`/posts/${id}/muted`)
       const subscribeCollection = db.collection(`/posts/${id}/subscribes`)

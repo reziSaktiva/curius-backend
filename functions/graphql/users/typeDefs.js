@@ -115,9 +115,10 @@ module.exports = gql`
         displayName: String
         displayImage: String
         colorCode: String
+        replyCount: Int
         reply: ReplyData
         status: StatusPost
-        # replyList: [Comment]
+        children: [Comment]
     },
     type ReplyData {
         username: String
