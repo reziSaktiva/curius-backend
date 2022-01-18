@@ -99,7 +99,9 @@ module.exports = {
                         db.collection('admin').add({
                             email,
                             level: newAdminLevel,
-                            name: adminName
+                            name: adminName,
+                            isActive: true,
+                            isBanned: false
                         }).then(doc => {
                             doc.update({ id: doc.id })
                         })

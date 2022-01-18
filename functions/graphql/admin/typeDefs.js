@@ -178,6 +178,11 @@ module.exports = gql`
         hitsPerPage: Int
         processingTimeMS: Float
     }
+    type StatisticUser {
+        label: String
+        total: Int
+    }
+
     type Query {
         getAdmin: [Admin]
         getReportedListByCommentId(search: String, commentId: ID, page: Int, perPage: Int): SearchCommentReported
@@ -198,6 +203,7 @@ module.exports = gql`
         # Graph
         getGraphSummary(graphType: String, state: String): GraphData
         getAdminLogs(page: Int, perPage: Int, search: String): SearchAdminLogs
+        getStaticUserByAge: [StatisticUser]
     }
 
     type AdminLog {
