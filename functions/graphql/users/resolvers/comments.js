@@ -45,11 +45,6 @@ module.exports = {
                             postOwner = doc.data().owner;
 
                             if (reply.id) {
-                                db.doc(`/posts/${id}/comments/${reply.id}`).get()
-                                    .then(doc => {
-                                        doc.ref.update({ replyCount: doc.data().replyCount + 1, children: [newComment] })
-                                    })
-                            } else {
                                 newComment = {
                                     ...newComment,
                                     replyCount,
@@ -66,6 +61,13 @@ module.exports = {
                         newComment.displayName = name
                         newComment.displayImage = displayImage
                         newComment.colorCode = colorCode
+
+                        if (reply.id) {
+                            db.doc(`/posts/${id}/comments/${reply.id}`).get()
+                                .then(doc => {
+                                    doc.ref.update({ replyCount: doc.data().replyCount + 1, children: [newComment] })
+                                })
+                        }
 
                         doc.update({ id: doc.id, displayName: name, displayImage: displayImage, colorCode })
 
