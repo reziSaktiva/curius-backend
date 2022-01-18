@@ -9,15 +9,17 @@ module.exports = {
         async createComment(_, { id, text, reply, photo }, context) {
             const { username } = await fbAuthContext(context)
             const { name, displayImage, colorCode } = await randomGenerator(username, id)
-
+            const pathCommentCollection = reply.id ? `/posts/${id}/comments/${reply.id}/childrenStorage` : `/posts/${id}/comments`
             const postDocument = db.doc(`/posts/${id}`)
-            const commentCollection = db.collection(`/posts/${id}/comments`)
+            const commentCollection = db.collection(pathCommentCollection)
             const subscribeCollection = db.collection(`/posts/${id}/subscribes`)
 
             if (text.trim() === '' && !photo) {
                 throw new UserInputError('kamu tidak bisa membuat comment tanpa text', { error: { text: 'kamu tidak bisa membuat comment tanpa text' } })
             }
             try {
+                const replyCount = 0
+
                 const newComment = {
                     owner: username,
                     createdAt: new Date().toISOString(),
@@ -29,7 +31,7 @@ module.exports = {
                         flag: [],
                         takedown: false
                     },
-                    reportedCount: 0
+                    reportedCount: 0,
                 }
 
                 let postOwner;
@@ -40,7 +42,21 @@ module.exports = {
                             throw new UserInputError('Postingan tidak ditemukan/sudah dihapus')
                         } else {
                             doc.ref.update({ commentCount: doc.data().commentCount + 1, rank: doc.data().rank + 1 })
-                            postOwner = doc.data().owner
+                            postOwner = doc.data().owner;
+
+                            if (reply.id) {
+                                db.doc(`/posts/${id}/comments/${reply.id}`).get()
+                                    .then(doc => {
+                                        doc.ref.update({ replyCount: doc.data().replyCount + 1, children: [newComment] })
+                                    })
+                            } else {
+                                newComment = {
+                                    ...newComment,
+                                    replyCount,
+                                    children: []
+                                }
+                            }
+
 
                             return commentCollection.add(newComment)
                         }
@@ -92,7 +108,6 @@ module.exports = {
                                                         return db.collection(`/users/${doc.data().owner}/notifications`).add(notifSubscribe)
                                                             .then(data => {
                                                                 data.update({ id: data.id })
-                                                                pubSub.publish(NOTIFICATION_ADDED, { notificationAdded: { ...notifSubscribe, id: data.id } })
                                                             })
                                                     }
                                                 })
@@ -119,7 +134,6 @@ module.exports = {
                             return db.collection(`/users/${postOwner}/notifications`).add(notifData)
                                 .then(data => {
                                     data.update({ id: data.id })
-                                    pubSub.publish(NOTIFICATION_ADDED, { notificationAdded: { ...notifData, id: data.id } })
 
                                     return subscribeCollection.get()
                                         .then(data => {
@@ -142,7 +156,6 @@ module.exports = {
                                                         return db.collection(`/users/${doc.data().owner}/notifications`).add(notifSubscribe)
                                                             .then(data => {
                                                                 data.update({ id: data.id })
-                                                                pubSub.publish(NOTIFICATION_ADDED, { notificationAdded: { ...notifSubscribe, id: data.id } })
                                                             })
                                                     }
                                                 })
