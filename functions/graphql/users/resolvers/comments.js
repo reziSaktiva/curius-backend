@@ -6,6 +6,22 @@ const randomGenerator = require('../../../utility/randomGenerator')
 
 module.exports = {
     Mutation: {
+        async getMoreChild(_, { postId, commentId, lastChildId }, _context) {
+            const commentChildCollections = db.collection(`/posts/${postId}/comments/${commentId}/childrenStorage`).orderBy('createdAt', 'asc')
+            try {
+                if (lastChildId) {
+                    const lastDocument = await db.doc(`/posts/${postId}/comments/${commentId}/childrenStorage/${lastChildId}`).get()
+
+                    return commentChildCollections.limit(2).startAfter(lastDocument).get()
+                        .then(doc => doc.docs.map(doc => doc.data()))
+                }
+                return commentChildCollections.limit(2).get()
+                    .then(doc => doc.docs.map(doc => doc.data()))
+            }
+            catch (err) {
+                throw new Error(err)
+            }
+        },
         async createComment(_, { id, text, reply, photo }, context) {
             const { username } = await fbAuthContext(context)
             const { name, displayImage, colorCode } = await randomGenerator(username, id)
