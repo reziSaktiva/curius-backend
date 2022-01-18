@@ -1,5 +1,6 @@
 const { client } = require('../../../utility/algolia')
-const { ALGOLIA_INDEX_POSTS_DESC, ALGOLIA_INDEX_USERS_DESC, ALGOLIA_INDEX_ADMIN_LOGS } = require('../../../constant/post')
+const moment = require('moment');
+const { ALGOLIA_INDEX_POSTS_DESC, ALGOLIA_INDEX_USERS_DESC, ALGOLIA_INDEX_ADMIN_LOGS, ALGOLIA_INDEX_USERS } = require('../../../constant/post')
 // const adminAuthContext = require('../../../utility/adminAuthContext')
 
 module.exports = {
@@ -142,7 +143,68 @@ module.exports = {
       const searchDocs = await index.search(search, payload)
 
       return searchDocs
+    },
+    async getStaticUserByAge(_, { }, context) {
+      const defaultPayload = {
+        "attributesToRetrieve": "*",
+        "attributesToSnippet": "*:20",
+        "snippetEllipsisText": "…",
+        "responseFields": "*",
+        "getRankingInfo": true,
+        "analytics": false,
+        "enableABTest": false,
+        "explain": "*",
+        "facets": ["*"]
+      };
+
+      const pagination = {
+        "hitsPerPage": 1000,
+        "page": 0,
+      };
+
+      const thirdteenYearAgo = moment().subtract(13, 'years').unix()
+      const seventeenYearAgo = moment().subtract(17, 'years').unix()
+
+      // Static 2
+      const eightteenYearAgo = moment().subtract(18, 'years').unix()
+      const twentytwoYearAgo = moment().subtract(22, 'years').unix()
+
+      // Static 3
+      const twentythreeYearAgo = moment().subtract(23, 'years').unix()
+      const twentysevenYearAgo = moment().subtract(27, 'years').unix()
+
+      // Static 3
+      const twentyEightYearAgo = moment().subtract(23, 'years').unix()
+      const thirtytwoYearAgo = moment().subtract(27, 'years').unix()
+      
+      const index = client.initIndex(ALGOLIA_INDEX_USERS)
+
+      const payload = {
+        ...defaultPayload,
+        ...pagination
+      };
+      
+      console.log(`dob_timestamp:${twentytwoYearAgo * 1000} TO ${eightteenYearAgo * 1000}`)
+      console.log(`dob_timestamp:${twentysevenYearAgo * 1000} TO ${twentythreeYearAgo * 1000}`)
+      const searchDocsParameterOne = await index.search('', { ...payload, filters: `dob_timestamp:${seventeenYearAgo * 1000} TO ${thirdteenYearAgo * 1000}` })
+      const staticOne = searchDocsParameterOne?.nbHits || 0;
+
+
+      const searchDocsParameterTwo = await index.search('', { ...payload, filters: `dob_timestamp:${twentytwoYearAgo * 1000} TO ${eightteenYearAgo * 1000}` })
+      const staticTwo = searchDocsParameterTwo?.nbHits || 0;
+
+      const searchDocsParameterThree = await index.search('', { ...payload, filters: `dob_timestamp:${twentysevenYearAgo * 1000} TO ${twentytwoYearAgo * 1000}` })
+      const staticThree = searchDocsParameterThree?.nbHits || 0;
+
+      const searchDocsParameterFour = await index.search('', { ...payload, filters: `dob_timestamp:${thirtytwoYearAgo * 1000} TO ${twentysevenYearAgo * 1000}` })
+      const staticFour = searchDocsParameterFour?.nbHits || 0;
+
+      return [
+        { label: '13 - 17 years', total: staticOne },
+        { label: '18 - 22 years', total: staticTwo },
+        { label: '23 - 27 years', total: staticThree },
+        { label: '27 - 32 years', total: staticFour },
+      ]
     }
-    // }
   }
 }

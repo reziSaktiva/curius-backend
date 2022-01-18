@@ -10,10 +10,6 @@ const { ALGOLIA_INDEX_POSTS, ALGOLIA_INDEX_REPORT_POSTS, ALGOLIA_INDEX_POSTS_ASC
 const { API_KEY_GEOCODE } = require('../../../utility/secret/API');
 const { createLogs } = require('../usecase/admin');
 
-const isNullOrUndefined = data => {
-  return typeof data !== undefined || data !== null
-}
-
 const getEndpointPost = (room, id, target = '') => {
   return `/${room ? `room/${room}/posts` : 'posts'}/${id}${target}`
 }
@@ -377,7 +373,6 @@ module.exports = {
         if (facetFilters.length) payload.facetFilters = facetFilters
         // console.log('payload: ', payload)
         const searchDocs = await index.search(search, payload)
-        console.log('search: ', searchDocs)
 
         const comments = searchDocs.hits.map(async doc => {
           const endpoint = doc.parentTypePost === 'global-posts' ? `/posts/${doc.idPost}/comments/${doc.idComment}` : `/room/${doc.idRoom}/posts/${doc.idPost}/comments/${doc.idComment}`
