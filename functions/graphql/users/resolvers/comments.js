@@ -20,7 +20,7 @@ module.exports = {
             try {
                 const replyCount = 0
 
-                const newComment = {
+                let newComment = {
                     owner: username,
                     createdAt: new Date().toISOString(),
                     text,
