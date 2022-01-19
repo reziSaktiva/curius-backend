@@ -7,7 +7,7 @@ const { db } = require('../../../utility/admin')
 const adminAuthContext = require('../../../utility/adminAuthContext')
 const { client, server } = require('../../../utility/algolia')
 const { API_KEY_GEOCODE } = require('../../../utility/secret/API')
-const { createLogs, hasAccessPriv, LIST_OF_PRIVILEGE } = require('../usecase/admin');
+const { hasAccessPriv, LIST_OF_PRIVILEGE } = require('../usecase/admin');
 
 module.exports = {
     Query: {
