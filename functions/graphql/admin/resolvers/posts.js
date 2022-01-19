@@ -427,7 +427,7 @@ module.exports = {
             const oldPost = data.data()
 
             if (flags) {
-              status.flag = [...(oldPost.status.flag || []), ...flags]
+              status.flags = [...(oldPost.status.flag || []), ...flags]
             }
 
             if (takedown) {
@@ -444,7 +444,7 @@ module.exports = {
         let message = ''
         if (takedown) message = `Admin ${name} has reported Post Id ${docId}`
         if (active) message = `Admin ${name} has activate Post Id ${docId}`
-        if (flags.length) message = `Admin ${name} has set flag ${flag.join(',')} to Post Id ${docId}`
+        if (flags.length) message = `Admin ${name} has set flag ${flags.join(',')} to Post Id ${docId}`
 
         await createLogs({ adminId: id, role: level, message })
         // Update Algolia Search Posts
