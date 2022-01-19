@@ -181,6 +181,7 @@ module.exports = gql`
     type StatisticUser {
         label: String
         total: Int
+        percentage: Int
     }
 
     type Query {

@@ -1,7 +1,11 @@
-const { client } = require('../../../utility/algolia')
+const { client, server } = require('../../../utility/algolia')
 const moment = require('moment');
 const { ALGOLIA_INDEX_POSTS_DESC, ALGOLIA_INDEX_USERS_DESC, ALGOLIA_INDEX_ADMIN_LOGS, ALGOLIA_INDEX_USERS } = require('../../../constant/post')
 // const adminAuthContext = require('../../../utility/adminAuthContext')
+
+const getPersentate = (grandTotal, current) => {
+  return Math.floor(current / grandTotal * 100)
+}
 
 module.exports = {
   Query: {
@@ -199,12 +203,14 @@ module.exports = {
       const searchDocsParameterFour = await index.search('', { ...payload, filters: `dob_timestamp:${thirtytwoYearAgo * 1000} TO ${twentysevenYearAgo * 1000}` })
       const staticFour = searchDocsParameterFour?.nbHits || 0;
 
+      const grandTotal = staticOne + staticTwo + staticThree + staticFour;
+
       return [
-        { label: '13 - 17 years', total: staticOne },
-        { label: '18 - 22 years', total: staticTwo },
-        { label: '23 - 27 years', total: staticThree },
-        { label: '27 - 32 years', total: staticFour },
+        { label: '13 - 17 years', total: staticOne, percentage: getPersentate(grandTotal, staticOne) },
+        { label: '18 - 22 years', total: staticTwo, percentage: getPersentate(grandTotal, staticTwo) },
+        { label: '23 - 27 years', total: staticThree, percentage: getPersentate(grandTotal, staticThree) },
+        { label: '27 - 32 years', total: staticFour, percentage: getPersentate(grandTotal, staticFour) },
       ]
-    }
+    },
   }
 }
