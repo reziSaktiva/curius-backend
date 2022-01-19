@@ -57,10 +57,16 @@ module.exports = {
                         if (!doc.exists) {
                             throw new UserInputError('Postingan tidak ditemukan/sudah dihapus')
                         } else {
-                            doc.ref.update({ commentCount: doc.data().commentCount + 1, rank: doc.data().rank + 1 })
+                            const isUserHasComment = doc.data().commentedBy.find(owner => owner === username)
+                            if (!isUserHasComment) {
+                                doc.ref.update({ commentCount: doc.data().commentCount + 1, rank: doc.data().rank + 1, commentedBy: [...doc.data().commentedBy, username] })
+                            } else {
+                                doc.ref.update({ commentCount: doc.data().commentCount + 1, rank: doc.data().rank + 1 })
+                            }
+
                             postOwner = doc.data().owner;
 
-                            if (reply.id) {
+                            if (!reply.id) {
                                 newComment = {
                                     ...newComment,
                                     replyCount,

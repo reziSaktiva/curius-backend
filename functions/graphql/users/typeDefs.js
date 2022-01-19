@@ -13,6 +13,7 @@ module.exports = gql`
         commentCount: Int
         repostCount: Int
         status: StatusPost
+        commentedBy: [String]
         comments: [Comment]
         likes: [Like]
         muted: [Mute]
