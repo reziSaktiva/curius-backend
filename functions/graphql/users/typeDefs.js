@@ -36,7 +36,7 @@ module.exports = gql`
     }
     type StatusPost {
         active: Boolean
-        flag: [String]
+        flags: [String]
         takedown: Boolean
     }
     type Media {
