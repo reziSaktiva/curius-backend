@@ -44,7 +44,7 @@ module.exports = {
                     photo,
                     status: {
                         active: true,
-                        flag: [],
+                        flags: [],
                         takedown: false
                     },
                     reportedCount: 0,
