@@ -8,7 +8,7 @@ const adminAuthContext = require('../../../utility/adminAuthContext')
 
 const { ALGOLIA_INDEX_POSTS, ALGOLIA_INDEX_REPORT_POSTS, ALGOLIA_INDEX_POSTS_ASC, ALGOLIA_INDEX_POSTS_DESC } = require('../../../constant/post')
 const { API_KEY_GEOCODE } = require('../../../utility/secret/API');
-const { createLogs } = require('../usecase/admin');
+const { createLogs, hasAccessPriv, LIST_OF_PRIVILEGE } = require('../usecase/admin');
 
 const getEndpointPost = (room, id, target = '') => {
   return `/${room ? `room/${room}/posts` : 'posts'}/${id}${target}`
@@ -407,6 +407,14 @@ module.exports = {
   Mutation: {
     async setStatusPost(_, { active, flags = [], takedown, postId }, _ctx) {
       const { name, level, id } = await adminAuthContext(_ctx)
+
+      let action = ''
+      if (takedown) action = LIST_OF_PRIVILEGE.TAKEDOWN;
+      if (flags.length) action = LIST_OF_PRIVILEGE.SET_FLAGS;
+      if (active !== undefined && !active) action = LIST_OF_PRIVILEGE.DELETE_POSTS
+
+      if (!hasAccessPriv(level, action)) throw new Error('Permission Denied')
+
       if (!postId) throw new Error('postId is Required')
 
       const index = server.initIndex(ALGOLIA_INDEX_POSTS);
@@ -466,6 +474,11 @@ module.exports = {
     },
     async setStatusComment(_, { idComment, active, takedown, deleted }, _ctx) {
       const { name, level, id } = await adminAuthContext(_ctx)
+
+      let action = ''
+      if (takedown) action = LIST_OF_PRIVILEGE.TAKEDOWN;
+      if (action && !hasAccessPriv(level, action)) throw new Error('Permission Denied')
+
       if (!name) throw new Error('permission denied')
 
       const dataReported = db.collection('/reports_comment').where('idComment', '==', idComment).get()

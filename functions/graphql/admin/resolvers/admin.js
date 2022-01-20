@@ -1,6 +1,7 @@
 const { UserInputError } = require('apollo-server-express')
 const { db } = require('../../../utility/admin')
 const adminAuthContext = require('../../../utility/adminAuthContext')
+const { createLogs, hasAccessPriv, LIST_OF_PRIVILEGE } = require('../usecase/admin');
 
 const updateNewDataArray = newDataEntry => (oldData = []) => {
     const newData = newDataEntry.filter(v => v.id == oldData.id)
@@ -89,7 +90,8 @@ module.exports = {
         },
         async registerAdmin(_, { email, level: newAdminLevel, name: adminName }, context) {
             const { name, level } = await adminAuthContext(context)
-
+            if (!hasAccessPriv(level, LIST_OF_PRIVILEGE.ADD_OR_DELETE_ADMIN)) throw new Error('Permission Denied')
+            
             try {
                 if (level === 1) {
                     const getAdminWithSameEmail = await db.collection('admin').where('email', '==', email).get()
@@ -117,7 +119,8 @@ module.exports = {
             }
         },
         async setStatusAdmin(_, { adminId, isActive, isBanned }, ctx) {
-            const { name, level } = await adminAuthContext(ctx) // TODO: add condition action only for some privilage
+            const { name, level, id } = await adminAuthContext(ctx) // TODO: add condition action only for some privilage
+            if (!hasAccessPriv(level, LIST_OF_PRIVILEGE.ADD_OR_DELETE_ADMIN)) throw new Error('Permission Denied')
             if (!name) throw new Error('Access Denied')
 
             let newDataAdmin = {}
@@ -136,6 +139,12 @@ module.exports = {
                     }
                 )
     
+                await createLogs({
+                    adminId: id,
+                    role: level,
+                    message: `Admin ${name} has been ${isBanned ? 'Banned' : isActive && 'Active'} Admin id ${adminId}`,
+                    name
+                })
                 return newDataAdmin;
             } catch (err) {
                 return err;

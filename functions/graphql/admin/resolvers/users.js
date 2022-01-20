@@ -1,6 +1,8 @@
 const { db } = require('../../../utility/admin')
 const { client, server } = require('../../../utility/algolia')
 const { ALGOLIA_INDEX_USERS } = require('../../../constant/post')
+const adminAuthContext = require('../../../utility/adminAuthContext')
+const { createLogs, hasAccessPriv, LIST_OF_PRIVILEGE } = require('../usecase/admin');
 
 module.exports = {
     Query: {
@@ -68,9 +70,12 @@ module.exports = {
     },
     Mutation: {
         async changeUserStatus(_, { status, username }, _context) {
+            const { name, level, id } = await adminAuthContext(context)
             const listStatus = ['active', 'banned', 'delete', 'cancel'];
 
             const includeStatus = listStatus.includes(status)
+
+            if (status === 'banned' && !hasAccessPriv(level, LIST_OF_PRIVILEGE.BAN_USER)) throw new Error('Permission Denied')
 
             if (!includeStatus) {
                 return {
@@ -93,6 +98,14 @@ module.exports = {
                     objectID: userData.id,
                     status
                 }])
+
+                await createLogs({
+                    adminId: id,
+                    role: level,
+                    message: `Admin ${name} has change status user ${username} to ${status}`,
+                    name
+                })
+
                 return {
                     ...userData,
                     status

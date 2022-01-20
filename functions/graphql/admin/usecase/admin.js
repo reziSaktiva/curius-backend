@@ -3,6 +3,66 @@ const { server, client } = require('../../../utility/algolia')
 
 const { ALGOLIA_INDEX_ADMIN_LOGS } = require('../../../constant/post')
 
+export const LIST_OF_PRIVILEGE = {
+  RANDOM: 'Randomization',
+  EXPORT: 'Export',
+  BAN_USER: 'Ban-User',
+  ADD_OR_DELETE_ADMIN: 'Add-or-Delete-Admin',
+  SET_FLAGS: 'Set-Flags',
+  TAKEDOWN: 'Takedown',
+  DELETE_POSTS: 'Delete-Posts',
+  CREATE_ROOM: 'Create-Room',
+  CMS: 'CMS'
+}
+
+const ROLE_AND_ACCESS = [
+  {
+    id: 1, 
+    priv: [
+      LIST_OF_PRIVILEGE.RANDOM,
+      LIST_OF_PRIVILEGE.EXPORT,
+      LIST_OF_PRIVILEGE.BAN_USER,
+      LIST_OF_PRIVILEGE.ADD_OR_DELETE_ADMIN,
+      LIST_OF_PRIVILEGE.SET_FLAGS,
+      LIST_OF_PRIVILEGE.TAKEDOWN,
+      LIST_OF_PRIVILEGE.DELETE_POSTS,
+      LIST_OF_PRIVILEGE.CREATE_ROOM,
+      LIST_OF_PRIVILEGE.CMS
+    ]
+  },
+  {
+    id: 2,
+    priv: [
+      LIST_OF_PRIVILEGE.RANDOM,
+      LIST_OF_PRIVILEGE.EXPORT,
+      LIST_OF_PRIVILEGE.BAN_USER,
+      LIST_OF_PRIVILEGE.SET_FLAGS,
+      LIST_OF_PRIVILEGE.TAKEDOWN,
+      LIST_OF_PRIVILEGE.DELETE_POSTS,
+      LIST_OF_PRIVILEGE.CREATE_ROOM,
+      LIST_OF_PRIVILEGE.CMS
+    ]
+  },
+  {
+    id: 3,
+    priv: [
+      LIST_OF_PRIVILEGE.RANDOM,
+      LIST_OF_PRIVILEGE.EXPORT,
+      LIST_OF_PRIVILEGE.BAN_USER
+    ]
+  },
+  {
+    id: 4,
+    priv: [
+      LIST_OF_PRIVILEGE.RANDOM,
+      LIST_OF_PRIVILEGE.EXPORT,
+      LIST_OF_PRIVILEGE.SET_FLAGS,
+      LIST_OF_PRIVILEGE.TAKEDOWN,
+      LIST_OF_PRIVILEGE.DELETE_POSTS
+    ]
+  }
+]
+
 module.exports = {
   createLogs: async ({ adminId, role, message, name }) => {
     const payload = {
@@ -24,5 +84,12 @@ module.exports = {
     })
 
     return 'Success create log'
+  },
+  hasAccessPriv: ({ id: role, action }) => {
+    if (!Object.values(LIST_OF_PRIVILEGE).includes(action)) return false;
+
+    const access = ROLE_AND_ACCESS.find(({ id }) => id === role) || [];
+
+    return !!access.priv.includes(action)
   }
 }
