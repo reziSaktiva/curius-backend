@@ -3,7 +3,7 @@ const { server, client } = require('../../../utility/algolia')
 
 const { ALGOLIA_INDEX_ADMIN_LOGS } = require('../../../constant/post')
 
-export const LIST_OF_PRIVILEGE = {
+const LIST_OF_PRIVILEGE = {
   RANDOM: 'Randomization',
   EXPORT: 'Export',
   BAN_USER: 'Ban-User',
@@ -64,6 +64,7 @@ const ROLE_AND_ACCESS = [
 ]
 
 module.exports = {
+  LIST_OF_PRIVILEGE,
   createLogs: async ({ adminId, role, message, name }) => {
     const payload = {
       adminId,

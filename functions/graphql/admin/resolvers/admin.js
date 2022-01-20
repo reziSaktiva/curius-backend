@@ -178,13 +178,13 @@ module.exports = {
                 return err;
             }
         },
-        async deleteConfigThemesById(_, { attr = '', id: idAttr }, ctx) {
+        async deleteConfigThemesById(_, { attr = '', id: idAttr, themeId }, ctx) {
             const attribute = ['colors', 'adjective', 'nouns']
             if (!attribute.includes(attr)) throw new Error('attribute does not exists')
 
             try {
-                const newDataTheme = {}
-                await db.doc(`/themes/${id}`).get().then(
+                let newDataTheme = {}
+                await db.doc(`/themes/${themeId}`).get().then(
                     doc => {
                         const oldData = doc.data();
 
