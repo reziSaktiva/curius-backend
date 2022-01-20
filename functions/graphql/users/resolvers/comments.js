@@ -6,6 +6,22 @@ const randomGenerator = require('../../../utility/randomGenerator')
 
 module.exports = {
     Mutation: {
+        async getMoreChild(_, { postId, commentId, lastChildId }, _context) {
+            const commentChildCollections = db.collection(`/posts/${postId}/comments/${commentId}/childrenStorage`).orderBy('createdAt', 'asc')
+            try {
+                if (lastChildId) {
+                    const lastDocument = await db.doc(`/posts/${postId}/comments/${commentId}/childrenStorage/${lastChildId}`).get()
+
+                    return commentChildCollections.limit(2).startAfter(lastDocument).get()
+                        .then(doc => doc.docs.map(doc => doc.data()))
+                }
+                return commentChildCollections.limit(2).get()
+                    .then(doc => doc.docs.map(doc => doc.data()))
+            }
+            catch (err) {
+                throw new Error(err)
+            }
+        },
         async createComment(_, { id, text, reply, photo }, context) {
             const { username } = await fbAuthContext(context)
             const { name, displayImage, colorCode } = await randomGenerator(username, id)
@@ -41,10 +57,16 @@ module.exports = {
                         if (!doc.exists) {
                             throw new UserInputError('Postingan tidak ditemukan/sudah dihapus')
                         } else {
-                            doc.ref.update({ commentCount: doc.data().commentCount + 1, rank: doc.data().rank + 1 })
+                            const isUserHasComment = doc.data().commentedBy.find(owner => owner === username)
+                            if (!isUserHasComment) {
+                                doc.ref.update({ commentCount: doc.data().commentCount + 1, rank: doc.data().rank + 1, commentedBy: [...doc.data().commentedBy, username] })
+                            } else {
+                                doc.ref.update({ commentCount: doc.data().commentCount + 1, rank: doc.data().rank + 1 })
+                            }
+
                             postOwner = doc.data().owner;
 
-                            if (reply.id) {
+                            if (!reply.id) {
                                 newComment = {
                                     ...newComment,
                                     replyCount,

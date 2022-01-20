@@ -11,7 +11,7 @@ const { server, client } = require('../../../utility/algolia')
 module.exports = {
   Query: {
     async getPosts(_, { lat, lng, range = 1, type, page, room }) {
-      if (!lat || !lng) {
+      if (!room && (!lat || !lng)) {
         throw new UserInputError('Lat and Lng is Required')
       }
 
@@ -45,7 +45,7 @@ module.exports = {
         ],
       };
 
-      const geoLocPayload = lng && lat && {
+      const geoLocPayload = room ? {} : lng && lat && {
         "aroundLatLng": `${lat}, ${lng}`,
         "aroundRadius": range * 1000,
       };
@@ -95,12 +95,6 @@ module.exports = {
                     return likes;
                   };
 
-                  // Comments
-                  const comments = async () => {
-                    const commentsData = await db.collection(`/posts/${data.id}/comments`).get()
-                    return commentsData.docs.map(doc => doc.data())
-                  }
-
                   // Muted
                   const muted = async () => {
                     const mutedData = await db.collection(`/posts/${data.id}/muted`).get();
@@ -112,7 +106,7 @@ module.exports = {
                     return subscribeData.docs.map(doc => doc.data());
                   }
 
-                  const newData = { ...data, likes: likes(), comments: comments(), muted: muted(), repost: repostData(), subscribe: subscribe() }
+                  const newData = { ...data, likes: likes(), muted: muted(), repost: repostData(), subscribe: subscribe() }
 
                   newHits.push(newData)
                 })
@@ -1121,6 +1115,7 @@ module.exports = {
             rank: 0,
             geohash,
             location,
+            commentedBy: [],
             _tags: hastags,
             status: {
               active: true,
@@ -1139,6 +1134,7 @@ module.exports = {
             rank: 0,
             geohash,
             location,
+            commentedBy: [],
             status: {
               active: true,
               flag: [],
