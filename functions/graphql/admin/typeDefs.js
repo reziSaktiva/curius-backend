@@ -358,7 +358,7 @@ module.exports = gql`
         # Randomization
         updateThemesById(id: ID, name: String, colors: [Colors], adjective: [Adjective], nouns: [Nouns], isDeleted: Boolean, isActive: Boolean): ThemeType 
         setStatusAdmin(adminId: ID, isActive: Boolean, isBanned: Boolean): Admin
-        deleteConfigThemesById(attr: String!, id: ID!): ThemeType
+        deleteConfigThemesById(attr: String!, themeId: ID! , id: ID!): ThemeType
 
         # Create New Data
         createRoom(roomName: String, description: String, startingDate: String, tillDate: String, displayPicture: String, location: Location, range: Int): String
