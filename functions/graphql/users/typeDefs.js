@@ -304,7 +304,7 @@ module.exports = gql`
 
         # comments mutation
         createComment( id:ID!, text: String!, reply: Reply, photo: String ): Comment!
-        deleteComment( postId: ID!, commentId: ID!, room: String ): Comment!
+        deleteComment( postId: ID!, commentId: ID!, childrenId: ID ): Comment!
         getMoreChild(postId: ID, commentId: ID, lastChildId: ID): [Comment]
     }
 `

@@ -195,29 +195,34 @@ module.exports = {
                 throw new Error(err)
             }
         },
-        async deleteComment(_, { postId, commentId, room }, context) {
+        async deleteComment(_, { postId, commentId, childrenId }, context) {
             const { username } = await fbAuthContext(context)
             const postDocument = await db.doc(`/posts/${postId}`).get()
-            const getCommentDoc = await db.collection(room ? `/room/${room}/posts` : 'posts').doc(postId).collection('comments').doc(commentId).get()
-            const commentDoc = db.collection(room ? `/room/${room}/posts` : 'posts').doc(postId).collection('comments').doc(commentId)
+            const getCommentDoc = await db.doc(childrenId ? `/posts/${postId}/comments/${commentId}/childrenStorage/${childrenId}` : `/posts/${postId}/comments/${commentId}`).get()
+            const childrenStorageCollection = await db.collection(`/posts/${postId}/comments/${commentId}/childrenStorage`).get()
             const subscribeCollection = await db.collection(`/posts/${postId}/subscribes`).get()
 
             try {
-                if (!getCommentDoc.exists) {
-                    throw new UserInputError("Comment tidak di temukan/sudah di hapus")
-                } else {
-                    if (!getCommentDoc.data().reply.id) {
-                        const getCommentChild = await db.collection(`${room ? `/room/${room}/posts/` : `/posts/`}${postId}/comments`).where('reply.id', '==', getCommentDoc.data().id).get()
-                        if (!getCommentChild.empty) {
-                            const commentChilds = getCommentChild.docs.map(doc => doc.data())
-                            commentChilds.forEach(doc => {
-                                db.doc(`${room ? `/room/${room}/posts/` : `/posts/`}${postId}/comments/${doc.id}`).delete()
+                if (!getCommentDoc.exists) throw new UserInputError("Comment tidak di temukan/sudah di hapus")
+                else {
+                    if (username !== getCommentDoc.data().owner) throw new UserInputError("comment is not yours")
+
+                    getCommentDoc.ref.delete()
+                    if (!childrenId) {
+                        if (!childrenStorageCollection.empty) {
+                            const lengthData = childrenStorageCollection.docs.length + 1
+                            childrenStorageCollection.forEach(doc => {
+                                doc.ref.delete()
                             })
+                            postDocument.ref.update({ commentCount: postDocument.data().commentCount - lengthData, rank: postDocument.data().rank - lengthData })
+                        } else {
+                            postDocument.ref.update({ commentCount: postDocument.data().commentCount - 1, rank: postDocument.data().rank - 1 })
                         }
+                    } else {
+                        postDocument.ref.update({ commentCount: postDocument.data().commentCount - 1, rank: postDocument.data().rank - 1 })
+
                     }
 
-                    commentDoc.delete()
-                    postDocument.ref.update({ commentCount: postDocument.data().commentCount - 1, rank: postDocument.data().rank - 1 })
 
                     if (!subscribeCollection.empty) {
                         subscribeCollection.docs.forEach(doc => {
@@ -248,7 +253,6 @@ module.exports = {
                 return getCommentDoc.data()
             }
             catch (err) {
-                console.log(err);
                 throw new Error(err)
             }
         }
