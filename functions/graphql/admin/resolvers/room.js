@@ -7,6 +7,7 @@ const { db } = require('../../../utility/admin')
 const adminAuthContext = require('../../../utility/adminAuthContext')
 const { client, server } = require('../../../utility/algolia')
 const { API_KEY_GEOCODE } = require('../../../utility/secret/API')
+const { hasAccessPriv, LIST_OF_PRIVILEGE } = require('../usecase/admin');
 
 module.exports = {
     Query: {
@@ -106,6 +107,8 @@ module.exports = {
     Mutation: {
       async createRoom(_, { roomName, description, startingDate, tillDate, displayPicture, location, range }, context) {
           const { name, level } = await adminAuthContext(context)
+          if (!hasAccessPriv(level, LIST_OF_PRIVILEGE.CREATE_ROOM)) throw new Error('Permission Denied')
+          
           const index = server.initIndex(ALGOLIA_INDEX_ROOMS)
 
           const data = {
