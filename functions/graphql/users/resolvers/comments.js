@@ -7,7 +7,7 @@ const randomGenerator = require('../../../utility/randomGenerator')
 module.exports = {
     Mutation: {
         async getMoreChild(_, { postId, commentId, lastChildId }, _context) {
-            const commentChildCollections = db.collection(`/posts/${postId}/comments/${commentId}/childrenStorage`).orderBy('createdAt', 'asc')
+            const commentChildCollections = db.collection(`/posts/${postId}/comments/${commentId}/childrenStorage`).where("status.active", '==', true).orderBy('createdAt', 'asc')
             try {
                 if (lastChildId) {
                     const lastDocument = await db.doc(`/posts/${postId}/comments/${commentId}/childrenStorage/${lastChildId}`).get()
@@ -16,6 +16,19 @@ module.exports = {
                         .then(doc => doc.docs.map(doc => doc.data()))
                 }
                 return commentChildCollections.limit(2).get()
+                    .then(doc => doc.docs.map(doc => doc.data()))
+            }
+            catch (err) {
+                throw new Error(err)
+            }
+        },
+        async getMoreComments(_, { postId, lastCommentId }, _context) {
+            const commentCommentCollections = db.collection(`/posts/${postId}/comments`).where("status.active", '==', true).orderBy('createdAt', 'asc')
+
+            try {
+                const lastDocument = await db.doc(`/posts/${postId}/comments/${lastCommentId}`).get()
+
+                return commentCommentCollections.limit(2).startAfter(lastDocument).get()
                     .then(doc => doc.docs.map(doc => doc.data()))
             }
             catch (err) {
