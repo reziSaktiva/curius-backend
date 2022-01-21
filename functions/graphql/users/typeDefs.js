@@ -306,5 +306,6 @@ module.exports = gql`
         createComment( id:ID!, text: String!, reply: Reply, photo: String ): Comment!
         deleteComment( postId: ID!, commentId: ID!, childrenId: ID ): Comment!
         getMoreChild(postId: ID, commentId: ID, lastChildId: ID): [Comment]
+        getMoreComments(postId: ID, lastCommentId: ID): [Comment]
     }
 `
