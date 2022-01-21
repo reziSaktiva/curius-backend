@@ -413,7 +413,7 @@ module.exports = {
       if (flags.length) action = LIST_OF_PRIVILEGE.SET_FLAGS;
       if (active !== undefined && !active) action = LIST_OF_PRIVILEGE.DELETE_POSTS
 
-      if (!hasAccessPriv(level, action)) throw new Error('Permission Denied')
+      if (!hasAccessPriv({ id: level, action })) throw new Error('Permission Denied')
 
       if (!postId) throw new Error('postId is Required')
 
@@ -447,7 +447,7 @@ module.exports = {
             }
 
             docId = doc.id
-            return doc.ref.update({ status })
+            return doc.ref.update({ status: { ...oldPost.status, ...status } })
           })
         let message = ''
         if (takedown) message = `Admin ${name} has reported Post Id ${docId}`
@@ -477,7 +477,7 @@ module.exports = {
 
       let action = ''
       if (takedown) action = LIST_OF_PRIVILEGE.TAKEDOWN;
-      if (action && !hasAccessPriv(level, action)) throw new Error('Permission Denied')
+      if (action && !hasAccessPriv({ id: level, action })) throw new Error('Permission Denied')
 
       if (!name) throw new Error('permission denied')
 

@@ -71,11 +71,12 @@ module.exports = {
     Mutation: {
         async changeUserStatus(_, { status, username }, _context) {
             const { name, level, id } = await adminAuthContext(context)
+            // only level 3 should be ask for review update user status
             const listStatus = ['active', 'banned', 'delete', 'cancel'];
 
             const includeStatus = listStatus.includes(status)
 
-            if (status === 'banned' && !hasAccessPriv(level, LIST_OF_PRIVILEGE.BAN_USER)) throw new Error('Permission Denied')
+            if (status === 'banned' && !hasAccessPriv({ id: level, action: LIST_OF_PRIVILEGE.BAN_USER })) throw new Error('Permission Denied')
 
             if (!includeStatus) {
                 return {

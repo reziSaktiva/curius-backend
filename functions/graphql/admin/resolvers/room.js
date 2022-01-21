@@ -107,7 +107,7 @@ module.exports = {
     Mutation: {
       async createRoom(_, { roomName, description, startingDate, tillDate, displayPicture, location, range }, context) {
           const { name, level } = await adminAuthContext(context)
-          if (!hasAccessPriv(level, LIST_OF_PRIVILEGE.CREATE_ROOM)) throw new Error('Permission Denied')
+          if (!hasAccessPriv({ id: level, action: LIST_OF_PRIVILEGE.CREATE_ROOM })) throw new Error('Permission Denied')
           
           const index = server.initIndex(ALGOLIA_INDEX_ROOMS)
 

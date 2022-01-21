@@ -90,7 +90,10 @@ module.exports = {
         },
         async registerAdmin(_, { email, level: newAdminLevel, name: adminName }, context) {
             const { name, level } = await adminAuthContext(context)
-            if (!hasAccessPriv(level, LIST_OF_PRIVILEGE.ADD_OR_DELETE_ADMIN)) throw new Error('Permission Denied')
+            if (!hasAccessPriv({
+                id: level,
+                action: LIST_OF_PRIVILEGE.ADD_OR_DELETE_ADMIN
+            })) throw new Error('Permission Denied')
             
             try {
                 if (level === 1) {
@@ -120,7 +123,11 @@ module.exports = {
         },
         async setStatusAdmin(_, { adminId, isActive, isBanned }, ctx) {
             const { name, level, id } = await adminAuthContext(ctx) // TODO: add condition action only for some privilage
-            if (!hasAccessPriv(level, LIST_OF_PRIVILEGE.ADD_OR_DELETE_ADMIN)) throw new Error('Permission Denied')
+            if (!hasAccessPriv({
+                id: level,
+                action: LIST_OF_PRIVILEGE.ADD_OR_DELETE_ADMIN
+            })) throw new Error('Permission Denied')
+            
             if (!name) throw new Error('Access Denied')
 
             let newDataAdmin = {}
