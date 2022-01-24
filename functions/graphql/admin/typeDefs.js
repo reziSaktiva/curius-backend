@@ -41,6 +41,7 @@ module.exports = gql`
         tillDate: String
         address: String
         isDeactive: Boolean
+        location: LatLongWithRange
     }
     type Media {
         content: [String]
@@ -79,6 +80,23 @@ module.exports = gql`
         lng: Float
         detail: DetailLatLong
     }
+    type LatLongWithRange {
+        lat: Float
+        lng: Float
+        range: Float
+        detail: DetailLatLong
+    }
+    input LatLongWithRangeInput {
+        lat: Float
+        lng: Float
+        range: Float
+        detail: DetailLatLongInput
+    }
+
+    input DetailLatLongInput {
+        formattedAddress: String
+    }
+
     type DetailLatLong {
         city: String
         country: String
@@ -187,6 +205,7 @@ module.exports = gql`
     type Query {
         getAdmin: [Admin]
         getReportedListByCommentId(search: String, commentId: ID, page: Int, perPage: Int): SearchCommentReported
+        getRoomById(id: ID!): Room!
 
         # Search
         searchUser(search: String, status: String, perPage: Int, page: Int, filters: RequestFilterUser ): SearchUser!
@@ -349,7 +368,7 @@ module.exports = gql`
     }
 
     type Mutation {
-        checkEmail(email: String uid: String name: String): Boolean
+        checkEmail(email: String uid: String name: String, accessCode: String!): Boolean
         registerAdmin(email: String! level: Int! name: String!): String
         changeUserStatus(status: String!, username: String!): User!
         setStatusComment(idComment: ID, active: Boolean, takedown: Boolean, deleted: Boolean): CommentReported
@@ -361,8 +380,8 @@ module.exports = gql`
         deleteConfigThemesById(attr: String!, themeId: ID! , id: ID!): ThemeType
 
         # Create New Data
-        createRoom(roomName: String, description: String, startingDate: String, tillDate: String, displayPicture: String, location: Location, range: Int): String
-        updateRoom(isDeactive: Boolean, roomId: ID, roomName: String, description: String, startingDate: String, tillDate: String, displayPicture: String, location: Location, range: Int): Room
+        createRoom(roomName: String, description: String, startingDate: String, tillDate: String, displayPicture: String, location: LatLongWithRangeInput, range: Int): String
+        updateRoom(isDeactive: Boolean, roomId: ID, roomName: String, description: String, startingDate: String, tillDate: String, displayPicture: String, location: LatLongWithRangeInput, range: Int): Room
         reportPostById(idPost: ID!, content: String, userIdReporter: ID!): ReportPost!
         reportedComment(idComment: ID!, idPost: ID, reason: String!, roomId: ID, username: String!): String
         createReportPostById(idPost: ID!, content: String, userIdReporter: ID!): ReportPost
