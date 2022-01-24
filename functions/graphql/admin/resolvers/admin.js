@@ -65,8 +65,11 @@ module.exports = {
         }
     },
     Mutation: {
-        async checkEmail(_, { email, uid: id, name }) {
-            const getAdmin = await db.collection('admin').where('email', '==', email).get()
+        async checkEmail(_, { email, uid: id, name, accessCode }) {
+            const getAdmin = await db.collection('admin')
+                .where('email', '==', email)
+                .where('accessCode', '==', accessCode)
+                .get()
 
             try {
                 if (!getAdmin.empty) {
@@ -88,7 +91,7 @@ module.exports = {
                 console.log(err);
             }
         },
-        async registerAdmin(_, { email, level: newAdminLevel, name: adminName }, context) {
+        async registerAdmin(_, { email, level: newAdminLevel, name: adminName, accessCode }, context) {
             const { name, level } = await adminAuthContext(context)
             if (!hasAccessPriv({
                 id: level,
@@ -105,6 +108,7 @@ module.exports = {
                             email,
                             level: newAdminLevel,
                             name: adminName,
+                            accessCode,
                             isActive: true,
                             isBanned: false
                         }).then(doc => {

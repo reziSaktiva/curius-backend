@@ -102,11 +102,18 @@ module.exports = {
           } catch (err) {
             return err
           }
+        },
+        async getRoomById(_, { id }) {
+          const getRooms = await db.collection('room').where('id', '==', id).get()
+          const rooms = await getRooms.docs.map(async doc => doc.data())
+
+          return rooms[0]
         }
     },
     Mutation: {
       async createRoom(_, { roomName, description, startingDate, tillDate, displayPicture, location, range }, context) {
           const { name, level } = await adminAuthContext(context)
+          console.log('location: ', location);
           if (!hasAccessPriv({ id: level, action: LIST_OF_PRIVILEGE.CREATE_ROOM })) throw new Error('Permission Denied')
           
           const index = server.initIndex(ALGOLIA_INDEX_ROOMS)
@@ -154,8 +161,10 @@ module.exports = {
               throw new Error(err)
           }
       },
-      async updateRoom(_, { isDeactive, roomId,roomName, description, startingDate, tillDate, displayPicture, location, range }, context) {
+      async updateRoom(_, props, context) {
+        const { isDeactive, roomId,roomName, description, startingDate, tillDate, displayPicture, location, range } = props
         const { name, level } = await adminAuthContext(context)
+        if (!roomId) throw new Error('Room ID is requred')
         if (!name) throw new Error('Access Denied')
         const index = server.initIndex(ALGOLIA_INDEX_ROOMS)
 
@@ -165,14 +174,15 @@ module.exports = {
           let newData = { }
           await db.doc(targetCollection).get().then(
             doc => {
-              const payload = { }
+              const payload = doc.data()
 
               if (roomName) payload.roomName = roomName
               if (description) payload.description = description
               if (startingDate) payload.startingDate = startingDate
               if (tillDate) payload.tillDate = tillDate
               if (displayPicture) payload.displayPicture = displayPicture
-              if (location && location.lat && location.lng) payload.location = location
+              if (location && location.lat && location.lng) payload.location = { ...payload.location ,...location }
+              if (range) payload.location = { ...payload.location, range }
               if (isDeactive !== null || isDeactive !== undefined) {
                 if (isDeactive) payload.isDeactive = true
                 else payload.isDeactive = false
