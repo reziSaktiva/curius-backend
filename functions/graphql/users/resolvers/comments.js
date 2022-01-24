@@ -69,13 +69,6 @@ module.exports = {
                         if (!doc.exists) {
                             throw new UserInputError('Postingan tidak ditemukan/sudah dihapus')
                         } else {
-                            const isUserHasComment = doc.data().commentedBy.find(owner => owner === username)
-                            if (!isUserHasComment) {
-                                doc.ref.update({ commentCount: doc.data().commentCount + 1, rank: doc.data().rank + 1, commentedBy: [...doc.data().commentedBy, username] })
-                            } else {
-                                doc.ref.update({ commentCount: doc.data().commentCount + 1, rank: doc.data().rank + 1 })
-                            }
-
                             postOwner = doc.data().owner;
 
                             if (!reply.id) {
@@ -86,7 +79,7 @@ module.exports = {
                                 }
                             }
 
-
+                            doc.ref.update({ commentCount: doc.data().commentCount + 1, rank: doc.data().rank + 1 })
                             return commentCollection.add(newComment)
                         }
                     })
@@ -203,7 +196,6 @@ module.exports = {
                 return newComment
             }
             catch (err) {
-                console.log(err);
                 throw new Error(err)
             }
         },

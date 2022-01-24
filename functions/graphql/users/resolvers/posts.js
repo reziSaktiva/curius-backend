@@ -86,9 +86,22 @@ module.exports = {
                     }
                   }
 
+                  //commentedBy
+                  const commentedBy = async () => {
+                    let commentedBy = []
+
+                    const commentCollection = await db.collection(`/posts/${data.id}/comments`).get()
+                    commentCollection.forEach(doc => {
+                      const isHas = commentedBy.find(result => result === doc.data().owner)
+                      if (!isHas) {
+                        commentedBy.push(doc.data().owner)
+                      }
+                    })
+                    return commentedBy
+                  };
+
                   // Likes
                   const likes = async () => {
-
                     const likesData = await db.collection(`/posts/${data.id}/likes`).get()
                     const likes = likesData.docs.map(doc => doc.data())
 
@@ -106,7 +119,7 @@ module.exports = {
                     return subscribeData.docs.map(doc => doc.data());
                   }
 
-                  const newData = { ...data, likes: likes(), muted: muted(), repost: repostData(), subscribe: subscribe() }
+                  const newData = { ...data, commentedBy: commentedBy(), likes: likes(), muted: muted(), repost: repostData(), subscribe: subscribe() }
 
                   newHits.push(newData)
                 })
@@ -425,7 +438,7 @@ module.exports = {
       const { username } = await fbAuthContext(context)
 
       const postDocument = db.doc(`/posts/${id}`)
-      const commentCollection = db.collection(`/posts/${id}/comments`).where("reply.id", '==', null).where("status.active", '==', true).orderBy('createdAt', 'asc').limit(8)
+      const commentCollection = db.collection(`/posts/${id}/comments`)
       const likeCollection = db.collection(`/posts/${id}/likes`)
       const mutedCollection = db.collection(`/posts/${id}/muted`)
       const subscribeCollection = db.collection(`/posts/${id}/subscribes`)
@@ -446,10 +459,23 @@ module.exports = {
               repost = repostData.data();
             }
 
+            const commentedBy = async () => {
+              let commentedBy = []
+
+              const commentCollection = await db.collection(`/posts/${id}/comments`).get()
+              commentCollection.forEach(doc => {
+                const isHas = commentedBy.find(result => result === doc.data().owner)
+                if (!isHas) {
+                  commentedBy.push(doc.data().owner)
+                }
+              })
+              return commentedBy
+            };
+
             const likesPost = await likeCollection.get();
             const likes = likesPost.docs.map(doc => doc.data()) || []
 
-            const commentsPost = await commentCollection.get();
+            const commentsPost = await commentCollection.where("reply.id", '==', null).where("status.active", '==', true).orderBy('createdAt', 'asc').limit(8).get();
             const comments = commentsPost.docs.map(doc => doc.data()) || [];
 
             const mutedPost = await mutedCollection.get();
@@ -465,7 +491,8 @@ module.exports = {
               comments: comments,
               muted,
               subscribe,
-              repost
+              repost,
+              commentedBy: commentedBy()
             }
           }
         }
