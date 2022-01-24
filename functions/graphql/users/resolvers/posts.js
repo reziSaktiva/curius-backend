@@ -10,8 +10,8 @@ const { server, client } = require('../../../utility/algolia')
 
 module.exports = {
   Query: {
-    async getPosts(_, { lat, lng, range = 1, type, page, room }) {
-      if (!room && (!lat || !lng)) {
+    async getPosts(_, { lat, lng, range = 1, type, page, room, username }) {
+      if ((!lat && !lng) && (!room && !username)) {
         throw new UserInputError('Lat and Lng is Required')
       }
 
@@ -21,11 +21,15 @@ module.exports = {
 
       const facetFilters = [["status.active:true"]]
 
-      if (room) {
-        facetFilters.push(['_tags:has_post_room'])
-        facetFilters.push([`room:${room}`])
+      if(username){
+        facetFilters.push([`owner:${username}`])
       } else {
-        facetFilters.push(['_tags:is_not_post_room'])
+        if (room) {
+          facetFilters.push(['_tags:has_post_room'])
+          facetFilters.push([`room:${room}`])
+        } else {
+          facetFilters.push(['_tags:is_not_post_room'])
+        }
       }
 
       const defaultPayload = {
@@ -45,7 +49,7 @@ module.exports = {
         ],
       };
 
-      const geoLocPayload = room ? {} : lng && lat && {
+      const geoLocPayload = room || username ? {} : lng && lat && {
         "aroundLatLng": `${lat}, ${lng}`,
         "aroundRadius": range * 1000,
       };

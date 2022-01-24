@@ -331,7 +331,7 @@ module.exports = {
             })
 
             return filterLocation;
-        }
+        },
     },
     Mutation: {
         async privateSetting(_, _args, context) {

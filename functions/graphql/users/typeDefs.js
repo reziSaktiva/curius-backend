@@ -194,7 +194,7 @@ module.exports = gql`
     }
     type Query {
         moreForYou: dataPost
-        getPosts(lat: Float, lng: Float, range: Float page: Int type: String, room: ID): dataPost
+        getPosts(lat: Float, lng: Float, range: Float page: Int type: String, room: ID, username: String): dataPost
         getPopularPosts(lat: Float, lng: Float range: Float): dataPost
         getVisited: [GeoLocation]
         getProfilePosts(username: String): dataPost
