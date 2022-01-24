@@ -7,10 +7,10 @@ const randomGenerator = require('../../../utility/randomGenerator')
 module.exports = {
     Mutation: {
         async getMoreChild(_, { postId, commentId, lastChildId }, _context) {
-            const commentChildCollections = db.collection(`/posts/${postId}/comments/${commentId}/childrenStorage`).where("status.active", '==', true).orderBy('createdAt', 'asc')
+            const commentChildCollections = db.collection(`/posts/${postId}/comments`).where("reply.id", '==', commentId).where("status.active", '==', true).orderBy('createdAt', 'asc')
             try {
                 if (lastChildId) {
-                    const lastDocument = await db.doc(`/posts/${postId}/comments/${commentId}/childrenStorage/${lastChildId}`).get()
+                    const lastDocument = await db.doc(`/posts/${postId}/comments/${lastChildId}`).get()
 
                     return commentChildCollections.limit(2).startAfter(lastDocument).get()
                         .then(doc => doc.docs.map(doc => doc.data()))
@@ -23,7 +23,7 @@ module.exports = {
             }
         },
         async getMoreComments(_, { postId, lastCommentId }, _context) {
-            const commentCommentCollections = db.collection(`/posts/${postId}/comments`).where("status.active", '==', true).orderBy('createdAt', 'asc')
+            const commentCommentCollections = db.collection(`/posts/${postId}/comments`).where("reply.id", '==', null).where("status.active", '==', true).orderBy('createdAt', 'asc')
 
             try {
                 const lastDocument = await db.doc(`/posts/${postId}/comments/${lastCommentId}`).get()
@@ -38,9 +38,8 @@ module.exports = {
         async createComment(_, { id, text, reply, photo }, context) {
             const { username } = await fbAuthContext(context)
             const { name, displayImage, colorCode } = await randomGenerator(username, id)
-            const pathCommentCollection = reply.id ? `/posts/${id}/comments/${reply.id}/childrenStorage` : `/posts/${id}/comments`
             const postDocument = db.doc(`/posts/${id}`)
-            const commentCollection = db.collection(pathCommentCollection)
+            const commentCollection = db.collection(`/posts/${id}/comments`)
             const subscribeCollection = db.collection(`/posts/${id}/subscribes`)
 
             if (text.trim() === '' && !photo) {
@@ -208,11 +207,10 @@ module.exports = {
                 throw new Error(err)
             }
         },
-        async deleteComment(_, { postId, commentId, childrenId }, context) {
+        async deleteComment(_, { postId, commentId }, context) {
             const { username } = await fbAuthContext(context)
             const postDocument = await db.doc(`/posts/${postId}`).get()
-            const getCommentDoc = await db.doc(childrenId ? `/posts/${postId}/comments/${commentId}/childrenStorage/${childrenId}` : `/posts/${postId}/comments/${commentId}`).get()
-            const childrenStorageCollection = await db.collection(`/posts/${postId}/comments/${commentId}/childrenStorage`).get()
+            const getCommentDoc = await db.doc(`/posts/${postId}/comments/${commentId}`).get()
             const subscribeCollection = await db.collection(`/posts/${postId}/subscribes`).get()
 
             try {
@@ -220,22 +218,28 @@ module.exports = {
                 else {
                     if (username !== getCommentDoc.data().owner) throw new UserInputError("comment is not yours")
 
-                    getCommentDoc.ref.delete()
-                    if (!childrenId) {
-                        if (!childrenStorageCollection.empty) {
-                            const lengthData = childrenStorageCollection.docs.length + 1
-                            childrenStorageCollection.forEach(doc => {
-                                doc.ref.delete()
-                            })
-                            postDocument.ref.update({ commentCount: postDocument.data().commentCount - lengthData, rank: postDocument.data().rank - lengthData })
-                        } else {
-                            postDocument.ref.update({ commentCount: postDocument.data().commentCount - 1, rank: postDocument.data().rank - 1 })
-                        }
-                    } else {
-                        postDocument.ref.update({ commentCount: postDocument.data().commentCount - 1, rank: postDocument.data().rank - 1 })
+                    if (getCommentDoc.data().reply.id) {
+                        const parentComment = await db.doc(`/posts/${postId}/comments/${getCommentDoc.data().reply.id}`).get()
+                        if (getCommentDoc.id === parentComment.data().children[0].id) {
+                            const children = await db.collection(`/posts/${postId}/comments`).where("reply.id", '==', parentComment.id).where("status.active", '==', true).orderBy('createdAt', 'asc').get()
+                            const lastChildren = children.docs[children.docs.length - 2];
+                            const dataChildren = children.docs.length <= 1 ? [] : [lastChildren.data()]
 
+                            parentComment.ref.update({ children: dataChildren, replyCount: parentComment.data().replyCount - 1 })
+                        }
+                        postDocument.ref.update({ commentCount: postDocument.data().commentCount - 1, rank: postDocument.data().rank - 1 })
+                    } else {
+                        const children = await db.collection(`/posts/${postId}/comments`).where('reply.id', '==', commentId).get()
+
+                        children.forEach(doc => {
+                            doc.ref.delete()
+                        })
+
+                        const lengthData = children.docs.length + 1
+                        postDocument.ref.update({ commentCount: postDocument.data().commentCount - lengthData, rank: postDocument.data().rank - lengthData })
                     }
 
+                    getCommentDoc.ref.delete()
 
                     if (!subscribeCollection.empty) {
                         subscribeCollection.docs.forEach(doc => {
