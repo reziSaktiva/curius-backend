@@ -6,7 +6,8 @@ const { AuthenticationError, UserInputError } = require('apollo-server-express')
 const fbAuthContext = require("../../../utility/fbAuthContext");
 const randomGenerator = require("../../../utility/randomGenerator");
 
-const { server, client } = require('../../../utility/algolia')
+const { server, client } = require('../../../utility/algolia');
+const { ALGOLIA_INDEX_ROOMS } = require('../../../constant/post');
 
 module.exports = {
   Query: {
@@ -1094,6 +1095,8 @@ module.exports = {
     },
     async createPost(_, { text, media, location, repostedPost, room }, context) {
       const { username } = await fbAuthContext(context);
+      const index = server.initIndex(ALGOLIA_INDEX_ROOMS)
+
       if (username) {
         try {
           const regexpHastag = /(\s|^)\#\w\w+\b/
@@ -1149,8 +1152,18 @@ module.exports = {
 
           await db.collection("posts")
             .add(newPost)
-            .then((doc) => {
+            .then(async (doc) => {
               newPost.id = doc.id;
+
+              if (room) {
+                await index.partialUpdateObject({
+                  totalPosts: {
+                    _operation: 'Increment',
+                    value: 1
+                  },
+                  objectID:  room
+                })
+              }
 
               doc.update({ id: doc.id });
             });

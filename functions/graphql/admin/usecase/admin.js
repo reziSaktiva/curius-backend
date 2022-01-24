@@ -1,5 +1,5 @@
 const { db } = require('../../../utility/admin')
-const { server, client } = require('../../../utility/algolia')
+const { server } = require('../../../utility/algolia')
 
 const { ALGOLIA_INDEX_ADMIN_LOGS } = require('../../../constant/post')
 
@@ -11,6 +11,7 @@ const LIST_OF_PRIVILEGE = {
   SET_FLAGS: 'Set-Flags',
   TAKEDOWN: 'Takedown',
   DELETE_POSTS: 'Delete-Posts',
+  ACTIVE_POSTS: 'Active-Posts',
   CREATE_ROOM: 'Create-Room',
   CMS: 'CMS'
 }
@@ -27,6 +28,7 @@ const ROLE_AND_ACCESS = [
       LIST_OF_PRIVILEGE.TAKEDOWN,
       LIST_OF_PRIVILEGE.DELETE_POSTS,
       LIST_OF_PRIVILEGE.CREATE_ROOM,
+      LIST_OF_PRIVILEGE.ACTIVE_POSTS,
       LIST_OF_PRIVILEGE.CMS
     ]
   },
@@ -40,6 +42,7 @@ const ROLE_AND_ACCESS = [
       LIST_OF_PRIVILEGE.TAKEDOWN,
       LIST_OF_PRIVILEGE.DELETE_POSTS,
       LIST_OF_PRIVILEGE.CREATE_ROOM,
+      LIST_OF_PRIVILEGE.ACTIVE_POSTS,
       LIST_OF_PRIVILEGE.CMS
     ]
   },

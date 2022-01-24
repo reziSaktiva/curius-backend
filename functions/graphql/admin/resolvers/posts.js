@@ -405,13 +405,15 @@ module.exports = {
     },
   },
   Mutation: {
-    async setStatusPost(_, { active, flags = [], takedown, postId }, _ctx) {
+    async setStatusPost(_, props, _ctx) {
+      const { active, flags = [], takedown, postId, deleted } = props
       const { name, level, id } = await adminAuthContext(_ctx)
 
       let action = ''
       if (takedown) action = LIST_OF_PRIVILEGE.TAKEDOWN;
       if (flags.length) action = LIST_OF_PRIVILEGE.SET_FLAGS;
-      if (active !== undefined && !active) action = LIST_OF_PRIVILEGE.DELETE_POSTS
+      if (active !== undefined && active) action = LIST_OF_PRIVILEGE.ACTIVE_POSTS
+      if (deleted) action = LIST_OF_PRIVILEGE.DELETE_POSTS
 
       if (!hasAccessPriv({ id: level, action })) throw new Error('Permission Denied')
 
@@ -420,7 +422,7 @@ module.exports = {
       const index = server.initIndex(ALGOLIA_INDEX_POSTS);
       const targetCollection = `/posts/${postId}`
       const data = await db.doc(targetCollection).get()
-      const status = {}
+      let status = {}
 
       const oldDocAlgolia = await index.getObject(postId, {
         attributesToRetrieve: ['_tags']
@@ -438,15 +440,20 @@ module.exports = {
               status.flags = [...(oldPost.status.flag || []), ...flags]
             }
 
-            if (takedown) {
+            if (takedown !== undefined) {
               status.takedown = takedown
             }
 
-            if (active) {
+            if (active !== undefined) {
               status.active = active
             }
 
+            if (deleted !== undefined) {
+              status.deleted = deleted
+            }
+
             docId = doc.id
+            status = { ...oldPost.status, ...status };
             return doc.ref.update({ status: { ...oldPost.status, ...status } })
           })
         let message = ''
@@ -661,7 +668,6 @@ module.exports = {
             const oldData = doc.data()
             const listOfReported = oldData.logReported || []
             const hasReportedBefore = listOfReported.filter(user => user === username)
-            console.log('hasReportedBefore: ', !hasReportedBefore.length)
             flagHasReportedBefore = hasReportedBefore.length;
   
             if (!hasReportedBefore.length) {

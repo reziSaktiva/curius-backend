@@ -36,6 +36,7 @@ module.exports = gql`
         createdBy: String
         description: String
         displayPicture: String
+        totalPosts: Float
         roomName: String
         startingDate: String
         tillDate: String
@@ -52,6 +53,7 @@ module.exports = gql`
         active: Boolean
         flags: [String]
         takedown: Boolean
+        deleted: Boolean
     }
     type User {
         id: ID!
@@ -372,7 +374,7 @@ module.exports = gql`
         registerAdmin(email: String! level: Int! name: String!): String
         changeUserStatus(status: String!, username: String!): User!
         setStatusComment(idComment: ID, active: Boolean, takedown: Boolean, deleted: Boolean): CommentReported
-        setStatusPost(active: Boolean, flags: [String], takedown: Boolean, postId: String): Post!\
+        setStatusPost(active: Boolean, flags: [String], takedown: Boolean, postId: String, deleted: Boolean): Post!\
 
         # Randomization
         updateThemesById(id: ID, name: String, colors: [Colors], adjective: [Adjective], nouns: [Nouns], isDeleted: Boolean, isActive: Boolean): ThemeType 

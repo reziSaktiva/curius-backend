@@ -70,7 +70,7 @@ module.exports = {
     },
     Mutation: {
         async changeUserStatus(_, { status, username }, _context) {
-            const { name, level, id } = await adminAuthContext(context)
+            const { name, level, id } = await adminAuthContext(_context)
             // only level 3 should be ask for review update user status
             const listStatus = ['active', 'banned', 'delete', 'cancel'];
 

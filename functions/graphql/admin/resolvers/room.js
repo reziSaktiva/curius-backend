@@ -128,6 +128,7 @@ module.exports = {
                   range
               },
               displayPicture,
+              totalPosts: 0,
               createdBy: name,
               createdAt: new Date().toISOString()
           }
