@@ -69,6 +69,21 @@ module.exports = gql`
         status: String
         interest: [String]
     }
+    type UpdateUserStatus {
+        id: ID!
+        username: String
+        fullName: String
+        email: String
+        mobileNumber: String
+        gender: String
+        dob: String
+        joinDate: String
+        profilePicture: String
+        theme: String
+        status: String
+        interest: [String]
+        message: String
+    }
     type Repost {
         id: ID
         owner: String
@@ -372,9 +387,10 @@ module.exports = gql`
     type Mutation {
         checkEmail(email: String uid: String name: String, accessCode: String!): Boolean
         registerAdmin(email: String! level: Int! name: String!): String
-        changeUserStatus(status: String!, username: String!): User!
+        changeUserStatus(status: String!, username: String!): UpdateUserStatus!
         setStatusComment(idComment: ID, active: Boolean, takedown: Boolean, deleted: Boolean): CommentReported
         setStatusPost(active: Boolean, flags: [String], takedown: Boolean, postId: String, deleted: Boolean): Post!\
+        approveAdminAction(notifId: ID, approve: Boolean): String
 
         # Randomization
         updateThemesById(id: ID, name: String, colors: [Colors], adjective: [Adjective], nouns: [Nouns], isDeleted: Boolean, isActive: Boolean): ThemeType 

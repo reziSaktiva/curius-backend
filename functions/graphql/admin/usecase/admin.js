@@ -19,6 +19,7 @@ const LIST_OF_PRIVILEGE = {
 const ROLE_AND_ACCESS = [
   {
     id: 1, 
+    name: 'Super Admin',
     priv: [
       LIST_OF_PRIVILEGE.RANDOM,
       LIST_OF_PRIVILEGE.EXPORT,
@@ -34,6 +35,7 @@ const ROLE_AND_ACCESS = [
   },
   {
     id: 2,
+    name: 'Co-Super Admin',
     priv: [
       LIST_OF_PRIVILEGE.RANDOM,
       LIST_OF_PRIVILEGE.EXPORT,
@@ -48,6 +50,7 @@ const ROLE_AND_ACCESS = [
   },
   {
     id: 3,
+    name: 'User (Admin)',
     priv: [
       LIST_OF_PRIVILEGE.RANDOM,
       LIST_OF_PRIVILEGE.EXPORT,
@@ -56,6 +59,7 @@ const ROLE_AND_ACCESS = [
   },
   {
     id: 4,
+    name: 'Post (Admin)',
     priv: [
       LIST_OF_PRIVILEGE.RANDOM,
       LIST_OF_PRIVILEGE.EXPORT,
@@ -68,7 +72,8 @@ const ROLE_AND_ACCESS = [
 
 module.exports = {
   LIST_OF_PRIVILEGE,
-  createLogs: async ({ adminId, role, message, name }) => {
+  ROLE_AND_ACCESS,
+  createLogs: async ({ adminId, role, message, name, notifId }) => {
     const payload = {
       adminId,
       role,
@@ -79,13 +84,17 @@ module.exports = {
 
     const index = server.initIndex(ALGOLIA_INDEX_ADMIN_LOGS);
   
-    const adminData = await db.collection('/admin_logs').add(payload)
+    const adminData = await db.collection('/admin_logs').add(payload).then(doc => {
+      console.log(doc.id)
+      return doc
+    })
     const parseSnapshot = await (await adminData.get()).data()
 
-    await index.saveObject({
-      objectID: parseSnapshot.adminId,
-      ...payload
-    })
+    await index.saveObjects([{
+      ...payload,
+      notifId,
+      adminId: parseSnapshot.adminId,
+    }], { autoGenerateObjectIDIfNotExist: true })
 
     return 'Success create log'
   },

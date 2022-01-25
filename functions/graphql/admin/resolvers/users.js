@@ -1,4 +1,5 @@
-const { db } = require('../../../utility/admin')
+const { ref, set } = require("firebase/database");
+const { db, client: dbClient } = require('../../../utility/admin')
 const { client, server } = require('../../../utility/algolia')
 const { ALGOLIA_INDEX_USERS } = require('../../../constant/post')
 const adminAuthContext = require('../../../utility/adminAuthContext')
@@ -70,7 +71,7 @@ module.exports = {
     },
     Mutation: {
         async changeUserStatus(_, { status, username }, _context) {
-            const { name, level, id } = await adminAuthContext(_context)
+            const { name, level, id, levelName } = await adminAuthContext(_context)
             // only level 3 should be ask for review update user status
             const listStatus = ['active', 'banned', 'delete', 'cancel'];
 
@@ -86,11 +87,31 @@ module.exports = {
 
             try {
                 const index = server.initIndex(ALGOLIA_INDEX_USERS);
-                await db.doc(`/users/${username}`)
-                    .get()
-                    .then(doc => {
-                        return doc.ref.update({ status })
-                    })
+                if (status === 'banned' && level === 3) {
+                    const getUsers = await db.collection('notifications')
+                        .where('type', '==', 'users')
+                        .where('data.username', '==', username)
+                        .get()
+                    const users = getUsers.docs.map(doc => doc.data())
+
+                    if (!users.length) {
+                        await db.collection('/notifications').add({
+                            type: 'users',
+                            data: { username },
+                            isVerify: false,
+                            adminName: name,
+                            adminRole: levelName,
+                            action: "Banned",
+                            isRead: false
+                        })
+                    }
+                } else {
+                    await db.doc(`/users/${username}`)
+                        .get()
+                        .then(doc => {
+                            return doc.ref.update({ status })
+                        })
+                }
 
                 const user = await db.doc(`/users/${username}`).get()
                 const userData = user.data()
@@ -103,18 +124,70 @@ module.exports = {
                 await createLogs({
                     adminId: id,
                     role: level,
-                    message: `Admin ${name} has change status user ${username} to ${status}`,
+                    message: `Admin ${name} request approval to super-admin for change status user ${username} to ${status}`,
                     name
                 })
 
-                return {
+                return status !== 'banned' ? {
                     ...userData,
-                    status
-                }
+                    status,
+                    message: 'success'
+                } : { ...userData, status: 'banned', message: 'waiting approval from super admin'}
             } catch (err) {
                 console.log(err)
                 throw new Error(err)
             }
         },
+        async approveAdminAction(_, { notifId, approve }, _context) {
+            const { name, level, id } = await adminAuthContext(_context)
+            const hasAccess = level === 1 || level === 2
+            if (!hasAccess) throw new Error("Permission Denied")
+            
+            let notifData = {}
+            await db.doc(`/notifications/${notifId}`)
+                .get()
+                .then(doc => {
+                    notifData = doc.data()
+                    if (notifData.type === 'users' && notifData.action === 'Banned') {
+                        return doc.ref.update({ isVerify: true, approve })
+                    }
+
+                    return doc
+                })
+
+            if (!approve) {
+                console.log('decline log')
+                await createLogs({
+                    adminId: id,
+                    role: level,
+                    message: `Admin ${name} has decline ${notifData.adminName} request for status user ${notifData.data.username} to Banned`,
+                    name
+                })
+    
+                return "Success Decline admin action"
+            }
+
+            if (notifData.type === "users") {
+                if (notifData.action === "Banned") {
+                    await db.doc(`/users/${notifData.data.username}`)
+                        .get()
+                        .then(doc => {
+                            return doc.ref.update({ status: 'banned' })
+                        })
+        
+                    console.log('approve log')
+                    await createLogs({
+                        adminId: id,
+                        role: level,
+                        message: `Admin ${name} has approved ${notifData.adminName} request for status user ${notifData.data.username} to Banned`,
+                        name
+                    })
+        
+                    return "Success Approve admin action"
+                }
+            }   
+
+            return "Please use the types and actions has been registered"
+        }
     }
 }
