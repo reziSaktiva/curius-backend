@@ -10,7 +10,9 @@ const { server, client } = require('../../../utility/algolia')
 
 module.exports = {
   Query: {
-    async getPosts(_, { lat, lng, range = 1, type, page, room, username }) {
+    async getPosts(_, { lat, lng, range = 1, type, page, room, username }, context) {
+      const { mutedUser } = await fbAuthContext(context)
+
       if ((!lat && !lng) && (!room && !username)) {
         throw new UserInputError('Lat and Lng is Required')
       }
@@ -30,6 +32,12 @@ module.exports = {
         } else {
           facetFilters.push(['_tags:is_not_post_room'])
         }
+      }
+
+      if (mutedUser.length) {
+        mutedUser.forEach(user => {
+          facetFilters.push([`owner:-${user}`])
+        })
       }
 
       const defaultPayload = {
@@ -1509,6 +1517,7 @@ module.exports = {
       const muteDocument = db.collection(`/posts/${postId}/muted`)
 
       try {
+        const userData = await db.doc(`/users/${username}`).get()
         const { isMuted, muteId } = await muteDocument.where("owner", "==", username).limit(1).get()
           .then(data => {
             const isMuted = data.empty
@@ -1543,6 +1552,8 @@ module.exports = {
                   mute: false,
                   id: muteId
                 }
+                const mutedUser = userData.data().mutedUser.filter(user => user !== doc.data().owner)
+                userData.ref.update({ mutedUser })
               } else {
                 return muteDocument.add({ owner: username, createdAt: new Date().toISOString(), postId })
                   .then(data => {
@@ -1553,6 +1564,7 @@ module.exports = {
                       id: data.id
                     }
                     db.doc(`/users/${username}/muted/${data.id}`).set(mute)
+                    userData.ref.update({ mutedUser: [...userData.data().mutedUser, doc.data().owner] })
                   })
               }
             }
