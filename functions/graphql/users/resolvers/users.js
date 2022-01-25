@@ -204,7 +204,11 @@ module.exports = {
                     const mutedData = await db.collection(`/posts/${data.id}/muted`).get();
                     const muted = mutedData.docs.map(doc => doc.data());
 
-                    return { ...data, likes, comments, muted, repost }
+                    // Subscribed
+                    const subscribePost = await db.collection(`/posts/${data.id}/subscribes`).get();
+                    const subscribe = subscribePost.docs.map(doc => doc.data()) || [];
+
+                    return { ...data, likes, comments, muted, repost, subscribe }
                 });
 
             } catch (err) {

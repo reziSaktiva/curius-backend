@@ -297,8 +297,8 @@ module.exports = gql`
         nextMoreForYou (id: ID): dataPost
         createPost(text:String, media: [String] location: Location! repostedPost: Data room: ID): Post!
         subscribePost( postId: ID! ): Subscribe!
-        mutePost ( postId: ID! room: String ): Mute!
-        deletePost( id: ID! room: String ): DeleteData
+        mutePost ( postId: ID! ): Mute!
+        deletePost( id: ID! ): DeleteData
         likePost(id: ID!): Like
         textSearch(search: String, perPage: Int, page: Int, range: Float, location: Location ): Search!
 

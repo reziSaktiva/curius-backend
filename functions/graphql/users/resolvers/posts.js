@@ -21,7 +21,7 @@ module.exports = {
 
       const facetFilters = [["status.active:true"]]
 
-      if(username){
+      if (username) {
         facetFilters.push([`owner:${username}`])
       } else {
         if (room) {
@@ -1244,7 +1244,7 @@ module.exports = {
         }
       }
     },
-    async deletePost(_, { id, room }, context) {
+    async deletePost(_, { id }, context) {
       const { username } = await fbAuthContext(context);
 
       const document = db.doc(`/posts/${id}`);
@@ -1264,7 +1264,7 @@ module.exports = {
           } else {
             if (doc.data().repost && doc.data().repost.repost) {
               const { repost } = doc.data()
-              db.doc(`/${repost.room ? `room/${repost.room}/posts` : 'posts'}/${repost.repost}`).get()
+              db.doc(`/posts/${repost.repost}`).get()
                 .then(doc => doc.ref.update({ repostCount: doc.data().repostCount - 1 }))
             }
             return likesData.get()
@@ -1312,9 +1312,7 @@ module.exports = {
                     .get()
                     .then((data) => {
                       data.forEach((doc) => {
-                        db.doc(
-                          `/users/${docOwner}/notifications/${doc.data().id}/`
-                        ).delete();
+                        db.doc(`/users/${docOwner}/notifications/${doc.data().id}/`).delete();
                       });
                     });
                 });
@@ -1322,8 +1320,7 @@ module.exports = {
           }
         });
         return {
-          id: document.id,
-          room
+          id: document.id
         };
       } catch (err) {
         console.log(err);
@@ -1506,7 +1503,7 @@ module.exports = {
         console.log(err);
         throw new Error(err);
       }
-    }, async mutePost(_, { postId, room }, context) {
+    }, async mutePost(_, { postId }, context) {
       const { username } = await fbAuthContext(context)
       const postDocument = db.doc(`/posts/${postId}`)
       const muteDocument = db.collection(`/posts/${postId}/muted`)
