@@ -35,15 +35,15 @@ module.exports = {
                 throw new Error(err)
             }
         },
-        async createComment(_, { id, text, reply, photo }, context) {
+        async createComment(_, { id, textContent, reply, photo }, context) {
             const { username } = await fbAuthContext(context)
             const { name, displayImage, colorCode } = await randomGenerator(username, id)
             const postDocument = db.doc(`/posts/${id}`)
             const commentCollection = db.collection(`/posts/${id}/comments`)
             const subscribeCollection = db.collection(`/posts/${id}/subscribes`)
 
-            if (text.trim() === '' && !photo) {
-                throw new UserInputError('kamu tidak bisa membuat comment tanpa text', { error: { text: 'kamu tidak bisa membuat comment tanpa text' } })
+            if (textContent.trim() === '' && !photo) {
+                throw new UserInputError('kamu tidak bisa membuat comment tanpa text', { error: { textContent: 'kamu tidak bisa membuat comment tanpa text' } })
             }
             try {
                 const replyCount = 0
@@ -51,7 +51,7 @@ module.exports = {
                 let newComment = {
                     owner: username,
                     createdAt: new Date().toISOString(),
-                    text,
+                    textContent,
                     reply,
                     photo,
                     status: {

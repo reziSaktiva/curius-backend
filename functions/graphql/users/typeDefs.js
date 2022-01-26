@@ -110,7 +110,7 @@ module.exports = gql`
         id: ID
         createdAt: String
         owner: String
-        text: String
+        textContent: String
         photoProfile: String
         photo: String
         displayName: String
@@ -303,7 +303,7 @@ module.exports = gql`
         textSearch(search: String, perPage: Int, page: Int, range: Float, location: Location ): Search!
 
         # comments mutation
-        createComment( id:ID!, text: String!, reply: Reply, photo: String ): Comment!
+        createComment( id:ID!, textContent: String!, reply: Reply, photo: String ): Comment!
         deleteComment( postId: ID!, commentId: ID! ): Comment!
         getMoreChild(postId: ID, commentId: ID, lastChildId: ID): [Comment]
         getMoreComments(postId: ID, lastCommentId: ID): [Comment]
