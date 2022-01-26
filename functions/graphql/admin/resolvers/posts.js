@@ -6,7 +6,7 @@ const { db } = require('../../../utility/admin')
 const { UserInputError } = require('apollo-server-express');
 const adminAuthContext = require('../../../utility/adminAuthContext')
 
-const { ALGOLIA_INDEX_POSTS, ALGOLIA_INDEX_REPORT_POSTS, ALGOLIA_INDEX_POSTS_ASC, ALGOLIA_INDEX_POSTS_DESC } = require('../../../constant/post')
+const { ALGOLIA_INDEX_POSTS, ALGOLIA_INDEX_REPORT_POSTS, ALGOLIA_INDEX_POSTS_ASC, ALGOLIA_INDEX_POSTS_DESC, ALGOLIA_INDEX_POSTS_RANK_DESC, ALGOLIA_INDEX_POSTS_RANK_ASC } = require('../../../constant/post')
 const { API_KEY_GEOCODE } = require('../../../utility/secret/API');
 const { createLogs, hasAccessPriv, LIST_OF_PRIVILEGE } = require('../usecase/admin');
 
@@ -175,7 +175,7 @@ module.exports = {
       }
     },
     async searchPosts(_, {
-      perPage = 5, page, location, range = 40, hasReported = false,
+      perPage = 5, page, location, range = 40, hasReported = false, useExport = false,
       useDetailLocation = false, search, filters, room, sortBy = 'desc'
     }, _ctx) {
       const googleMapsClient = new Client({ axiosInstance: axios });
@@ -190,6 +190,8 @@ module.exports = {
       let indexKey = ALGOLIA_INDEX_POSTS
       if (sortBy === 'desc') indexKey = ALGOLIA_INDEX_POSTS_DESC
       if (sortBy === 'asc') indexKey = ALGOLIA_INDEX_POSTS_ASC
+      if (sortBy === 'rank_asc') indexKey = ALGOLIA_INDEX_POSTS_RANK_ASC
+      if (sortBy === 'rank_desc') indexKey = ALGOLIA_INDEX_POSTS_RANK_DESC
 
       const index = client.initIndex(indexKey);
 
@@ -237,7 +239,7 @@ module.exports = {
       } : {};
 
       const pagination = {
-        "hitsPerPage": perPage || 10,
+        "hitsPerPage": useExport ? 10 : perPage || 10,
         "page": page || 0,
       }
       const facetFilters = []
@@ -260,24 +262,24 @@ module.exports = {
       let queryTags = []
       if (media.length) {
         if (media.includes('video')) {
-          queryTags.push('w-video')
+          queryTags.push('_tags:w-video')
         }
         if (media.includes('photo')) {
-          queryTags.push('w-photos')
+          queryTags.push('_tags:w-photos')
         }
         
         if (media.includes('voice-note')) {
-          queryTags.push('w-voice-note')
+          queryTags.push('_tags:w-voice-note')
         }
 
         if (media.includes('gif')) {
-          queryTags.push('w-gif')
+          queryTags.push('_tags:w-gif')
         }
       }
 
-      if (hasReported) queryTags.push(`has_reported`)
+      if (hasReported) facetFilters.push(['_tags:has_reported'])
 
-      facetFilters.push([`_tags:${queryTags.join(',')}`])
+      if (queryTags.length) facetFilters.push(queryTags)
 
       try {
         const payload = {

@@ -27,9 +27,11 @@ module.exports = {
             }
             let facetFilters = []
             const _tags = []
+            console.log('filters: ', filters)
             if (status) facetFilters.push([`status:${status}`])
             if (filters?.hasEmail) _tags.push(`has_email`)
-            if (filters?.hasPhoneNumber) _tags.push(`has_mobile_number`)
+            if (filters?.hasPhoneNumber) _tags.push(`has_phone_number`)
+            if (filters?.isSuspend) facetFilters.push([`status:suspended`])
 
             if (_tags.length) facetFilters.push([`_tags:${_tags.join(',')}`])
 
@@ -38,6 +40,8 @@ module.exports = {
                     const payload = { ...defaultPayload, ...pagination }
 
                     if (facetFilters.length) payload.facetFilters = facetFilters
+
+                    console.log('payload: ', payload);
                     index.search(search, payload)
                         .then(async res => {
                             const { hits, page: nbPage, nbHits, nbPages, hitsPerPage, processingTimeMS } = res;
@@ -188,6 +192,45 @@ module.exports = {
             }   
 
             return "Please use the types and actions has been registered"
+        },
+        async syncAlogliaFirebase(_, { }, _context) {
+            const index = server.initIndex(ALGOLIA_INDEX_USERS);
+            const pagination = {
+                "hitsPerPage": 1000,
+                "page": 0,
+            };
+    
+            const defaultPayload = {
+                "attributesToRetrieve": "*",
+                "attributesToSnippet": "*:20",
+                "snippetEllipsisText": "…",
+                "responseFields": "*",
+                "getRankingInfo": true,
+                "analytics": false,
+                "enableABTest": false,
+                "explain": "*",
+                "facets": ["*"]
+            };
+            
+            const searchDocs = await index.search('', { ...pagination, ...defaultPayload })
+            
+            const newHits = await searchDocs.hits.map(async ({ dob, joinDate, objectID, ...rest }) => {
+                const fbdata = await db.doc(`/users/${rest.username}`).get()
+                const dataParse = await fbdata.data()
+                console.log('res: ', dataParse)
+                return ({
+                    ...rest,
+                    status: dataParse.status,
+                    dob,
+                    objectID,
+                    dob_timestamp: new Date(dob).getTime(),
+                    date_timestamp: new Date(joinDate).getTime()
+                })
+            })
+
+            const parseAwait = await Promise.all(newHits)
+
+            await index.partialUpdateObjects(parseAwait)
         }
     }
 }

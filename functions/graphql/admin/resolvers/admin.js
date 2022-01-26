@@ -45,6 +45,11 @@ module.exports = {
                 console.log(err);
             }
         },
+        async getAdminLogin(_, { }, context) {
+            const adminData = await adminAuthContext(context)
+
+            return adminData
+        },
         async searchThemes(_, { name }, context) {
             // const { name, level } = await adminAuthContext(context) // TODO: add condition action only for some privilage
             try {

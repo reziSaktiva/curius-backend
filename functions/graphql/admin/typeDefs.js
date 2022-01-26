@@ -226,7 +226,7 @@ module.exports = gql`
 
         # Search
         searchUser(search: String, status: String, perPage: Int, page: Int, filters: RequestFilterUser ): SearchUser!
-        searchPosts(search: String, perPage: Int, page: Int, hasReported: Boolean, useDetailLocation: Boolean, range: Float, location: String, filters: RequestFilter, room: String, sortBy: String ): SearchPosts!
+        searchPosts(search: String, perPage: Int, page: Int, useExport: Boolean, hasReported: Boolean, useDetailLocation: Boolean, range: Float, location: String, filters: RequestFilter, room: String, sortBy: String ): SearchPosts!
         searchRoom(name: String, location: String, useDetailLocation: Boolean, page: Int, perPage: Int): SearchRoom
         searchCommentReported(search: String, sortBy: String, page: Int, perPage: Int, filters: RequestFilter): SearchCommentReported
         
@@ -241,6 +241,9 @@ module.exports = gql`
         getGraphSummary(graphType: String, state: String): GraphData
         getAdminLogs(page: Int, perPage: Int, search: String): SearchAdminLogs
         getStaticUserByAge: [StatisticUser]
+
+        # Admin
+        getAdminLogin: Admin
     }
 
     type AdminLog {
@@ -407,5 +410,6 @@ module.exports = gql`
         
         # Replication
         createReplicatePostAscDesc: String
+        syncAlogliaFirebase: String
     }
 `

@@ -833,6 +833,8 @@ module.exports = {
                                 fullName,
                                 dob,
                                 joinDate: new Date().toISOString(),
+                                date_timestamp: new Date().getTime(),
+                                dob_timestamp: new Date(dob).getTime(),
                                 profilePicture: '',
                                 _private: [],
                             }
@@ -856,6 +858,8 @@ module.exports = {
                         fullName,
                         dob,
                         joinDate: new Date().toISOString(),
+                        date_timestamp: new Date().getTime(),
+                        dob_timestamp: new Date(dob).getTime(),
                         profilePicture: ''
                     }
 
