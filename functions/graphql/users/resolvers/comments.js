@@ -35,14 +35,14 @@ module.exports = {
                 throw new Error(err)
             }
         },
-        async createComment(_, { id, textContent, reply, photo }, context) {
+        async createComment(_, { id, textContent, reply, media }, context) {
             const { username } = await fbAuthContext(context)
             const { name, displayImage, colorCode } = await randomGenerator(username, id)
             const postDocument = db.doc(`/posts/${id}`)
             const commentCollection = db.collection(`/posts/${id}/comments`)
             const subscribeCollection = db.collection(`/posts/${id}/subscribes`)
 
-            if (textContent.trim() === '' && !photo) {
+            if (textContent.trim() === '' && !media.content) {
                 throw new UserInputError('kamu tidak bisa membuat comment tanpa text', { error: { textContent: 'kamu tidak bisa membuat comment tanpa text' } })
             }
             try {
@@ -53,7 +53,7 @@ module.exports = {
                     createdAt: new Date().toISOString(),
                     textContent,
                     reply,
-                    photo,
+                    media,
                     status: {
                         active: true,
                         flags: [],

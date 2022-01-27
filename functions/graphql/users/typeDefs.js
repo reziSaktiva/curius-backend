@@ -112,7 +112,7 @@ module.exports = gql`
         owner: String
         textContent: String
         photoProfile: String
-        photo: String
+        media: Media
         displayName: String
         displayImage: String
         colorCode: String
@@ -271,6 +271,11 @@ module.exports = gql`
         username: String
         id: ID
     },
+    input MediaInput {
+        content: [String]
+        meta: String
+        type: String
+    }
     type Mutation {
         # users mutation
         registerUser(registerInput: RegisterInput): String
@@ -303,7 +308,7 @@ module.exports = gql`
         textSearch(search: String, perPage: Int, page: Int, range: Float, location: Location ): Search!
 
         # comments mutation
-        createComment( id:ID!, textContent: String!, reply: Reply, photo: String ): Comment!
+        createComment( id:ID!, textContent: String!, reply: Reply, media: MediaInput ): Comment!
         deleteComment( postId: ID!, commentId: ID! ): Comment!
         getMoreChild(postId: ID, commentId: ID, lastChildId: ID): [Comment]
         getMoreComments(postId: ID, lastCommentId: ID): [Comment]
