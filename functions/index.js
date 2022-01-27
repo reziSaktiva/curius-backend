@@ -136,7 +136,6 @@ exports.onPostCreate = functions.region('asia-southeast2')
             let tags = []
 
             if (newData.room) {
-                console.log(newData.room);
                 db.doc(`/room/${newData.room}`).get()
                     .then(doc => {
                         doc.ref.update({ postsCount: doc.data().postsCount + 1 })

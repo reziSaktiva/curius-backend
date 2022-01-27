@@ -110,9 +110,9 @@ module.exports = gql`
         id: ID
         createdAt: String
         owner: String
-        text: String
+        textContent: String
         photoProfile: String
-        photo: String
+        media: Media
         displayName: String
         displayImage: String
         colorCode: String
@@ -194,7 +194,7 @@ module.exports = gql`
     }
     type Query {
         moreForYou: dataPost
-        getPosts(lat: Float, lng: Float, range: Float page: Int type: String, room: ID): dataPost
+        getPosts(lat: Float, lng: Float, range: Float page: Int type: String, room: ID, username: String): dataPost
         getPopularPosts(lat: Float, lng: Float range: Float): dataPost
         getVisited: [GeoLocation]
         getProfilePosts(username: String): dataPost
@@ -271,6 +271,11 @@ module.exports = gql`
         username: String
         id: ID
     },
+    input MediaInput {
+        content: [String]
+        meta: String
+        type: String
+    }
     type Mutation {
         # users mutation
         registerUser(registerInput: RegisterInput): String
@@ -297,13 +302,13 @@ module.exports = gql`
         nextMoreForYou (id: ID): dataPost
         createPost(text:String, media: [String] location: Location! repostedPost: Data room: ID): Post!
         subscribePost( postId: ID! ): Subscribe!
-        mutePost ( postId: ID! room: String ): Mute!
-        deletePost( id: ID! room: String ): DeleteData
+        mutePost ( postId: ID! ): Mute!
+        deletePost( id: ID! ): DeleteData
         likePost(id: ID!): Like
         textSearch(search: String, perPage: Int, page: Int, range: Float, location: Location ): Search!
 
         # comments mutation
-        createComment( id:ID!, text: String!, reply: Reply, photo: String ): Comment!
+        createComment( id:ID!, textContent: String!, reply: Reply, media: MediaInput ): Comment!
         deleteComment( postId: ID!, commentId: ID! ): Comment!
         getMoreChild(postId: ID, commentId: ID, lastChildId: ID): [Comment]
         getMoreComments(postId: ID, lastCommentId: ID): [Comment]
