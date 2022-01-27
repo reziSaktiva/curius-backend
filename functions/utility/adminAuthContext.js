@@ -18,7 +18,7 @@ module.exports = async (context) => {
                 return {
                     ...decodeToken,
                     ...adminData,
-                    levelName: getRoleName.name
+                    levelName: getRoleName?.name || ''
                 }
             }
             catch (err) {

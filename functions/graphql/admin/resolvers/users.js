@@ -95,6 +95,7 @@ module.exports = {
                     const getUsers = await db.collection('notifications')
                         .where('type', '==', 'users')
                         .where('data.username', '==', username)
+                        .where('approve', '==', false)
                         .get()
                     const users = getUsers.docs.map(doc => doc.data())
 
@@ -136,7 +137,7 @@ module.exports = {
                     ...userData,
                     status,
                     message: 'success'
-                } : { ...userData, status: 'banned', message: 'waiting approval from super admin'}
+                } : { ...userData, status: 'active', message: 'waiting approval from super admin'}
             } catch (err) {
                 console.log(err)
                 throw new Error(err)
