@@ -241,9 +241,6 @@ module.exports = gql`
         getGraphSummary(graphType: String, state: String): GraphData
         getAdminLogs(page: Int, perPage: Int, search: String): SearchAdminLogs
         getStaticUserByAge: [StatisticUser]
-
-        # Admin
-        getAdminLogin: Admin
     }
 
     type AdminLog {
@@ -411,5 +408,8 @@ module.exports = gql`
         # Replication
         createReplicatePostAscDesc: String
         syncAlogliaFirebase: String
+
+        # Admin
+        getAdminLogin: Admin
     }
 `
