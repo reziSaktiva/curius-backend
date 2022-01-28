@@ -204,7 +204,11 @@ module.exports = {
                     const mutedData = await db.collection(`/posts/${data.id}/muted`).get();
                     const muted = mutedData.docs.map(doc => doc.data());
 
-                    return { ...data, likes, comments, muted, repost }
+                    // Subscribed
+                    const subscribePost = await db.collection(`/posts/${data.id}/subscribes`).get();
+                    const subscribe = subscribePost.docs.map(doc => doc.data()) || [];
+
+                    return { ...data, likes, comments, muted, repost, subscribe }
                 });
 
             } catch (err) {
@@ -236,13 +240,22 @@ module.exports = {
                             repost = repostData.data() || {}
                         }
 
+                        const commentedBy = async () => {
+                            let commentedBy = []
+
+                            const commentCollection = await db.collection(`/posts/${data.id}/comments`).get()
+                            commentCollection.forEach(doc => {
+                                const isHas = commentedBy.find(result => result === doc.data().owner)
+                                if (!isHas) {
+                                    commentedBy.push(doc.data().owner)
+                                }
+                            })
+                            return commentedBy
+                        };
+
                         // Likes
                         const likesData = await db.collection(`/posts/${data.id}/likes`).get()
                         const likes = likesData.docs.map(doc => doc.data())
-
-                        // Comments
-                        const commentsData = await db.collection(`/posts/${data.id}/comments`).get()
-                        const comments = commentsData.docs.map(doc => doc.data())
 
                         // Muted
                         const mutedData = await db.collection(`/posts/${data.id}/muted`).get();
@@ -251,7 +264,7 @@ module.exports = {
                         const subscribeData = await db.collection(`/posts/${data.id}/subscribes`).get();
                         const subscribe = subscribeData.docs.map(doc => doc.data());
 
-                        return { ...data, likes, comments, muted, subscribe, repost }
+                        return { ...data, likes, muted, subscribe, repost, commentedBy: commentedBy() }
                     })
                 }
                 return []
@@ -322,7 +335,7 @@ module.exports = {
             })
 
             return filterLocation;
-        }
+        },
     },
     Mutation: {
         async privateSetting(_, _args, context) {

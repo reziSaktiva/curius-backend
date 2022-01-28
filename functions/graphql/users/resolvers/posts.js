@@ -11,8 +11,10 @@ const { ALGOLIA_INDEX_ROOMS } = require('../../../constant/post');
 
 module.exports = {
   Query: {
-    async getPosts(_, { lat, lng, range = 1, type, page, room }) {
-      if (!room && (!lat || !lng)) {
+    async getPosts(_, { lat, lng, range = 1, type, page, room, username }, context) {
+      const { mutedUser } = await fbAuthContext(context)
+
+      if ((!lat && !lng) && (!room && !username)) {
         throw new UserInputError('Lat and Lng is Required')
       }
 
@@ -22,11 +24,21 @@ module.exports = {
 
       const facetFilters = [["status.active:true"]]
 
-      if (room) {
-        facetFilters.push(['_tags:has_post_room'])
-        facetFilters.push([`room:${room}`])
+      if (username) {
+        facetFilters.push([`owner:${username}`])
       } else {
-        facetFilters.push(['_tags:is_not_post_room'])
+        if (room) {
+          facetFilters.push(['_tags:has_post_room'])
+          facetFilters.push([`room:${room}`])
+        } else {
+          facetFilters.push(['_tags:is_not_post_room'])
+        }
+      }
+
+      if (mutedUser.length) {
+        mutedUser.forEach(user => {
+          facetFilters.push([`owner:-${user}`])
+        })
       }
 
       const defaultPayload = {
@@ -46,7 +58,7 @@ module.exports = {
         ],
       };
 
-      const geoLocPayload = room ? {} : lng && lat && {
+      const geoLocPayload = room || username ? {} : lng && lat && {
         "aroundLatLng": `${lat}, ${lng}`,
         "aroundRadius": range * 1000,
       };
@@ -87,9 +99,22 @@ module.exports = {
                     }
                   }
 
+                  //commentedBy
+                  const commentedBy = async () => {
+                    let commentedBy = []
+
+                    const commentCollection = await db.collection(`/posts/${data.id}/comments`).get()
+                    commentCollection.forEach(doc => {
+                      const isHas = commentedBy.find(result => result === doc.data().owner)
+                      if (!isHas) {
+                        commentedBy.push(doc.data().owner)
+                      }
+                    })
+                    return commentedBy
+                  };
+
                   // Likes
                   const likes = async () => {
-
                     const likesData = await db.collection(`/posts/${data.id}/likes`).get()
                     const likes = likesData.docs.map(doc => doc.data())
 
@@ -107,7 +132,7 @@ module.exports = {
                     return subscribeData.docs.map(doc => doc.data());
                   }
 
-                  const newData = { ...data, likes: likes(), muted: muted(), repost: repostData(), subscribe: subscribe() }
+                  const newData = { ...data, commentedBy: commentedBy(), likes: likes(), muted: muted(), repost: repostData(), subscribe: subscribe() }
 
                   newHits.push(newData)
                 })
@@ -426,7 +451,7 @@ module.exports = {
       const { username } = await fbAuthContext(context)
 
       const postDocument = db.doc(`/posts/${id}`)
-      const commentCollection = db.collection(`/posts/${id}/comments`).where("reply.id", '==', null).where("status.active", '==', true).orderBy('createdAt', 'asc').limit(8)
+      const commentCollection = db.collection(`/posts/${id}/comments`)
       const likeCollection = db.collection(`/posts/${id}/likes`)
       const mutedCollection = db.collection(`/posts/${id}/muted`)
       const subscribeCollection = db.collection(`/posts/${id}/subscribes`)
@@ -447,10 +472,23 @@ module.exports = {
               repost = repostData.data();
             }
 
+            const commentedBy = async () => {
+              let commentedBy = []
+
+              const commentCollection = await db.collection(`/posts/${id}/comments`).get()
+              commentCollection.forEach(doc => {
+                const isHas = commentedBy.find(result => result === doc.data().owner)
+                if (!isHas) {
+                  commentedBy.push(doc.data().owner)
+                }
+              })
+              return commentedBy
+            };
+
             const likesPost = await likeCollection.get();
             const likes = likesPost.docs.map(doc => doc.data()) || []
 
-            const commentsPost = await commentCollection.get();
+            const commentsPost = await commentCollection.where("reply.id", '==', null).where("status.active", '==', true).orderBy('createdAt', 'asc').limit(8).get();
             const comments = commentsPost.docs.map(doc => doc.data()) || [];
 
             const mutedPost = await mutedCollection.get();
@@ -466,7 +504,8 @@ module.exports = {
               comments: comments,
               muted,
               subscribe,
-              repost
+              repost,
+              commentedBy: commentedBy()
             }
           }
         }
@@ -1226,7 +1265,7 @@ module.exports = {
         }
       }
     },
-    async deletePost(_, { id, room }, context) {
+    async deletePost(_, { id }, context) {
       const { username } = await fbAuthContext(context);
 
       const document = db.doc(`/posts/${id}`);
@@ -1246,7 +1285,7 @@ module.exports = {
           } else {
             if (doc.data().repost && doc.data().repost.repost) {
               const { repost } = doc.data()
-              db.doc(`/${repost.room ? `room/${repost.room}/posts` : 'posts'}/${repost.repost}`).get()
+              db.doc(`/posts/${repost.repost}`).get()
                 .then(doc => doc.ref.update({ repostCount: doc.data().repostCount - 1 }))
             }
             return likesData.get()
@@ -1294,9 +1333,7 @@ module.exports = {
                     .get()
                     .then((data) => {
                       data.forEach((doc) => {
-                        db.doc(
-                          `/users/${docOwner}/notifications/${doc.data().id}/`
-                        ).delete();
+                        db.doc(`/users/${docOwner}/notifications/${doc.data().id}/`).delete();
                       });
                     });
                 });
@@ -1304,8 +1341,7 @@ module.exports = {
           }
         });
         return {
-          id: document.id,
-          room
+          id: document.id
         };
       } catch (err) {
         console.log(err);
@@ -1488,12 +1524,13 @@ module.exports = {
         console.log(err);
         throw new Error(err);
       }
-    }, async mutePost(_, { postId, room }, context) {
+    }, async mutePost(_, { postId }, context) {
       const { username } = await fbAuthContext(context)
       const postDocument = db.doc(`/posts/${postId}`)
       const muteDocument = db.collection(`/posts/${postId}/muted`)
 
       try {
+        const userData = await db.doc(`/users/${username}`).get()
         const { isMuted, muteId } = await muteDocument.where("owner", "==", username).limit(1).get()
           .then(data => {
             const isMuted = data.empty
@@ -1528,6 +1565,8 @@ module.exports = {
                   mute: false,
                   id: muteId
                 }
+                const mutedUser = userData.data().mutedUser.filter(user => user !== doc.data().owner)
+                userData.ref.update({ mutedUser })
               } else {
                 return muteDocument.add({ owner: username, createdAt: new Date().toISOString(), postId })
                   .then(data => {
@@ -1538,6 +1577,7 @@ module.exports = {
                       id: data.id
                     }
                     db.doc(`/users/${username}/muted/${data.id}`).set(mute)
+                    userData.ref.update({ mutedUser: [...userData.data().mutedUser, doc.data().owner] })
                   })
               }
             }

@@ -35,15 +35,15 @@ module.exports = {
                 throw new Error(err)
             }
         },
-        async createComment(_, { id, text, reply, photo }, context) {
+        async createComment(_, { id, textContent, reply, media }, context) {
             const { username } = await fbAuthContext(context)
             const { name, displayImage, colorCode } = await randomGenerator(username, id)
             const postDocument = db.doc(`/posts/${id}`)
             const commentCollection = db.collection(`/posts/${id}/comments`)
             const subscribeCollection = db.collection(`/posts/${id}/subscribes`)
 
-            if (text.trim() === '' && !photo) {
-                throw new UserInputError('kamu tidak bisa membuat comment tanpa text', { error: { text: 'kamu tidak bisa membuat comment tanpa text' } })
+            if (textContent.trim() === '' && !media.content) {
+                throw new UserInputError('kamu tidak bisa membuat comment tanpa text', { error: { textContent: 'kamu tidak bisa membuat comment tanpa text' } })
             }
             try {
                 const replyCount = 0
@@ -51,9 +51,9 @@ module.exports = {
                 let newComment = {
                     owner: username,
                     createdAt: new Date().toISOString(),
-                    text,
+                    textContent,
                     reply,
-                    photo,
+                    media,
                     status: {
                         active: true,
                         flags: [],
@@ -69,13 +69,6 @@ module.exports = {
                         if (!doc.exists) {
                             throw new UserInputError('Postingan tidak ditemukan/sudah dihapus')
                         } else {
-                            const isUserHasComment = doc.data().commentedBy.find(owner => owner === username)
-                            if (!isUserHasComment) {
-                                doc.ref.update({ commentCount: doc.data().commentCount + 1, rank: doc.data().rank + 1, commentedBy: [...doc.data().commentedBy, username] })
-                            } else {
-                                doc.ref.update({ commentCount: doc.data().commentCount + 1, rank: doc.data().rank + 1 })
-                            }
-
                             postOwner = doc.data().owner;
 
                             if (!reply.id) {
@@ -86,7 +79,7 @@ module.exports = {
                                 }
                             }
 
-
+                            doc.ref.update({ commentCount: doc.data().commentCount + 1, rank: doc.data().rank + 1 })
                             return commentCollection.add(newComment)
                         }
                     })
@@ -203,7 +196,6 @@ module.exports = {
                 return newComment
             }
             catch (err) {
-                console.log(err);
                 throw new Error(err)
             }
         },
