@@ -277,7 +277,8 @@ module.exports = gql`
     type UserStatistic {
         total: Int
         newUser: Int
-        deleted: Int 
+        deleted: Int
+        active: Int
     }
 
     type PostStatistic {

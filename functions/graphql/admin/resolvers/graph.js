@@ -47,7 +47,7 @@ module.exports = {
         dateFrom = new Date().setFullYear(new Date().getFullYear() - 1)
       }
 
-      facetFilters.push([`date_timestamp >= ${dateFrom} AND date_timestamp <= ${dateTo}`]);
+      facetFilters.push([`date_timestamp:${dateFrom} TO ${dateTo}`]);
 
       const payload = {
         ...defaultPayload,
@@ -58,6 +58,8 @@ module.exports = {
       const searchUser = await indexUser.search('', payload)
       
       const searchNewUser = await indexUser.search('', { ...payload, facetFilters })
+
+      const activeUsers = await indexUser.search('', { ...payload, facetFilters: [[`active_timestamp:${dateFrom} TO ${dateTo}`]]})
 
       const searchDeletedUser = await indexUser.search('', { ...payload, facetFilters: [...facetFilters, [`_tags:has_deleted`]]})
 
@@ -81,7 +83,6 @@ module.exports = {
         if (childData === 'newUser') dataDoc = searchNewUser
       }
 
-      console.log('dataDoc.hits: ', dataDoc.hits)
       const groups = dataDoc.hits.reduce((groups, doc) => {
         const date = doc[`${parentData === 'user' ? 'joinDate':'createdAt'}`].split('T')[0];
         const parseDate = date.split('-')
@@ -110,7 +111,8 @@ module.exports = {
           user: {
             total: searchUser.nbHits,
             newUser: searchNewUser.nbHits,
-            deleted: searchDeletedUser.nbHits
+            deleted: searchDeletedUser.nbHits,
+            active: activeUsers.nbHits
           },
           post: {
             total: searchDocs.nbHits,

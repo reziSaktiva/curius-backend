@@ -1,5 +1,4 @@
-const { ref, set } = require("firebase/database");
-const { db, client: dbClient } = require('../../../utility/admin')
+const { db } = require('../../../utility/admin')
 const { client, server } = require('../../../utility/algolia')
 const { ALGOLIA_INDEX_USERS } = require('../../../constant/post')
 const adminAuthContext = require('../../../utility/adminAuthContext')
@@ -52,7 +51,7 @@ module.exports = {
                                 })
                             }
 
-                            if (userIds.length) {
+                            if (userIds.length < 10) {
                                 const getUsers = await db.collection('users').where('id', 'in', userIds).get()
                                 const users = getUsers.docs.map(doc => doc.data())
 
@@ -61,7 +60,7 @@ module.exports = {
                                 return;
                             }
 
-                            resolve({ hits: [], page: nbPage, nbHits, nbPages: nbPages - 1, hitsPerPage, processingTimeMS })
+                            resolve({ hits: userIds.length ? hits : [], page: nbPage, nbHits, nbPages: nbPages - 1, hitsPerPage, processingTimeMS })
                         }).catch(err => {
                             reject(err)
                         })
