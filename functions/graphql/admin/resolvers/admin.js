@@ -72,7 +72,7 @@ module.exports = {
                 .get()
 
             try {
-                if (!getAdmin.docs[0].isBanned) return { valid: !getAdmin.empty, isBanned: true }
+                if (!getAdmin.docs[0].data().isBanned) return { valid: !getAdmin.empty, isBanned: true }
                 if (!getAdmin.empty) {
                     return db.doc(`/admin/${getAdmin.docs[0].id}`).get()
                         .then(doc => {
