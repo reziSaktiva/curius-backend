@@ -385,8 +385,13 @@ module.exports = gql`
         nouns: [NounsType]
     }
 
+    type CheckEmailStatus {
+        valid: Boolean
+        isBanned: Boolean
+    }
+
     type Mutation {
-        checkEmail(email: String uid: String name: String, accessCode: String!): Boolean
+        checkEmail(email: String uid: String name: String, accessCode: String!): CheckEmailStatus
         registerAdmin(email: String! level: Int! name: String!, accessCode: String!): String
         changeUserStatus(status: String!, username: String!): UpdateUserStatus!
         setStatusComment(idComment: ID, active: Boolean, takedown: Boolean, deleted: Boolean): CommentReported
