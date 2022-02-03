@@ -56,7 +56,7 @@ module.exports = gql`
         id: ID
         owner: String
         text: String
-        media: [String]
+        media: Media
         createdAt: String
         location: LatLong
     }
@@ -300,7 +300,7 @@ module.exports = gql`
         nextRoomPosts( id:ID!, room: String ): [Post]!
         nextPopularPosts( id:ID! lat: Float, lng: Float, range: Float): dataPost
         nextMoreForYou (id: ID): dataPost
-        createPost(text:String, media: [String] location: Location! repostedPost: Data room: ID): Post!
+        createPost(text:String, media: MediaInput location: Location! repostedPost: Data room: ID): Post!
         subscribePost( postId: ID! ): Subscribe!
         mutePost ( postId: ID! ): Mute!
         deletePost( id: ID! ): DeleteData
