@@ -390,13 +390,19 @@ module.exports = gql`
         isBanned: Boolean
     }
 
+    type ApprovalAdmin {
+        status: String
+        id: ID
+        message: String
+    }
+
     type Mutation {
         checkEmail(email: String uid: String name: String, accessCode: String!): CheckEmailStatus
         registerAdmin(email: String! level: Int! name: String!, accessCode: String!): String
         changeUserStatus(status: String!, username: String!): UpdateUserStatus!
         setStatusComment(idComment: ID, active: Boolean, takedown: Boolean, deleted: Boolean): CommentReported
         setStatusPost(active: Boolean, flags: [String], takedown: Boolean, postId: String, deleted: Boolean): Post!\
-        approveAdminAction(notifId: ID, approve: Boolean): String
+        approveAdminAction(notifId: ID, approve: Boolean): ApprovalAdmin
 
         # Randomization
         updateThemesById(id: ID, name: String, colors: [Colors], adjective: [Adjective], nouns: [Nouns], isDeleted: Boolean, isActive: Boolean): ThemeType 
