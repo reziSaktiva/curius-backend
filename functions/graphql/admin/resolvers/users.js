@@ -79,6 +79,7 @@ module.exports = {
             const listStatus = ['active', 'banned', 'delete', 'cancel'];
 
             const includeStatus = listStatus.includes(status)
+            const shouldBeRequestApproval = !!(status && level === 3)
 
             if (status === 'banned' && !hasAccessPriv({ id: level, action: LIST_OF_PRIVILEGE.BAN_USER })) throw new Error('Permission Denied')
 
@@ -90,7 +91,8 @@ module.exports = {
 
             try {
                 const index = server.initIndex(ALGOLIA_INDEX_USERS);
-                if (status === 'banned' && level === 3) {
+                if (shouldBeRequestApproval) {
+                    console.log('send request approval');
                     const getUsers = await db.collection('notifications')
                         .where('type', '==', 'users')
                         .where('data.username', '==', username)
@@ -110,6 +112,7 @@ module.exports = {
                         })
                     }
                 } else {
+                    console.log('approve direct');
                     await db.doc(`/users/${username}`)
                         .get()
                         .then(doc => {
@@ -120,23 +123,32 @@ module.exports = {
                 const user = await db.doc(`/users/${username}`).get()
                 const userData = user.data()
 
-                await index.partialUpdateObjects([{
-                    objectID: userData.id,
-                    status
-                }])
+                if (!shouldBeRequestApproval) {
+                    await index.partialUpdateObjects([{
+                        objectID: userData.id,
+                        status 
+                    }])
+                }
 
                 await createLogs({
                     adminId: id,
                     role: level,
-                    message: `Admin ${name} request approval to super-admin for change status user ${username} to ${status}`,
+                    message: shouldBeRequestApproval 
+                        ? `Admin ${name} request approval to super-admin for change status user ${username} to ${status}`
+                        : `Admin approve request to change status user ${username} to ${status}`,
                     name
                 })
 
-                return status !== 'banned' ? {
+                console.log('userData.status: ', userData.status);
+                const message = shouldBeRequestApproval ? 'waiting approval from super admin' : 'success'
+                const response = {
                     ...userData,
-                    status,
-                    message: 'success'
-                } : { ...userData, status: 'active', message: 'waiting approval from super admin'}
+                    status: shouldBeRequestApproval ? userData.status : status,
+                    message
+                }
+
+                return response;
+
             } catch (err) {
                 console.log(err)
                 throw new Error(err)
@@ -158,6 +170,8 @@ module.exports = {
 
                     return doc
                 })
+            const userData = await db.doc(`/users/${notifData.data.username}`).get()
+            const dataParse = userData.data();
 
             if (!approve) {
                 console.log('decline log')
@@ -168,7 +182,11 @@ module.exports = {
                     name
                 })
     
-                return "Success Decline admin action"
+                return {
+                    id: dataParse.id,
+                    status: dataParse.status, // still return previous data status
+                    message: "Success Decline admin action"
+                }
             }
 
             if (notifData.type === "users") {
@@ -187,11 +205,19 @@ module.exports = {
                         name
                     })
         
-                    return "Success Approve admin action"
+                    return {
+                        id: dataParse.id,
+                        status: notifData.action, // still return previous data status
+                        message: "Success Approve admin action"
+                    }
                 }
-            }   
-
-            return "Please use the types and actions has been registered"
+            } else {
+                return {
+                    id: dataParse.id,
+                    status: notifData.action, // still return previous data status
+                    message: "payload notifId or approve is required"
+                }
+            }
         },
         async syncAlogliaFirebase(_, { }, _context) {
             const index = server.initIndex(ALGOLIA_INDEX_USERS);
