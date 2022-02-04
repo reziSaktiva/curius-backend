@@ -610,21 +610,21 @@ module.exports = {
       }
     },
     async createReplicatePostAscDesc(_, { } , _ctx) {
-      const index = server.initIndex('users');
+      const index = server.initIndex('posts');
 
       await index.setSettings({
         replicas: [
-          'users_date_desc',
-          'users_date_asc'
+          'posts_rank_desc',
+          'posts_rank_asc'
         ]
       })
 
-      const replicasIndexDesc = server.initIndex('users_date_desc')
-      const replicasIndexAsc = server.initIndex('users_date_asc')
+      const replicasIndexDesc = server.initIndex('users_rank_desc')
+      const replicasIndexAsc = server.initIndex('users_rank_asc')
       
       await replicasIndexAsc.setSettings({
         ranking: [
-          "asc(date_timestamp)",
+          "asc(rank)",
           "typo",
           "geo",
           "words",
@@ -638,7 +638,7 @@ module.exports = {
 
       await replicasIndexDesc.setSettings({
         ranking: [
-          "desc(date_timestamp)",
+          "desc(rank)",
           "typo",
           "geo",
           "words",

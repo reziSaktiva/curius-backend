@@ -225,7 +225,7 @@ module.exports = gql`
         getRoomById(id: ID!): Room!
 
         # Search
-        searchUser(search: String, status: String, perPage: Int, page: Int, filters: RequestFilterUser ): SearchUser!
+        searchUser(search: String, status: String, perPage: Int, page: Int, filters: RequestFilterUser, sortBy: String ): SearchUser!
         searchPosts(search: String, perPage: Int, page: Int, useExport: Boolean, hasReported: Boolean, useDetailLocation: Boolean, range: Float, location: String, filters: RequestFilter, room: String, sortBy: String ): SearchPosts!
         searchRoom(name: String, location: String, useDetailLocation: Boolean, page: Int, perPage: Int): SearchRoom
         searchCommentReported(search: String, sortBy: String, page: Int, perPage: Int, filters: RequestFilter): SearchCommentReported

@@ -1,13 +1,17 @@
 const { db } = require('../../../utility/admin')
 const { client, server } = require('../../../utility/algolia')
-const { ALGOLIA_INDEX_USERS } = require('../../../constant/post')
+const { ALGOLIA_INDEX_USERS, ALGOLIA_INDEX_USERS_DESC, ALGOLIA_INDEX_USERS_ASC } = require('../../../constant/post')
 const adminAuthContext = require('../../../utility/adminAuthContext')
 const { createLogs, hasAccessPriv, LIST_OF_PRIVILEGE } = require('../usecase/admin');
 
 module.exports = {
     Query: {
-        async searchUser(_, { search, status, perPage, page, filters = {} }, _context) {
-            const index = client.initIndex(ALGOLIA_INDEX_USERS);
+        async searchUser(_, { search, status, perPage, page, filters = {}, sortBy = 'desc'}, _context) {
+            let indexKey = ALGOLIA_INDEX_USERS;
+            if (sortBy == 'asc') indexKey = ALGOLIA_INDEX_USERS_ASC
+            if (sortBy == 'desc') indexKey = ALGOLIA_INDEX_USERS_DESC
+
+            const index = client.initIndex(indexKey);
             const defaultPayload = {
                 "attributesToRetrieve": "*",
                 "attributesToSnippet": "*:20",
@@ -34,6 +38,7 @@ module.exports = {
 
             if (_tags.length) facetFilters.push([`_tags:${_tags.join(',')}`])
 
+            console.log('facetFilter: ', facetFilters);
             try {
                 return new Promise(async (resolve, reject) => {
                     const payload = { ...defaultPayload, ...pagination }
@@ -89,6 +94,9 @@ module.exports = {
                 }
             }
 
+            const user = await db.doc(`/users/${username}`).get()
+            const userData = user.data()
+
             try {
                 const index = server.initIndex(ALGOLIA_INDEX_USERS);
                 if (shouldBeRequestApproval) {
@@ -100,17 +108,23 @@ module.exports = {
                         .get()
                     const users = getUsers.docs.map(doc => doc.data())
 
-                    if (!users.length) {
-                        await db.collection('/notifications').add({
-                            type: 'users',
-                            data: { username },
-                            isVerify: false,
-                            adminName: name,
-                            adminRole: levelName,
-                            action: "Banned",
-                            isRead: false
-                        })
+                    if (users.length) {
+                        return {
+                            ...userData,
+                            status: userData.status,
+                            message: "You or other admin already request to change status for this user"
+                        }
                     }
+                    await db.collection('/notifications').add({
+                        type: 'users',
+                        data: { username },
+                        isVerify: false,
+                        adminName: name,
+                        adminRole: levelName,
+                        action: "Banned",
+                        isRead: false
+                    })
+                    
                 } else {
                     console.log('approve direct');
                     await db.doc(`/users/${username}`)
@@ -119,9 +133,6 @@ module.exports = {
                             return doc.ref.update({ status })
                         })
                 }
-
-                const user = await db.doc(`/users/${username}`).get()
-                const userData = user.data()
 
                 if (!shouldBeRequestApproval) {
                     await index.partialUpdateObjects([{

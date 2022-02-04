@@ -81,9 +81,10 @@ module.exports = {
         if (childData === 'total') dataDoc = searchUser
         if (childData === 'deleted') dataDoc = searchDeletedUser
         if (childData === 'newUser') dataDoc = searchNewUser
+        if (childData === 'active') dataDoc = activeUsers
       }
 
-      const groups = dataDoc.hits.reduce((groups, doc) => {
+      const groups = (dataDoc.hits || []).reduce((groups, doc) => {
         const date = doc[`${parentData === 'user' ? 'joinDate':'createdAt'}`].split('T')[0];
         const parseDate = date.split('-')
         const month = parseDate[1]
