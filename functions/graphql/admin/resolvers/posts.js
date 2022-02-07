@@ -239,7 +239,7 @@ module.exports = {
       } : {};
 
       const pagination = {
-        "hitsPerPage": useExport ? 10 : perPage || 10,
+        "hitsPerPage": useExport ? 100 : perPage || 10,
         "page": page || 0,
       }
       const facetFilters = []
@@ -259,27 +259,9 @@ module.exports = {
         facetFilters.push([`rank: ${ratingFrom} TO ${ratingTo}`])
       }
 
-      let queryTags = []
-      if (media.length) {
-        if (media.includes('video')) {
-          queryTags.push('_tags:w-video')
-        }
-        if (media.includes('photo')) {
-          queryTags.push('_tags:w-photos')
-        }
-
-        if (media.includes('voice-note')) {
-          queryTags.push('_tags:w-voice-note')
-        }
-
-        if (media.includes('gif')) {
-          queryTags.push('_tags:w-gif')
-        }
-      }
+      if (media) facetFilters.push([`media.type:${media}`])
 
       if (hasReported) facetFilters.push(['_tags:has_reported'])
-
-      if (queryTags.length) facetFilters.push(queryTags)
 
       try {
         const payload = {
@@ -289,15 +271,30 @@ module.exports = {
         };
 
         if (facetFilters.length) payload.facetFilters = facetFilters
-        console.log(payload)
+
+        // Algolia Search
         const searchDocs = await index.search(search, payload)
 
         const ids = searchDocs.hits.map(doc => doc.objectID)
+        const batches = [];
+
         if (!ids.length) return searchDocs
 
-        const getPosts = await db.collection('posts').where('id', 'in', ids).get()
-        const posts = await getPosts.docs.map(async (doc, idx) => {
-          const dataParse = doc.data()
+        while (ids.length) {
+          const batch = ids.splice(0, 10);
+          
+          batches.push(
+            db.collection('posts')
+              .where('id', 'in', [...batch]).get()
+              .then(results => results.docs.map(result => ({ ...result.data()})))
+          )
+        }
+
+        const getPosts = await Promise.all(batches).then(content => content.flat());
+
+        // const getPosts = await db.collection('posts').where('id', 'in', ids).get()
+        const posts = await getPosts.map(async (doc, idx) => {
+          const dataParse = doc
           console.log('timestamp: ', dataParse?.createdAt)
           if (!useDetailLocation) return dataParse
 
@@ -409,7 +406,7 @@ module.exports = {
   Mutation: {
     async setStatusPost(_, props, _ctx) {
       const { active, flags = [], takedown, postId, deleted } = props
-      const { name, level, id } = await adminAuthContext(_ctx)
+      const { name, level, id, levelName } = await adminAuthContext(_ctx)
 
       let action = ''
       if (takedown) action = LIST_OF_PRIVILEGE.TAKEDOWN;
@@ -423,11 +420,12 @@ module.exports = {
       if (!postId) throw new Error('postId is Required')
 
       let status = {}
-      const index = client.initIndex(ALGOLIA_INDEX_POSTS);
+      const index = server.initIndex(ALGOLIA_INDEX_POSTS);
       const targetCollection = `/posts/${postId}`
       const data = await db.doc(targetCollection).get()
 
       if (shouldBeRequestApproval) {
+        console.log('should request approval');
         const getPosts = await db.collection('notifications')
           .where('type', '==', 'posts')
           .where('data.postId', '==', postId)

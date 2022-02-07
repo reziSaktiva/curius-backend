@@ -4,6 +4,8 @@ const axios = require('axios')
 
 const { ALGOLIA_INDEX_ROOMS } = require('../../../constant/post')
 const { db } = require('../../../utility/admin')
+const { createLogs } = require('../usecase/admin');
+
 const adminAuthContext = require('../../../utility/adminAuthContext')
 const { client, server } = require('../../../utility/algolia')
 const { API_KEY_GEOCODE } = require('../../../utility/secret/API')
@@ -161,6 +163,35 @@ module.exports = {
           catch (err) {
               throw new Error(err)
           }
+      },
+      async deleteRoom(_, { roomId }, context) {
+        const { name, level } = await adminAuthContext(context)
+        try {
+
+          const index = server.initIndex(ALGOLIA_INDEX_ROOMS)
+
+          const targetCollection = `/room/${roomId}`
+          await db.doc(targetCollection).delete();
+          await index.deleteObject(roomId);
+
+          await createLogs({
+            adminId: id,
+            role: level,
+            message: `Admin ${name} has been delete roomId ${roomId}`,
+            name
+          });
+
+          return {
+            id: roomId,
+            message: 'Success delete roomId '+roomId
+          }
+        } catch(err) {
+          return {
+            id: roomId,
+            status: 'Error',
+            message: err
+          }
+        }
       },
       async updateRoom(_, props, context) {
         const { isDeactive, roomId,roomName, description, startingDate, tillDate, displayPicture, location, range } = props

@@ -247,7 +247,7 @@ module.exports = gql`
         getRoomById(id: ID!): Room!
 
         # Search
-        searchUser(search: String, status: String, perPage: Int, page: Int, filters: RequestFilterUser, sortBy: String ): SearchUser!
+        searchUser(search: String, status: String, perPage: Int, page: Int, filters: RequestFilterUser, sortBy: String, useExport: Boolean ): SearchUser!
         searchPosts(search: String, perPage: Int, page: Int, useExport: Boolean, hasReported: Boolean, useDetailLocation: Boolean, range: Float, location: String, filters: RequestFilter, room: String, sortBy: String ): SearchPosts!
         searchRoom(name: String, location: String, useDetailLocation: Boolean, page: Int, perPage: Int): SearchRoom
         searchCommentReported(search: String, sortBy: String, page: Int, perPage: Int, filters: RequestFilter): SearchCommentReported
@@ -306,6 +306,8 @@ module.exports = gql`
     type PostStatistic {
         total: Int
         totalReported: Int
+        active: Int
+        nonActive: Int
     }
 
     type SummaryData {
@@ -336,7 +338,7 @@ module.exports = gql`
     input RequestFilter {
         timestamp: Timestamp
         rating: Rating
-        media: [String]
+        media: String
         status: String
         owner: String
     }
@@ -418,13 +420,19 @@ module.exports = gql`
         message: String
     }
 
+    type BasicResponseAction {
+        id: ID
+        message: String
+        status: String
+    }
+
     type Mutation {
         checkEmail(email: String uid: String name: String, accessCode: String!): CheckEmailStatus
         registerAdmin(email: String! level: Int! name: String!, accessCode: String!): String
         changeUserStatus(status: String!, username: String!): UpdateUserStatus!
         setStatusComment(idComment: ID, active: Boolean, takedown: Boolean, deleted: Boolean): CommentReported
         setStatusPost(active: Boolean, flags: [String], takedown: Boolean, postId: String, deleted: Boolean): UpdatePostStatus!\
-        approveAdminAction(notifId: ID, approve: Boolean): ApprovalAdmin
+        approveAdminAction(notifId: ID, approve: Boolean): BasicResponseAction
 
         # Randomization
         updateThemesById(id: ID, name: String, colors: [Colors], adjective: [Adjective], nouns: [Nouns], isDeleted: Boolean, isActive: Boolean): ThemeType 
@@ -445,5 +453,8 @@ module.exports = gql`
 
         # Admin
         getAdminLogin: Admin
+
+        # Room
+        deleteRoom(roomId: ID!): BasicResponseAction
     }
 `
