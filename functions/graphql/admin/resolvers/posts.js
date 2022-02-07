@@ -49,7 +49,7 @@ module.exports = {
         if (!prev.includes(curr.userIdReporter)) return [...prev, curr.userIdReporter]
         return prev
       }, [])
-      
+
       const getUserReported = await db.collection('users').where('id', 'in', ids).get()
       const userReporter = await getUserReported.docs.map(doc => doc.data());
 
@@ -122,7 +122,7 @@ module.exports = {
     },
     async getReportedListByCommentId(_, { search = "", commentId, perPage, page }, _ctx) {
       const index = client.initIndex('report_comments');
-      
+
       const defaultPayload = {
         "attributesToRetrieve": "*",
         "attributesToSnippet": "*:20",
@@ -149,7 +149,7 @@ module.exports = {
         };
         payload.facetFilters = facetFilters
         const searchDocs = await index.search(search, payload)
-  
+
         const comments = await searchDocs.hits.map(async doc => {
           const comment = await db.doc(`/posts/${doc.idPost}/comments/${doc.idComment}`).get()
           const dataParse = await comment.data()
@@ -164,7 +164,7 @@ module.exports = {
             status: dataParse.status.active ? 'Active' : (dataParse.status.takedown && 'Takedown')
           })
         })
-  
+
         console.log(await comments)
         return {
           ...searchDocs,
@@ -267,7 +267,7 @@ module.exports = {
         if (media.includes('photo')) {
           queryTags.push('_tags:w-photos')
         }
-        
+
         if (media.includes('voice-note')) {
           queryTags.push('_tags:w-voice-note')
         }
@@ -332,7 +332,7 @@ module.exports = {
         return err
       }
     },
-    async searchCommentReported(_, { search, sortBy = 'desc', page, perPage, filters }){
+    async searchCommentReported(_, { search, sortBy = 'desc', page, perPage, filters }) {
       const timestampTo = get(filters, 'timestamp.to', '');
       const timestampFrom = get(filters, 'timestamp.from', '');
       let indexKey = 'report_comments'
@@ -357,7 +357,7 @@ module.exports = {
         "hitsPerPage": perPage || 10,
         "page": page || 0,
       }
-      
+
       const facetFilters = []
 
       if (timestampFrom) {
@@ -380,7 +380,7 @@ module.exports = {
           const endpoint = doc.parentTypePost === 'global-posts' ? `/posts/${doc.idPost}/comments/${doc.idComment}` : `/room/${doc.idRoom}/posts/${doc.idPost}/comments/${doc.idComment}`
           const comment = await db.doc(endpoint).get()
           const dataParse = await comment.data()
-          
+
           const getUserDetail = dataParse && await db.doc(`/users/${dataParse.owner}`).get()
           const user = dataParse && await getUserDetail.data()
 
@@ -401,7 +401,7 @@ module.exports = {
           hits: comments
         }
 
-      } catch(err) {
+      } catch (err) {
         return err
       }
     },
@@ -423,7 +423,7 @@ module.exports = {
       if (!postId) throw new Error('postId is Required')
 
       let status = {}
-      const index = server.initIndex(ALGOLIA_INDEX_POSTS);
+      const index = client.initIndex(ALGOLIA_INDEX_POSTS);
       const targetCollection = `/posts/${postId}`
       const data = await db.doc(targetCollection).get()
 
@@ -444,7 +444,7 @@ module.exports = {
 
         await db.collection('/notifications').add({
           type: 'posts',
-          data: { postId, ...(flags.length ? { flags } : { }) },
+          data: { postId, ...(flags.length ? { flags } : {}) },
           isVerify: false,
           adminName: name,
           adminRole: levelName,
@@ -560,7 +560,7 @@ module.exports = {
           return doc.ref.update({ status })
         }
       )
-      
+
       await index.saveObjects([{
         objectID: idComment,
         ...parseData[0],
@@ -582,7 +582,7 @@ module.exports = {
         owner: newData.owner,
         timestamp: newData.createAt,
         reportedCount: newData.reportedCount,
-        status: newData.status.active ? 'Active': (newData.status.takedown && 'Takedown')
+        status: newData.status.active ? 'Active' : (newData.status.takedown && 'Takedown')
       }
 
     },
@@ -637,7 +637,7 @@ module.exports = {
         if (takedown) message = `Admin ${name} has reported Post Id ${posts.id}`
         if (active) message = `Admin ${name} has activate Post Id ${posts.id}`
         if (deleted) message = `Admin ${name} has deleted Post Id ${posts.id}`
-  
+
         await createLogs({ adminId: id, role: level, message })
 
         const parseSnapshot = await (await writeRequest.get()).data()
@@ -651,7 +651,7 @@ module.exports = {
         return err;
       }
     },
-    async createReplicatePostAscDesc(_, { } , _ctx) {
+    async createReplicatePostAscDesc(_, { }, _ctx) {
       const index = server.initIndex('posts');
 
       await index.setSettings({
@@ -663,7 +663,7 @@ module.exports = {
 
       const replicasIndexDesc = server.initIndex('users_rank_desc')
       const replicasIndexAsc = server.initIndex('users_rank_asc')
-      
+
       await replicasIndexAsc.setSettings({
         ranking: [
           "asc(rank)",
@@ -708,16 +708,16 @@ module.exports = {
         await commentCollection.get().then(
           doc => {
             if (!doc.exists) throw new UserInputError('Postingan tidak ditemukan/sudah dihapus')
-  
+
             const oldData = doc.data()
             const listOfReported = oldData.logReported || []
             const hasReportedBefore = listOfReported.filter(user => user === username)
             flagHasReportedBefore = hasReportedBefore.length;
-  
+
             if (!hasReportedBefore.length) {
               const increment = (oldData.reportedCount || 0) + 1
               commentText = oldData.text;
-    
+
               return doc.ref.update({
                 reportedCount: increment,
                 status: { takedown: false, active: true },
@@ -726,9 +726,9 @@ module.exports = {
             }
           }
         )
-  
+
         if (flagHasReportedBefore) return `Already reported this comment before`
-  
+
         const payload = {
           objectID: idComment,
           idComment,
@@ -745,7 +745,7 @@ module.exports = {
 
         const writeRequest = await db.collection('/reports_comment').add(payload)
         await (await writeRequest.get()).data()
-  
+
         const index = server.initIndex('report_comments');
         await index.getObject(idComment).then(
           async () => {
@@ -754,7 +754,7 @@ module.exports = {
                 _operation: 'Increment',
                 value: 1
               },
-              objectID:  idComment
+              objectID: idComment
             })
 
 
@@ -762,7 +762,7 @@ module.exports = {
             if (takedown) message = `Admin ${name} has reported Comment Id ${idComment}`
             if (active) message = `Admin ${name} has activate Comment Id ${idComment}`
             if (deleted) message = `Admin ${name} has deleted Comment Id ${idComment}`
-      
+
             await createLogs({ adminId: id, role: level, message })
           }
         ).catch(
@@ -772,7 +772,7 @@ module.exports = {
             })
           }
         )
-  
+
         return `Success Reported Comment ${idComment} in Post ${idPost}`;
       } catch (err) {
         console.log(err)

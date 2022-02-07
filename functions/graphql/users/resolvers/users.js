@@ -100,7 +100,7 @@ module.exports = {
 
             let dataUser = {
                 user: null,
-                galery: [],
+                allMedia: [],
                 liked: []
             }
 
@@ -125,35 +125,38 @@ module.exports = {
 
                                 if (posts.length) {
                                     posts.forEach((post) => {
-                                        if (post.media && post.media.length) {
-                                            dataUser.galery.push(post.media)
+                                        if (post.media) {
+                                            if (post.media.type !== "gif") {
+                                                post.media.content.forEach(data => {
+                                                    dataUser.allMedia.push(data)
+                                                })
+                                            }
                                         }
-                                    });
+                                    })
                                 }
+
+                                // const private = doc.data()._private
+                                // const passwordUpdateHistory = private && private.filter(item => item.lastUpdate)
+
+                                dataUser.user = {
+                                    email: doc.data().email,
+                                    id: doc.data().id,
+                                    username: doc.data().username,
+                                    fullName: doc.data().fullName,
+                                    mobileNumber: doc.data().mobileNumber,
+                                    joinDate: doc.data().joinDate,
+                                    gender: doc.data().gender,
+                                    dob: doc.data().dob,
+                                    profilePicture: doc.data().profilePicture,
+                                    interest: doc.data().interest,
+                                    theme: doc.data().theme,
+                                    postsCount,
+                                    repostCount,
+                                    likesCount
+                                }
+
+                                return db.collection(`/users/${name ? name : username}/liked`).get()
                             }
-
-                            const private = doc.data()._private
-                            const passwordUpdateHistory = private && private.filter(item => item.lastUpdate)
-
-                            dataUser.user = {
-                                email: doc.data().email,
-                                id: doc.data().id,
-                                username: doc.data().username,
-                                fullName: doc.data().fullName,
-                                mobileNumber: doc.data().mobileNumber,
-                                joinDate: doc.data().joinDate,
-                                gender: doc.data().gender,
-                                dob: doc.data().dob,
-                                profilePicture: doc.data().profilePicture,
-                                interest: doc.data().interest,
-                                theme: doc.data().theme,
-                                passwordUpdateHistory,
-                                postsCount,
-                                repostCount,
-                                likesCount
-                            }
-
-                            return db.collection(`/users/${name ? name : username}/liked`).get()
                         })
                         .then(data => {
                             data.docs.forEach(doc => {
