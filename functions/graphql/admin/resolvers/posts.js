@@ -423,7 +423,7 @@ module.exports = {
       if (!postId) throw new Error('postId is Required')
 
       let status = {}
-      const index = server.initIndex(ALGOLIA_INDEX_POSTS);
+      const index = client.initIndex(ALGOLIA_INDEX_POSTS);
       const targetCollection = `/posts/${postId}`
       const data = await db.doc(targetCollection).get()
 

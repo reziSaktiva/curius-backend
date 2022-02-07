@@ -6,7 +6,7 @@ const { createLogs, hasAccessPriv, LIST_OF_PRIVILEGE } = require('../usecase/adm
 
 module.exports = {
     Query: {
-        async searchUser(_, { search, status, perPage, page, filters = {}, sortBy = 'desc'}, _context) {
+        async searchUser(_, { search, status, perPage, page, filters = {}, sortBy = 'desc' }, _context) {
             let indexKey = ALGOLIA_INDEX_USERS;
             if (sortBy == 'asc') indexKey = ALGOLIA_INDEX_USERS_ASC
             if (sortBy == 'desc') indexKey = ALGOLIA_INDEX_USERS_DESC
@@ -98,7 +98,7 @@ module.exports = {
             const userData = user.data()
 
             try {
-                const index = server.initIndex(ALGOLIA_INDEX_USERS);
+                const index = client.initIndex(ALGOLIA_INDEX_USERS);
                 if (shouldBeRequestApproval) {
                     console.log('send request approval');
                     const getUsers = await db.collection('notifications')
@@ -124,7 +124,7 @@ module.exports = {
                         action: "Banned",
                         isRead: false
                     })
-                    
+
                 } else {
                     console.log('approve direct');
                     await db.doc(`/users/${username}`)
@@ -137,14 +137,14 @@ module.exports = {
                 if (!shouldBeRequestApproval) {
                     await index.partialUpdateObjects([{
                         objectID: userData.id,
-                        status 
+                        status
                     }])
                 }
 
                 await createLogs({
                     adminId: id,
                     role: level,
-                    message: shouldBeRequestApproval 
+                    message: shouldBeRequestApproval
                         ? `Admin ${name} request approval to super-admin for change status user ${username} to ${status}`
                         : `Admin approve request to change status user ${username} to ${status}`,
                     name
@@ -169,7 +169,7 @@ module.exports = {
             const { name, level, id } = await adminAuthContext(_context)
             const hasAccess = level === 1 || level === 2
             if (!hasAccess) throw new Error("Permission Denied")
-            
+
             let notifData = {}
             await db.doc(`/notifications/${notifId}`)
                 .get()
@@ -196,7 +196,7 @@ module.exports = {
                     message: `Admin ${name} has decline ${notifData.adminName} request for status user ${notifData.data.username} to Banned`,
                     name
                 })
-    
+
                 return {
                     id: dataParse.id,
                     status: dataParse.status, // still return previous data status
@@ -209,7 +209,7 @@ module.exports = {
                 const postsParse = postsData.data();
                 let status = postsParse?.status;
                 let flags = postsParse?.status.flag || [];
-                       
+
                 if (notifData.action === LIST_OF_PRIVILEGE.TAKEDOWN) {
                     status = {
                         ...status,
@@ -248,7 +248,7 @@ module.exports = {
                     .then(doc => {
                         doc.ref.update({ status })
                     })
-                
+
                 return {
                     id: postsParse.id,
                     status: notifData.action,
@@ -263,7 +263,7 @@ module.exports = {
                         .then(doc => {
                             return doc.ref.update({ status: 'banned' })
                         })
-        
+
                     console.log('approve log')
                     await createLogs({
                         adminId: id,
@@ -271,7 +271,7 @@ module.exports = {
                         message: `Admin ${name} has approved ${notifData.adminName} request for status user ${notifData.data.username} to Banned`,
                         name
                     })
-        
+
                     return {
                         id: dataParse.id,
                         status: notifData.action, // still return previous data status
@@ -292,7 +292,7 @@ module.exports = {
                 "hitsPerPage": 1000,
                 "page": 0,
             };
-    
+
             const defaultPayload = {
                 "attributesToRetrieve": "*",
                 "attributesToSnippet": "*:20",
@@ -304,9 +304,9 @@ module.exports = {
                 "explain": "*",
                 "facets": ["*"]
             };
-            
+
             const searchDocs = await index.search('', { ...pagination, ...defaultPayload })
-            
+
             const newHits = await searchDocs.hits.map(async ({ dob, joinDate, objectID, ...rest }) => {
                 const fbdata = await db.doc(`/users/${rest.username}`).get()
                 const dataParse = await fbdata.data()
