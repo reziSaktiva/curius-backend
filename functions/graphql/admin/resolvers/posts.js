@@ -418,67 +418,109 @@ module.exports = {
       if (deleted) action = LIST_OF_PRIVILEGE.DELETE_POSTS
 
       if (!hasAccessPriv({ id: level, action })) throw new Error('Permission Denied')
+      const shouldBeRequestApproval = !!(flags.length || takedown !== undefined || deleted !== undefined || active !== undefined) && level === 4;
 
       if (!postId) throw new Error('postId is Required')
 
+      let status = {}
       const index = server.initIndex(ALGOLIA_INDEX_POSTS);
       const targetCollection = `/posts/${postId}`
       const data = await db.doc(targetCollection).get()
-      let status = {}
 
-      const oldDocAlgolia = await index.getObject(postId, {
-        attributesToRetrieve: ['_tags']
-      });
-      let _tags = oldDocAlgolia._tags || []
-
-      try {
-        let docId = ''
-        await db.doc(targetCollection)
+      if (shouldBeRequestApproval) {
+        const getPosts = await db.collection('notifications')
+          .where('type', '==', 'posts')
+          .where('data.postId', '==', postId)
+          .where('isVerify', '==', false)
           .get()
-          .then(doc => {
-            const oldPost = data.data()
+        const posts = getPosts.docs.map(doc => doc.data())
+        // send request approval
+        if (posts.length) {
+          return {
+            ...data.data(),
+            message: `You or other admin already request to set ${action} this post`
+          }
+        }
 
-            if (flags) {
-              status.flags = [...(oldPost.status.flag || []), ...flags]
-            }
+        await db.collection('/notifications').add({
+          type: 'posts',
+          data: { postId, ...(flags.length ? { flags } : { }) },
+          isVerify: false,
+          adminName: name,
+          adminRole: levelName,
+          action,
+          isRead: false
+        })
 
-            if (takedown !== undefined) {
-              status.takedown = takedown
-            }
-
-            if (active !== undefined) {
-              status.active = active
-            }
-
-            if (deleted !== undefined) {
-              status.deleted = deleted
-            }
-
-            docId = doc.id
-            status = { ...oldPost.status, ...status };
-            return doc.ref.update({ status: { ...oldPost.status, ...status } })
-          })
         let message = ''
-        if (takedown) message = `Admin ${name} has reported Post Id ${docId}`
-        if (active) message = `Admin ${name} has activate Post Id ${docId}`
-        if (flags.length) message = `Admin ${name} has set flag ${flags.join(',')} to Post Id ${docId}`
+        if (takedown) message = `Admin ${name} request to reported Post Id ${docId}`
+        if (active) message = `Admin ${name} request to activate Post Id ${docId}`
+        if (flags.length) message = `Admin ${name} request set flag ${flags.join(',')} to Post Id ${docId}`
 
         await createLogs({ adminId: id, role: level, message })
-        // Update Algolia Search Posts
-        await index.partialUpdateObjects([{
-          objectID: postId,
-          status,
-          _tags
-        }]);
 
-      } catch (err) {
-        console.log(err)
-        throw new Error(err)
+        return {
+          ...data.data(),
+          message: 'waiting approval from superadmin or co-superadmin'
+        }
+
+      } else {
+        // approve directly
+        const oldDocAlgolia = await index.getObject(postId, {
+          attributesToRetrieve: ['_tags']
+        });
+        let _tags = oldDocAlgolia._tags || []
+
+        try {
+          let docId = ''
+          await db.doc(targetCollection)
+            .get()
+            .then(doc => {
+              const oldPost = data.data()
+
+              if (flags) {
+                status.flags = [...(oldPost.status.flag || []), ...flags]
+              }
+
+              if (takedown !== undefined) {
+                status.takedown = takedown
+              }
+
+              if (active !== undefined) {
+                status.active = active
+              }
+
+              if (deleted !== undefined) {
+                status.deleted = deleted
+              }
+
+              docId = doc.id
+              status = { ...oldPost.status, ...status };
+              return doc.ref.update({ status: { ...oldPost.status, ...status } })
+            })
+          let message = ''
+          if (takedown) message = `Admin ${name} has reported Post Id ${docId}`
+          if (active) message = `Admin ${name} has activate Post Id ${docId}`
+          if (flags.length) message = `Admin ${name} has set flag ${flags.join(',')} to Post Id ${docId}`
+
+          await createLogs({ adminId: id, role: level, message })
+          // Update Algolia Search Posts
+          await index.partialUpdateObjects([{
+            objectID: postId,
+            status,
+            _tags
+          }]);
+
+        } catch (err) {
+          console.log(err)
+          throw new Error(err)
+        }
       }
 
       return {
         ...data.data(),
-        status
+        status,
+        message: 'success'
       }
     },
     async setStatusComment(_, { idComment, active, takedown, deleted }, _ctx) {
@@ -736,7 +778,7 @@ module.exports = {
         console.log(err)
         throw new Error(err)
       }
-    },
+    }
   }
 }
 

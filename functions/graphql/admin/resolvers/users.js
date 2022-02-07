@@ -104,7 +104,7 @@ module.exports = {
                     const getUsers = await db.collection('notifications')
                         .where('type', '==', 'users')
                         .where('data.username', '==', username)
-                        .where('approve', '==', false)
+                        .where('isVerify', '==', false)
                         .get()
                     const users = getUsers.docs.map(doc => doc.data())
 
@@ -179,6 +179,10 @@ module.exports = {
                         return doc.ref.update({ isVerify: true, approve })
                     }
 
+                    if (notifData.type === 'posts' && notifData.action) {
+                        return doc.ref.update({ isVerify: true, approve })
+                    }
+
                     return doc
                 })
             const userData = await db.doc(`/users/${notifData.data.username}`).get()
@@ -197,6 +201,58 @@ module.exports = {
                     id: dataParse.id,
                     status: dataParse.status, // still return previous data status
                     message: "Success Decline admin action"
+                }
+            }
+
+            if (notifData.type === 'posts') {
+                const postsData = await db.doc(`/posts/${notifData.data.postId}`).get()
+                const postsParse = postsData.data();
+                let status = postsParse?.status;
+                let flags = postsParse?.status.flag || [];
+                       
+                if (notifData.action === LIST_OF_PRIVILEGE.TAKEDOWN) {
+                    status = {
+                        ...status,
+                        active: false,
+                        takedown: true,
+                        deleted: false
+                    }
+                }
+                if (notifData.action === LIST_OF_PRIVILEGE.ACTIVE_POSTS) {
+                    status = {
+                        ...status,
+                        active: true,
+                        takedown: false,
+                        deleted: false
+                    }
+                }
+
+                if (notifData.action === LIST_OF_PRIVILEGE.DELETE_POSTS) {
+                    status = {
+                        ...status,
+                        active: false,
+                        takedown: false,
+                        deleted: true
+                    }
+                }
+
+                if (notifData.action === LIST_OF_PRIVILEGE.SET_FLAGS) {
+                    status = {
+                        ...status,
+                        flag: [...flags, ...notifData.flags || []]
+                    }
+
+                }
+
+                await db.doc(`/posts/${notifData.data.postId}`).get()
+                    .then(doc => {
+                        doc.ref.update({ status })
+                    })
+                
+                return {
+                    id: postsParse.id,
+                    status: notifData.action,
+                    message: `Success Approve to action ${notifData.action} post `
                 }
             }
 
