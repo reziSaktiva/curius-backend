@@ -104,7 +104,6 @@ module.exports = {
                     const getUsers = await db.collection('notifications')
                         .where('type', '==', 'users')
                         .where('data.username', '==', username)
-                        .where('approve', '==', false)
                         .where('isVerify', '==', false)
                         .get()
                     const users = getUsers.docs.map(doc => doc.data())
