@@ -7,16 +7,22 @@ const randomGenerator = require('../../../utility/randomGenerator')
 module.exports = {
     Mutation: {
         async getMoreChild(_, { postId, commentId, lastChildId }, _context) {
-            const commentChildCollections = db.collection(`/posts/${postId}/comments`).where("reply.id", '==', commentId).where("status.active", '==', true).orderBy('createdAt', 'asc')
-            try {
-                if (lastChildId) {
-                    const lastDocument = await db.doc(`/posts/${postId}/comments/${lastChildId}`).get()
+            const commentChildCollections = db.collection(`/posts/${postId}/comments`).where("reply.id", '==', commentId)
 
-                    return commentChildCollections.limit(2).startAfter(lastDocument).get()
-                        .then(doc => doc.docs.map(doc => doc.data()))
-                }
-                return commentChildCollections.limit(2).get()
+            try {
+                // if (lastChildId) {
+                //     // const lastDocument = await db.doc(`/posts/${postId}/comments/${lastChildId}`).get()
+
+                //     return commentChildCollections.get()
+                //         .then(doc => doc.docs.map(doc => doc.data()))
+                // }
+                let comments = await commentChildCollections.get()
                     .then(doc => doc.docs.map(doc => doc.data()))
+
+                comments.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+                comments.pop()
+
+                return comments
             }
             catch (err) {
                 throw new Error(err)
@@ -214,10 +220,13 @@ module.exports = {
                         const parentComment = await db.doc(`/posts/${postId}/comments/${getCommentDoc.data().reply.id}`).get()
                         if (getCommentDoc.id === parentComment.data().children[0].id) {
                             const children = await db.collection(`/posts/${postId}/comments`).where("reply.id", '==', parentComment.id).where("status.active", '==', true).orderBy('createdAt', 'asc').get()
+
                             const lastChildren = children.docs[children.docs.length - 2];
                             const dataChildren = children.docs.length <= 1 ? [] : [lastChildren.data()]
 
                             parentComment.ref.update({ children: dataChildren, replyCount: parentComment.data().replyCount - 1 })
+                        } else {
+                            parentComment.ref.update({ replyCount: parentComment.data().replyCount - 1 })
                         }
                         postDocument.ref.update({ commentCount: postDocument.data().commentCount - 1, rank: postDocument.data().rank - 1 })
                     } else {

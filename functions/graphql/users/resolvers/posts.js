@@ -76,70 +76,70 @@ module.exports = {
             .then(async res => {
               const { hits, page, nbHits, nbPages, hitsPerPage, processingTimeMS } = res;
 
-              const postIds = []
-              if (hits.length) {
-                hits.forEach(async doc => {
-                  postIds.push(doc.objectID);
-                })
-              }
+              // const postIds = []
+              // if (hits.length) {
+              //   hits.forEach(async doc => {
+              //     postIds.push(doc.objectID);
+              //   })
+              // }
 
-              if (postIds.length) {
-                const getPosts = await db.collection('posts').where('id', 'in', postIds).orderBy(type !== "Popular" ? "createdAt" : "rank", "desc").get()
-                const posts = getPosts.docs.map(doc => doc.data())
+              // if (postIds.length) {
+              //   const getPosts = await db.collection('posts').where('id', 'in', postIds).orderBy(type !== "Popular" ? "createdAt" : "rank", "desc").get()
+              //   const posts = getPosts.docs.map(doc => doc.data())
 
-                const newHits = []
+              const newHits = []
 
-                posts.forEach(async data => {
-                  const { repost: repostId } = data;
+              hits.forEach(async data => {
+                const { repost: repostId } = data;
 
-                  const repostData = async () => {
-                    if (repostId) {
-                      const repostData = await db.doc(`/posts/${repostId}`).get()
-                      return repostData.data() || {}
+                const repostData = async () => {
+                  if (repostId) {
+                    const repostData = await db.doc(`/posts/${repostId}`).get()
+                    return repostData.data() || {}
+                  }
+                }
+
+                //commentedBy
+                const commentedBy = async () => {
+                  let commentedBy = []
+
+                  const commentCollection = await db.collection(`/posts/${data.objectID}/comments`).get()
+                  commentCollection.forEach(doc => {
+                    const isHas = commentedBy.find(result => result === doc.data().owner)
+                    if (!isHas) {
+                      commentedBy.push(doc.data().owner)
                     }
-                  }
+                  })
+                  return commentedBy
+                };
 
-                  //commentedBy
-                  const commentedBy = async () => {
-                    let commentedBy = []
+                // Likes
+                const likes = async () => {
+                  const likesData = await db.collection(`/posts/${data.objectID}/likes`).get()
+                  const likes = likesData.docs.map(doc => doc.data())
 
-                    const commentCollection = await db.collection(`/posts/${data.id}/comments`).get()
-                    commentCollection.forEach(doc => {
-                      const isHas = commentedBy.find(result => result === doc.data().owner)
-                      if (!isHas) {
-                        commentedBy.push(doc.data().owner)
-                      }
-                    })
-                    return commentedBy
-                  };
+                  return likes;
+                };
 
-                  // Likes
-                  const likes = async () => {
-                    const likesData = await db.collection(`/posts/${data.id}/likes`).get()
-                    const likes = likesData.docs.map(doc => doc.data())
+                // Muted
+                const muted = async () => {
+                  const mutedData = await db.collection(`/posts/${data.objectID}/muted`).get();
+                  return mutedData.docs.map(doc => doc.data());
+                }
 
-                    return likes;
-                  };
+                const subscribe = async () => {
+                  const subscribeData = await db.collection(`/posts/${data.objectID}/subscribes`).get();
+                  return subscribeData.docs.map(doc => doc.data());
+                }
 
-                  // Muted
-                  const muted = async () => {
-                    const mutedData = await db.collection(`/posts/${data.id}/muted`).get();
-                    return mutedData.docs.map(doc => doc.data());
-                  }
+                const newData = { ...data, id: data.objectID, commentedBy: commentedBy(), likes: likes(), muted: muted(), repost: repostData(), subscribe: subscribe() }
 
-                  const subscribe = async () => {
-                    const subscribeData = await db.collection(`/posts/${data.id}/subscribes`).get();
-                    return subscribeData.docs.map(doc => doc.data());
-                  }
+                newHits.push(newData)
+              })
 
-                  const newData = { ...data, commentedBy: commentedBy(), likes: likes(), muted: muted(), repost: repostData(), subscribe: subscribe() }
-
-                  newHits.push(newData)
-                })
-
-                resolve({ posts: newHits, nextPage: page + 1, hasMore: page + 1 !== nbPages })
-              }
-              resolve({ posts: [], nextPage: 0, hasMore: false })
+              resolve({ posts: newHits, nextPage: page + 1, hasMore: page + 1 !== nbPages })
+              // }
+              // resolve({ posts: [], nextPage: 0, hasMore: false })
             })
         })
       }
@@ -1134,7 +1134,6 @@ module.exports = {
     },
     async createPost(_, { text, media, location, repostedPost, room }, context) {
       const { username } = await fbAuthContext(context);
-      const index = server.initIndex(ALGOLIA_INDEX_ROOMS)
 
       if (username) {
         try {
@@ -1193,16 +1192,6 @@ module.exports = {
             .add(newPost)
             .then(async (doc) => {
               newPost.id = doc.id;
-
-              if (room) {
-                await index.partialUpdateObject({
-                  totalPosts: {
-                    _operation: 'Increment',
-                    value: 1
-                  },
-                  objectID:  room
-                })
-              }
 
               doc.update({ id: doc.id });
             });
