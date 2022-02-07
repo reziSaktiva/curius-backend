@@ -158,7 +158,7 @@ module.exports = gql`
     type UserData {
         user: User!
         liked: [Like]
-        galery: [[String]]
+        galery: [String]
     },
     type Subscribe {
         owner: String!
