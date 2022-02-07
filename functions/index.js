@@ -12,7 +12,7 @@ const resolversClient = require('./graphql/users/resolvers/index');
 
 const typeDefsAdmin = require('./graphql/admin/typeDefs')
 const resolversAdmin = require('./graphql/admin/resolvers/index');
-const { ALGOLIA_INDEX_POSTS, ALGOLIA_INDEX_USERS } = require('./constant/post');
+const { ALGOLIA_INDEX_POSTS, ALGOLIA_INDEX_USERS, ALGOLIA_INDEX_ROOMS } = require('./constant/post');
 const { db } = require('./utility/admin');
 
 // Global Config
@@ -44,6 +44,7 @@ serverAdmin.applyMiddleware({ app: admin, path: '/', cors: true })
 
 const postsIndex = algoliaClient.initIndex(ALGOLIA_INDEX_POSTS)
 const usersIndex = algoliaClient.initIndex(ALGOLIA_INDEX_USERS)
+const roomIndex = algoliaClient.initIndex(ALGOLIA_INDEX_ROOMS)
 
 exports.onUserDelete = functions.region('asia-southeast2')
     .firestore
@@ -114,6 +115,13 @@ exports.onPostDelete = functions.region('asia-southeast2')
             const data = snapshot.data()
 
             if (data.room) {
+                roomIndex.partialUpdateObject({
+                    totalPosts: {
+                        _operation: 'Decrement',
+                        value: 1
+                    },
+                    objectID: data.room
+                })
                 db.doc(`/room/${data.room}`).get()
                     .then(doc => {
                         doc.ref.update({ postsCount: doc.data().postsCount - 1 })
@@ -138,6 +146,14 @@ exports.onPostCreate = functions.region('asia-southeast2')
             if (newData.room) {
                 db.doc(`/room/${newData.room}`).get()
                     .then(doc => {
+                        roomIndex.partialUpdateObject({
+                            totalPosts: {
+                                _operation: 'Increment',
+                                value: 1
+                            },
+                            objectID: newData.room
+                        })
+
                         doc.ref.update({ postsCount: doc.data().postsCount + 1 })
                     })
                 tags.push("has_post_room")
