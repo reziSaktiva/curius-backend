@@ -100,7 +100,7 @@ module.exports = {
 
             let dataUser = {
                 user: null,
-                galery: [],
+                allMedia: [],
                 liked: []
             }
 
@@ -128,7 +128,7 @@ module.exports = {
                                         if (post.media) {
                                             if (post.media.type !== "gif") {
                                                 post.media.content.forEach(data => {
-                                                    dataUser.galery.push(data)
+                                                    dataUser.allMedia.push(data)
                                                 })
                                             }
                                         }
