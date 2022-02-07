@@ -432,6 +432,7 @@ module.exports = {
           .where('type', '==', 'posts')
           .where('data.postId', '==', postId)
           .where('approve', '==', false)
+          .where('isVerify', '==', false)
           .get()
         const posts = getPosts.docs.map(doc => doc.data())
         // send request approval
