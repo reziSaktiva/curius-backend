@@ -18,7 +18,7 @@ module.exports = async (context) => {
                     })
                     .then(async data => {
                         user.username = data.docs[0].data().username
-                        user.mutedUser = data.docs[0].data().mutedUser
+                        user.mutedUser = data.docs[0].data().mutedUser || []
                         const likes = await db.collection(`/users/${user.username}/liked`).get()
                         user.likes = likes.docs.map(doc => doc.data())
                     })

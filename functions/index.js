@@ -113,6 +113,7 @@ exports.onPostDelete = functions.region('asia-southeast2')
     .onDelete(async (snapshot, context) => {
         try {
             const data = snapshot.data()
+            postsIndex.deleteObject(context.params.id)
 
             if (data.room) {
                 roomIndex.partialUpdateObject({
@@ -127,7 +128,6 @@ exports.onPostDelete = functions.region('asia-southeast2')
                         doc.ref.update({ postsCount: doc.data().postsCount - 1 })
                     })
             }
-            postsIndex.deleteObject(context.params.id.toString())
         }
         catch (err) {
             functions.logger.log(err)
