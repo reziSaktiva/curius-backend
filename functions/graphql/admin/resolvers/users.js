@@ -6,7 +6,7 @@ const { createLogs, hasAccessPriv, LIST_OF_PRIVILEGE } = require('../usecase/adm
 
 module.exports = {
     Query: {
-        async searchUser(_, { search, status, perPage, page, filters = {}, sortBy = 'desc' }, _context) {
+        async searchUser(_, { search, status, perPage, page, filters = {}, sortBy = 'desc', useExport = false }, _context) {
             let indexKey = ALGOLIA_INDEX_USERS;
             if (sortBy == 'asc') indexKey = ALGOLIA_INDEX_USERS_ASC
             if (sortBy == 'desc') indexKey = ALGOLIA_INDEX_USERS_DESC
@@ -25,12 +25,12 @@ module.exports = {
             };
 
             const pagination = {
-                "hitsPerPage": perPage || 10,
+                "hitsPerPage": useExport ? 1000 : perPage || 10,
                 "page": page || 0,
             }
             let facetFilters = []
             const _tags = []
-            console.log('filters: ', filters)
+            
             if (status) facetFilters.push([`status:${status}`])
             if (filters?.hasEmail) _tags.push(`has_email`)
             if (filters?.hasPhoneNumber) _tags.push(`has_phone_number`)
@@ -50,22 +50,34 @@ module.exports = {
                         .then(async res => {
                             const { hits, page: nbPage, nbHits, nbPages, hitsPerPage, processingTimeMS } = res;
                             const userIds = [];
+                            const batches = [];
+
                             if (hits.length) {
                                 hits.forEach(async data => {
                                     userIds.push(data.objectID);
                                 })
                             }
 
-                            if (userIds.length < 10) {
-                                const getUsers = await db.collection('users').where('id', 'in', userIds).get()
-                                const users = getUsers.docs.map(doc => doc.data())
+                            console.log('userIds: ', userIds)
 
-                                // return following structure data algolia
-                                resolve({ hits: users, page: nbPage, nbHits, nbPages: nbPages - 1, hitsPerPage, processingTimeMS })
-                                return;
+                            while (userIds.length) {
+                                const batch = userIds.splice(0, 10);
+                                console.log('batch: ',batch)
+                            
+                                batches.push(
+                                    db.collection('users')
+                                      .where(
+                                        'id',
+                                        'in',
+                                        [...batch]
+                                      )
+                                      .get()
+                                      .then(results => results.docs.map(result => ({ /* id: result.id, */ ...result.data() }) ))
+                                )
                             }
 
-                            resolve({ hits: userIds.length ? hits : [], page: nbPage, nbHits, nbPages: nbPages - 1, hitsPerPage, processingTimeMS })
+                            const newHits = await Promise.all(batches).then(content => content.flat());
+                            resolve({ hits: newHits, page: nbPage, nbHits, nbPages: nbPages - 1, hitsPerPage, processingTimeMS })
                         }).catch(err => {
                             reject(err)
                         })
