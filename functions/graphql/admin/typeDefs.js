@@ -346,6 +346,7 @@ module.exports = gql`
     input RequestFilterUser {
         hasEmail: Boolean
         hasPhoneNumber: Boolean
+        isSuspend: Boolean
     }
 
     type ReportPost {

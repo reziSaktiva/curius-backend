@@ -110,7 +110,7 @@ module.exports = {
             const userData = user.data()
 
             try {
-                const index = client.initIndex(ALGOLIA_INDEX_USERS);
+                const index = server.initIndex(ALGOLIA_INDEX_USERS);
                 if (shouldBeRequestApproval) {
                     console.log('send request approval');
                     const getUsers = await db.collection('notifications')
@@ -147,10 +147,11 @@ module.exports = {
                 }
 
                 if (!shouldBeRequestApproval) {
-                    await index.partialUpdateObjects([{
+                    console.log('userData.id: ', userData.id);
+                    await index.partialUpdateObject({
                         objectID: userData.id,
                         status
-                    }])
+                    })
                 }
 
                 await createLogs({
