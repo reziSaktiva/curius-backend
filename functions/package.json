@@ -29,7 +29,8 @@
     "graphql-subscriptions": "^1.2.1",
     "http": "0.0.1-security",
     "moment": "^2.29.1",
-    "spherical-geometry-js": "^2.0.0"
+    "spherical-geometry-js": "^2.0.0",
+    "stream-chat": "^5.5.0"
   },
   "devDependencies": {
     "firebase-functions-test": "^0.2.0"
