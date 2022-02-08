@@ -183,6 +183,8 @@ module.exports = {
                 const getMuteData = await muteData.get();
                 const postId = getMuteData.docs.map(doc => doc.data().postId) || [];
 
+                if (!postId.length) return []
+
                 const data = await db.collection('posts').where('id', 'in', postId).get()
                 const docs = data.docs.map(doc => doc.data())
 
