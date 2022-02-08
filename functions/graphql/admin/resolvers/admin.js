@@ -140,14 +140,20 @@ module.exports = {
                 await db.doc(`/admin/${adminId}`).get().then(
                     doc => {
                         const oldData = doc.data();
-                        const payload = {
-                            ...oldData,
-                            isActive: isBanned ? false : true,
-                            isBanned: isActive ? true : false
-                        }
+                        const payload = oldData
+
+                        if (isActive !== undefined && isActive) {
+                            payload.isActive = true;
+                            payload.isBanned = false;
+                        } 
+
+                        if (isBanned !== undefined && isBanned) {
+                            payload.isActive = false;
+                            payload.isBanned = true;
+                        } 
                         
                         newDataAdmin = { id: adminId, ...payload };
-                        doc.ref.update({ ...oldData, isActive: isBanned ? false : true, isBanned })
+                        doc.ref.update({ ...oldData, isActive: payload.isActive, isBanned: payload.isBanned })
                     }
                 )
     
