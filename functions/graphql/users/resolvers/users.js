@@ -10,7 +10,9 @@ const firebase = require('firebase')
 const config = require('../../../utility/secret/config')
 const fbAuthContext = require('../../../utility/fbAuthContext')
 
-const { validateLoginInput } = require('../../../utility/validators')
+const { validateLoginInput } = require('../../../utility/validators');
+const { client } = require('../../../utility/algolia');
+const { ALGOLIA_INDEX_POSTS_RANK_DESC } = require('../../../constant/post');
 
 firebase.initializeApp(config)
 
@@ -94,6 +96,58 @@ module.exports = {
             })
 
             return filterLocation;
+        },
+        async getUserMedia(_, { page }, context) {
+            const { username } = await fbAuthContext(context)
+
+            const index = client.initIndex(ALGOLIA_INDEX_POSTS_RANK_DESC)
+
+            const facetFilters = [["status.active:true"], [`owner:${username}`], [`media.type:image`]]
+
+            const defaultPayload = {
+                "getRankingInfo": true,
+                "analytics": false,
+                "enableABTest": false,
+                "hitsPerPage": 10,
+                "attributesToRetrieve": "*",
+                "attributesToSnippet": "*:20",
+                "snippetEllipsisText": "…",
+                "responseFields": "*",
+                "explain": "*",
+                "maxValuesPerFacet": 100,
+                "page": 0,
+                "facets": [
+                    "*"
+                ],
+            };
+
+            const pagination = {
+                "hitsPerPage": 6,
+                "page": page || 0,
+            }
+
+            try {
+                return new Promise(async (resolve, reject) => {
+                    index.search("", { ...defaultPayload, ...pagination, facetFilters })
+                        .then(async res => {
+                            const { hits, page, nbHits, nbPages, hitsPerPage, processingTimeMS } = res;
+
+                            let media = [];
+                            if (hits.length) {
+                                hits.forEach(async doc => {
+                                    doc.media.content.forEach(data => {
+                                        media.push(data)
+                                    })
+                                })
+                            }
+
+                            resolve({ media, nextPage: page + 1, hasMore: page + 1 !== nbPages })
+                        })
+                })
+            }
+            catch (err) {
+                throw new Error(err)
+            }
         },
         async getUserData(_, { username: name }, context) {
             const { username } = await fbAuthContext(context)
