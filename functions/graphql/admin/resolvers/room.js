@@ -2,7 +2,7 @@ const { UserInputError } = require('apollo-server-express')
 const { Client } = require("@googlemaps/google-maps-services-js");
 const axios = require('axios')
 
-const { ALGOLIA_INDEX_ROOMS } = require('../../../constant/post')
+const { ALGOLIA_INDEX_ROOMS, ALGOLIA_INDEX_ROOMS_ASC, ALGOLIA_INDEX_ROOMS_DESC } = require('../../../constant/post')
 const { db } = require('../../../utility/admin')
 const { createLogs } = require('../usecase/admin');
 
@@ -13,8 +13,12 @@ const { hasAccessPriv, LIST_OF_PRIVILEGE } = require('../usecase/admin');
 
 module.exports = {
     Query: {
-        async searchRoom(_, { name, location, useDetailLocation, perPage, page }, context) {
-          const index = client.initIndex(ALGOLIA_INDEX_ROOMS)
+        async searchRoom(_, { name, location, useDetailLocation, perPage, page, isDeactive, sortBy }, context) {
+          let indexKey = ALGOLIA_INDEX_ROOMS
+          if (sortBy === 'asc') indexKey = ALGOLIA_INDEX_ROOMS_ASC
+          if (sortBy === 'desc') indexKey = ALGOLIA_INDEX_ROOMS_DESC
+
+          const index = client.initIndex(indexKey);
           const googleMapsClient = new Client({ axiosInstance: axios });
 
           const defaultPayload = {
@@ -68,7 +72,8 @@ module.exports = {
             const payload = {
               ...defaultPayload,
               ...geoLocPayload,
-              ...pagination
+              ...pagination,
+              ...(isDeactive !== undefined ? { facetFilters: [[`isDeactive:${isDeactive}`]] } : {})
             };
             const searchDocs = await index.search(name, payload)
 
