@@ -196,8 +196,10 @@ exports.onPostUpdate = functions.region('asia-southeast2')
             if (!newData.room) {
                 tags.push("is_not_post_room")
             }
-            if (newData.reportedCount > 0) {
-                tags.push("has_reported")
+            if (newData.reportedCount) {
+                if (newData.reportedCount > 0) {
+                    tags.push("has_reported")
+                }
             }
 
             const newPostPayload = {

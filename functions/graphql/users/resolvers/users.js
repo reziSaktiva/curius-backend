@@ -237,6 +237,7 @@ module.exports = {
                 }
                 const getMuteData = await muteData.get();
                 const postId = getMuteData.docs.map(doc => doc.data().postId) || [];
+                console.log(postId);
 
                 if (!postId.length) return []
 
@@ -905,6 +906,7 @@ module.exports = {
                                 mobileNumber,
                                 fullName,
                                 dob,
+                                mutedUser: [],
                                 status: "active",
                                 joinDate: new Date().toISOString(),
                                 profilePicture: profilePicture ? profilePicture : 'https://firebasestorage.googleapis.com/v0/b/insvire-curious-app.appspot.com/o/avatars%2Fprofile_default.png?alt=media',
@@ -929,6 +931,7 @@ module.exports = {
                         mobileNumber,
                         fullName,
                         dob,
+                        mutedUser: [],
                         status: "active",
                         joinDate: new Date().toISOString(),
                         profilePicture: profilePicture ? profilePicture : 'https://firebasestorage.googleapis.com/v0/b/insvire-curious-app.appspot.com/o/avatars%2Fprofile_default.png?alt=media'
