@@ -880,7 +880,7 @@ module.exports = {
             }
         },
         async registerUser(_, args, _context, _info) {
-            const { registerInput: { username, email, fullName, password, token, dob, mobileNumber } } = args;
+            const { registerInput: { username, email, fullName, password, token, dob, mobileNumber, profilePicture } } = args;
 
             try {
                 // const { valid, errors } = validateRegisterInput(email, password, username)
@@ -908,7 +908,7 @@ module.exports = {
                                 joinDate: new Date().toISOString(),
                                 date_timestamp: new Date().getTime(),
                                 dob_timestamp: new Date(dob).getTime(),
-                                profilePicture: '',
+                                profilePicture: profilePicture ? profilePicture : 'https://firebasestorage.googleapis.com/v0/b/insvire-curious-app.appspot.com/o/avatars%2Fprofile_default.png?alt=media',
                                 _private: [],
                             }
 
@@ -933,7 +933,7 @@ module.exports = {
                         joinDate: new Date().toISOString(),
                         date_timestamp: new Date().getTime(),
                         dob_timestamp: new Date(dob).getTime(),
-                        profilePicture: ''
+                        profilePicture: profilePicture ? profilePicture : 'https://firebasestorage.googleapis.com/v0/b/insvire-curious-app.appspot.com/o/avatars%2Fprofile_default.png?alt=media'
                     }
 
                     db.doc(`/users/${username}`).set(newUser)

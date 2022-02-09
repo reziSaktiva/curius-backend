@@ -225,6 +225,7 @@ module.exports = gql`
         token: String
         dob: String
         gender: String
+        profilePicture: String
     },
     input FacebookData {
         id: String!
