@@ -905,9 +905,8 @@ module.exports = {
                                 mobileNumber,
                                 fullName,
                                 dob,
+                                status: "active",
                                 joinDate: new Date().toISOString(),
-                                date_timestamp: new Date().getTime(),
-                                dob_timestamp: new Date(dob).getTime(),
                                 profilePicture: profilePicture ? profilePicture : 'https://firebasestorage.googleapis.com/v0/b/insvire-curious-app.appspot.com/o/avatars%2Fprofile_default.png?alt=media',
                                 _private: [],
                             }
@@ -930,9 +929,8 @@ module.exports = {
                         mobileNumber,
                         fullName,
                         dob,
+                        status: "active",
                         joinDate: new Date().toISOString(),
-                        date_timestamp: new Date().getTime(),
-                        dob_timestamp: new Date(dob).getTime(),
                         profilePicture: profilePicture ? profilePicture : 'https://firebasestorage.googleapis.com/v0/b/insvire-curious-app.appspot.com/o/avatars%2Fprofile_default.png?alt=media'
                     }
 

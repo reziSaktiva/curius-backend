@@ -79,7 +79,8 @@ exports.onUserCreate = functions.region('asia-southeast2')
             objectID: id,
             _tags: tags,
             // field algolia
-            date_timestamp: new Date(newData.joinDate).getTime()
+            date_timestamp: new Date(newData.joinDate).getTime(),
+            dob_timestamp: new Date(newData.dob).getTime(),
         }
         usersIndex.saveObjects([newPostPayload], { autoGenerateObjectIDIfNotExist: false })
     })
