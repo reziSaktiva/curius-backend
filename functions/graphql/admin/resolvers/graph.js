@@ -13,7 +13,7 @@ module.exports = {
       // const { name, level } = await adminAuthContext(context) // TODO: add condition action only for some privilage
 
       // if (name) {
-      const index = client.initIndex(ALGOLIA_INDEX_POSTS_ASC);
+      const index = client.initIndex(ALGOLIA_INDEX_POSTS);
       const indexUser = client.initIndex(ALGOLIA_INDEX_USERS_DESC);
 
       const facetFilters = []
@@ -68,7 +68,7 @@ module.exports = {
       
       const searchNewUser = await indexUser.search('', { ...payload, facetFilters })
 
-      const activeUsers = await indexUser.search('', { ...payload, facetFilters: [[`active_timestamp:${dateFrom} TO ${dateTo}`]]})
+      const activeUsers = await indexUser.search('', { ...payload, facetFilters: [...facetFilters, [`status:active`]]})
 
       const searchDeletedUser = await indexUser.search('', { ...payload, facetFilters: [...facetFilters, [`_tags:has_deleted`]]})
 

@@ -78,6 +78,7 @@ exports.onUserCreate = functions.region('asia-southeast2')
             ...newData,
             objectID: id,
             _tags: tags,
+            status: 'active',
             // field algolia
             date_timestamp: new Date(newData.joinDate).getTime()
         }

@@ -170,7 +170,7 @@ module.exports = {
           }
       },
       async deleteRoom(_, { roomId }, context) {
-        const { name, level } = await adminAuthContext(context)
+        const { name, level, id } = await adminAuthContext(context)
         try {
 
           const index = server.initIndex(ALGOLIA_INDEX_ROOMS)

@@ -373,7 +373,7 @@ module.exports = {
         // console.log('payload: ', payload)
         const searchDocs = await index.search(search, payload)
 
-        const comments = searchDocs.hits.map(async doc => {
+        const comments = !searchDocs.hits.length ? [] : searchDocs.hits.map(async doc => {
           const endpoint = doc.parentTypePost === 'global-posts' ? `/posts/${doc.idPost}/comments/${doc.idComment}` : `/room/${doc.idRoom}/posts/${doc.idPost}/comments/${doc.idComment}`
           const comment = await db.doc(endpoint).get()
           const dataParse = await comment.data()
