@@ -259,7 +259,7 @@ module.exports = gql`
         searchUser(search: String, status: String, perPage: Int, page: Int, filters: RequestFilterUser, sortBy: String, useExport: Boolean ): SearchUser!
         searchPosts(search: String, perPage: Int, page: Int, useExport: Boolean, hasReported: Boolean, useDetailLocation: Boolean, range: Float, location: String, filters: RequestFilter, room: String, sortBy: String ): SearchPosts!
         searchRoom(name: String, location: String, useDetailLocation: Boolean, page: Int, perPage: Int, isDeactive: Boolean, sortBy: String): SearchRoom
-        searchCommentReported(search: String, sortBy: String, page: Int, perPage: Int, filters: RequestFilter): SearchCommentReported
+        searchCommentReported(search: String, sortBy: String, page: Int, perPage: Int, filters: RequestFilter, useExport: Boolean): SearchCommentReported
         
         # Randomization
         searchThemes(name: String): [ThemeType]
