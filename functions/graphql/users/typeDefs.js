@@ -152,6 +152,7 @@ module.exports = gql`
         id:ID!
         owner: String!
         createdAt: String!
+        postData: Post!
         postId: ID!
         mute: Boolean
     }

@@ -236,41 +236,41 @@ module.exports = {
                     throw UserInputError("you must login first")
                 }
                 const getMuteData = await muteData.get();
-                const postId = getMuteData.docs.map(doc => doc.data().postId) || [];
-                console.log(postId);
+                const postData = getMuteData.docs.map(doc => doc.data().postData) || [];
 
-                if (!postId.length) return []
+                return postData
+                // if (!postId.length) return []
 
-                const data = await db.collection('posts').where('id', 'in', postId).get()
-                const docs = data.docs.map(doc => doc.data())
+                // const data = await db.collection('posts').where('id', 'in', postId).get()
+                // const docs = data.docs.map(doc => doc.data())
 
-                return docs.map(async data => {
-                    const { repost: repostId } = data;
-                    let repost = {}
+                // return docs.map(async data => {
+                //     const { repost: repostId } = data;
+                //     let repost = {}
 
-                    if (repostId) {
-                        const repostData = await db.doc(`/${repostId.room ? `room/${repostId.room}/posts` : 'posts'}/${repostId.repost}`).get()
-                        repost = repostData.data() || {}
-                    }
+                //     if (repostId) {
+                //         const repostData = await db.doc(`/${repostId.room ? `room/${repostId.room}/posts` : 'posts'}/${repostId.repost}`).get()
+                //         repost = repostData.data() || {}
+                //     }
 
-                    // Likes
-                    const likesData = await db.collection(`/posts/${data.id}/likes`).get()
-                    const likes = likesData.docs.map(doc => doc.data())
+                //     // Likes
+                //     const likesData = await db.collection(`/posts/${data.id}/likes`).get()
+                //     const likes = likesData.docs.map(doc => doc.data())
 
-                    // Comments
-                    const commentsData = await db.collection(`/posts/${data.id}/comments`).get()
-                    const comments = commentsData.docs.map(doc => doc.data())
+                //     // Comments
+                //     const commentsData = await db.collection(`/posts/${data.id}/comments`).get()
+                //     const comments = commentsData.docs.map(doc => doc.data())
 
-                    // Muted
-                    const mutedData = await db.collection(`/posts/${data.id}/muted`).get();
-                    const muted = mutedData.docs.map(doc => doc.data());
+                //     // Muted
+                //     const mutedData = await db.collection(`/posts/${data.id}/muted`).get();
+                //     const muted = mutedData.docs.map(doc => doc.data());
 
-                    // Subscribed
-                    const subscribePost = await db.collection(`/posts/${data.id}/subscribes`).get();
-                    const subscribe = subscribePost.docs.map(doc => doc.data()) || [];
+                //     // Subscribed
+                //     const subscribePost = await db.collection(`/posts/${data.id}/subscribes`).get();
+                //     const subscribe = subscribePost.docs.map(doc => doc.data()) || [];
 
-                    return { ...data, likes, comments, muted, repost, subscribe }
-                });
+                //     return { ...data, likes, comments, muted, repost, subscribe }
+                // });
 
             } catch (err) {
                 console.log(err)

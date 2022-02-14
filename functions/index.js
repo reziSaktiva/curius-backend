@@ -118,7 +118,7 @@ exports.onPostDelete = functions.region('asia-southeast2')
 
             if (data.room) {
                 roomIndex.partialUpdateObject({
-                    totalPosts: {
+                    postsCount: {
                         _operation: 'Decrement',
                         value: 1
                     },
@@ -148,7 +148,7 @@ exports.onPostCreate = functions.region('asia-southeast2')
                 db.doc(`/room/${newData.room}`).get()
                     .then(doc => {
                         roomIndex.partialUpdateObject({
-                            totalPosts: {
+                            postsCount: {
                                 _operation: 'Increment',
                                 value: 1
                             },
