@@ -249,8 +249,17 @@ module.exports = gql`
         comment: Comment!
     }
 
+    type AdminSearch {
+        hits: [Admin]
+        page: Int
+        nbHits: Int
+        nbPages: Int
+        hitsPerPage: Int
+        processingTimeMS: Float
+    }
+
     type Query {
-        getAdmin: [Admin]
+        getAdmin(page: Int, perPage: Int): AdminSearch
         getReportedListByCommentId(search: String, commentId: ID, page: Int, perPage: Int): SearchCommentReported
         getRoomById(id: ID!): Room!
         getDetailReportedComment(idComment: ID!, idPost: ID!): DetailReportedPost
