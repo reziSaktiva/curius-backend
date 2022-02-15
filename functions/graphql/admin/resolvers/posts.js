@@ -180,8 +180,8 @@ module.exports = {
     }, _ctx) {
       const googleMapsClient = new Client({ axiosInstance: axios });
       const timestampFrom = get(filters, 'timestamp.from', '');
-      const ownerPost = get(filters, 'owner', '');
       const timestampTo = get(filters, 'timestamp.to', '');
+      const ownerPost = get(filters, 'owner', '');
       const ratingFrom = get(filters, 'ratingFrom', 0);
       const ratingTo = get(filters, 'ratingTo', 0);
       const status = get(filters, 'status', 0);
@@ -243,6 +243,7 @@ module.exports = {
         "page": page || 0,
       }
       const facetFilters = []
+      let newFilters = ``
 
       if (ownerPost) facetFilters.push([`owner:${ownerPost}`])
       if (room) facetFilters.push([`room:${room}`])
@@ -253,7 +254,7 @@ module.exports = {
         const dateFrom = new Date(timestampFrom).getTime();
         const dateTo = new Date(timestampTo).getTime();
 
-        facetFilters.push([`date_timestamp >= ${dateFrom} AND date_timestamp <= ${dateTo}`]);
+        newFilters = `date_timestamp:${dateFrom} TO ${dateTo}`
       }
       if (ratingFrom && ratingTo) {
         facetFilters.push([`rank: ${ratingFrom} TO ${ratingTo}`])
@@ -267,7 +268,8 @@ module.exports = {
         const payload = {
           ...defaultPayload,
           ...geoLocPayload,
-          ...pagination
+          ...pagination,
+          filters: newFilters
         };
 
         if (facetFilters.length) payload.facetFilters = facetFilters
@@ -329,9 +331,12 @@ module.exports = {
         return err
       }
     },
-    async searchCommentReported(_, { search, sortBy = 'desc', page, perPage, filters }) {
+    async searchCommentReported(_, { search, sortBy = 'desc', page, perPage, filters, useExport = false }) {
       const timestampTo = get(filters, 'timestamp.to', '');
       const timestampFrom = get(filters, 'timestamp.from', '');
+      const ownerPost = get(filters, 'owner', '');
+      const status = get(filters, 'status', 0);
+
       let indexKey = 'report_comments'
       if (sortBy === 'desc') indexKey = 'report_comments_date_desc'
       if (sortBy === 'asc') indexKey = 'report_comments_date_asc'
@@ -351,7 +356,7 @@ module.exports = {
       };
 
       const pagination = {
-        "hitsPerPage": perPage || 10,
+        "hitsPerPage": useExport ? 100 : perPage || 10,
         "page": page || 0,
       }
 
@@ -364,6 +369,9 @@ module.exports = {
         facetFilters.push([`date_timestamp >= ${dateFrom} AND date_timestamp <= ${dateTo}`]);
       }
 
+      if (ownerPost) facetFilters.push([`owner:${ownerPost}`])
+      if (status) facetFilters.push([`status.active:${status == "active" ? 'true' : 'false'}`])
+      
       try {
         const payload = {
           ...defaultPayload,
