@@ -1535,10 +1535,40 @@ module.exports = {
             }
           })
 
+        const postData = await postDocument.get()
+          .then(doc => {
+            const {
+              id,
+              owner,
+              text,
+              media,
+              createdAt,
+              location,
+              repost,
+              room
+            } = doc.data()
+
+
+
+            return {
+              id,
+              owner,
+              text,
+              media,
+              createdAt,
+              location,
+              repost,
+              room
+            }
+          })
+          .catch((err) => {
+            throw new Error(err)
+          })
+
         let mute = {
           owner: username,
           createdAt: new Date().toISOString(),
-          postId
+          postData
         }
 
         await postDocument.get()
@@ -1572,7 +1602,10 @@ module.exports = {
             }
           })
 
-        return mute
+        return {
+          ...mute,
+          postId
+        }
 
       } catch (err) {
         throw new Error(err)
