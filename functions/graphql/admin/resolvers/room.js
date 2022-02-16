@@ -2,7 +2,7 @@ const { UserInputError } = require('apollo-server-express')
 const { Client } = require("@googlemaps/google-maps-services-js");
 const axios = require('axios')
 
-const { ALGOLIA_INDEX_ROOMS } = require('../../../constant/post')
+const { ALGOLIA_INDEX_ROOMS, ALGOLIA_INDEX_ROOMS_ASC, ALGOLIA_INDEX_ROOMS_DESC } = require('../../../constant/post')
 const { db } = require('../../../utility/admin')
 const { createLogs } = require('../usecase/admin');
 
@@ -13,8 +13,12 @@ const { hasAccessPriv, LIST_OF_PRIVILEGE } = require('../usecase/admin');
 
 module.exports = {
   Query: {
-    async searchRoom(_, { name, location, useDetailLocation, perPage, page }, context) {
-      const index = client.initIndex(ALGOLIA_INDEX_ROOMS)
+    async searchRoom(_, { name, location, useDetailLocation, perPage, page, isDeactive, sortBy }, context) {
+      let indexKey = ALGOLIA_INDEX_ROOMS
+      if (sortBy === 'asc') indexKey = ALGOLIA_INDEX_ROOMS_ASC
+      if (sortBy === 'desc') indexKey = ALGOLIA_INDEX_ROOMS_DESC
+
+      const index = client.initIndex(indexKey);
       const googleMapsClient = new Client({ axiosInstance: axios });
 
       const defaultPayload = {
@@ -68,9 +72,38 @@ module.exports = {
         const payload = {
           ...defaultPayload,
           ...geoLocPayload,
-          ...pagination
+          ...pagination,
+          ...(isDeactive !== undefined ? { facetFilters: [[`isDeactive:${isDeactive}`]] } : {})
         };
         const searchDocs = await index.search(name, payload)
+
+        const ids = searchDocs.hits.map(doc => doc.objectID)
+        if (!ids.length) return searchDocs
+
+        const getRooms = await db.collection('room').where('id', 'in', ids).get()
+        const rooms = await getRooms.docs.map(async (doc, idx) => {
+          const dataParse = doc.data()
+          if (!useDetailLocation || !dataParse?.location?.lat) return dataParse
+
+          const request = await googleMapsClient
+            .reverseGeocode({
+              params: {
+                latlng: `${dataParse?.location?.lat}, ${dataParse?.location?.lng}`,
+                language: 'en',
+                result_type: 'street_address|administrative_area_level_4',
+                location_type: 'APPROXIMATE',
+                key: API_KEY_GEOCODE
+              },
+              timeout: 5000 // milliseconds
+            }, axios)
+
+          const address = request.data.results[0].formatted_address
+
+          return {
+            ...dataParse,
+            address
+          }
+        })
 
         const ids = searchDocs.hits.map(doc => doc.objectID)
         if (!ids.length) return searchDocs

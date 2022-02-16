@@ -1,4 +1,4 @@
-const { db } = require('../../../utility/admin')
+const { db, docsId } = require('../../../utility/admin')
 const { client, server } = require('../../../utility/algolia')
 const { ALGOLIA_INDEX_USERS, ALGOLIA_INDEX_USERS_DESC, ALGOLIA_INDEX_USERS_ASC } = require('../../../constant/post')
 const adminAuthContext = require('../../../utility/adminAuthContext')
@@ -6,7 +6,7 @@ const { createLogs, hasAccessPriv, LIST_OF_PRIVILEGE } = require('../usecase/adm
 
 module.exports = {
     Query: {
-        async searchUser(_, { search, status, perPage, page, filters = {}, sortBy = 'desc', useExport = false }, _context) {
+        async searchUser(_, { search, status, perPage, page, filters = {}, sortBy, useExport = false }, _context) {
             let indexKey = ALGOLIA_INDEX_USERS;
             if (sortBy == 'asc') indexKey = ALGOLIA_INDEX_USERS_ASC
             if (sortBy == 'desc') indexKey = ALGOLIA_INDEX_USERS_DESC
@@ -49,35 +49,44 @@ module.exports = {
                     index.search(search, payload)
                         .then(async res => {
                             const { hits, page: nbPage, nbHits, nbPages, hitsPerPage, processingTimeMS } = res;
-                            const userIds = [];
-                            const batches = [];
+                            // const userIds = [];
+                            // const batches = [];
 
-                            if (hits.length) {
-                                hits.forEach(async data => {
-                                    userIds.push(data.objectID);
-                                })
-                            }
+                            // if (hits.length) {
+                            //     hits.forEach(async data => {
+                            //         userIds.push(data.username);
+                            //     })
+                            // }
 
-                            console.log('userIds: ', userIds)
+                            /** Matching data to firebase with multiple requests */
+                            // userIds.forEach(username => {
+                            //     batches.push(
+                            //         db.doc(`/users/${username}`).get().then(doc => doc.data())
+                            //     )
+                            // })
+                            // const newHits = Promise.all(batches).then(content => content.flat());
 
-                            while (userIds.length) {
-                                const batch = userIds.splice(0, 10);
-                                console.log('batch: ',batch)
+                            /** Matching data to firebase with separate query by splice 10 data */
+                            // while (userIds.length) {
+                            //     // const batch = userIds.splice(0, 10);
+                            //     // console.log('userIds: ',userIds)
                             
-                                batches.push(
-                                    db.collection('users')
-                                      .where(
-                                        'id',
-                                        'in',
-                                        [...batch]
-                                      )
-                                      .get()
-                                      .then(results => results.docs.map(result => ({ /* id: result.id, */ ...result.data() }) ))
-                                )
-                            }
+                            //     batches.push(
+                            //         db.collection('users')
+                            //           .where(
+                            //             'id',
+                            //             'in',
+                            //             userIds
+                            //           )
+                            //           .get()
+                            //           .then(results => results.docs.map(result => {
+                            //               console.log('result: ', result.data())
+                            //               return ({ /* id: result.id, */ ...result.data() })
+                            //             }))
+                            //     )
+                            // }
 
-                            const newHits = await Promise.all(batches).then(content => content.flat());
-                            resolve({ hits: newHits, page: nbPage, nbHits, nbPages: nbPages - 1, hitsPerPage, processingTimeMS })
+                            resolve({ hits, page: nbPage, nbHits, nbPages: nbPages - 1, hitsPerPage, processingTimeMS })
                         }).catch(err => {
                             reject(err)
                         })
@@ -110,7 +119,7 @@ module.exports = {
             const userData = user.data()
 
             try {
-                const index = client.initIndex(ALGOLIA_INDEX_USERS);
+                const index = server.initIndex(ALGOLIA_INDEX_USERS);
                 if (shouldBeRequestApproval) {
                     console.log('send request approval');
                     const getUsers = await db.collection('notifications')
@@ -147,10 +156,11 @@ module.exports = {
                 }
 
                 if (!shouldBeRequestApproval) {
-                    await index.partialUpdateObjects([{
+                    console.log('userData.id: ', userData.id);
+                    await index.partialUpdateObject({
                         objectID: userData.id,
                         status
-                    }])
+                    })
                 }
 
                 await createLogs({

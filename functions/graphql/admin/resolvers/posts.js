@@ -180,8 +180,8 @@ module.exports = {
     }, _ctx) {
       const googleMapsClient = new Client({ axiosInstance: axios });
       const timestampFrom = get(filters, 'timestamp.from', '');
-      const ownerPost = get(filters, 'owner', '');
       const timestampTo = get(filters, 'timestamp.to', '');
+      const ownerPost = get(filters, 'owner', '');
       const ratingFrom = get(filters, 'ratingFrom', 0);
       const ratingTo = get(filters, 'ratingTo', 0);
       const status = get(filters, 'status', 0);
@@ -243,6 +243,7 @@ module.exports = {
         "page": page || 0,
       }
       const facetFilters = []
+      let newFilters = ``
 
       if (ownerPost) facetFilters.push([`owner:${ownerPost}`])
       if (room) facetFilters.push([`room:${room}`])
@@ -253,7 +254,7 @@ module.exports = {
         const dateFrom = new Date(timestampFrom).getTime();
         const dateTo = new Date(timestampTo).getTime();
 
-        facetFilters.push([`date_timestamp >= ${dateFrom} AND date_timestamp <= ${dateTo}`]);
+        newFilters = `date_timestamp:${dateFrom} TO ${dateTo}`
       }
       if (ratingFrom && ratingTo) {
         facetFilters.push([`rank: ${ratingFrom} TO ${ratingTo}`])
@@ -267,7 +268,8 @@ module.exports = {
         const payload = {
           ...defaultPayload,
           ...geoLocPayload,
-          ...pagination
+          ...pagination,
+          filters: newFilters
         };
 
         if (facetFilters.length) payload.facetFilters = facetFilters
@@ -329,9 +331,12 @@ module.exports = {
         return err
       }
     },
-    async searchCommentReported(_, { search, sortBy = 'desc', page, perPage, filters }) {
+    async searchCommentReported(_, { search, sortBy = 'desc', page, perPage, filters, useExport = false }) {
       const timestampTo = get(filters, 'timestamp.to', '');
       const timestampFrom = get(filters, 'timestamp.from', '');
+      const ownerPost = get(filters, 'owner', '');
+      const status = get(filters, 'status', 0);
+
       let indexKey = 'report_comments'
       if (sortBy === 'desc') indexKey = 'report_comments_date_desc'
       if (sortBy === 'asc') indexKey = 'report_comments_date_asc'
@@ -351,7 +356,7 @@ module.exports = {
       };
 
       const pagination = {
-        "hitsPerPage": perPage || 10,
+        "hitsPerPage": useExport ? 100 : perPage || 10,
         "page": page || 0,
       }
 
@@ -364,6 +369,9 @@ module.exports = {
         facetFilters.push([`date_timestamp >= ${dateFrom} AND date_timestamp <= ${dateTo}`]);
       }
 
+      if (ownerPost) facetFilters.push([`owner:${ownerPost}`])
+      if (status) facetFilters.push([`status.active:${status == "active" ? 'true' : 'false'}`])
+      
       try {
         const payload = {
           ...defaultPayload,
@@ -373,7 +381,7 @@ module.exports = {
         // console.log('payload: ', payload)
         const searchDocs = await index.search(search, payload)
 
-        const comments = searchDocs.hits.map(async doc => {
+        const comments = !searchDocs.hits.length ? [] : searchDocs.hits.map(async doc => {
           const endpoint = doc.parentTypePost === 'global-posts' ? `/posts/${doc.idPost}/comments/${doc.idComment}` : `/room/${doc.idRoom}/posts/${doc.idPost}/comments/${doc.idComment}`
           const comment = await db.doc(endpoint).get()
           const dataParse = await comment.data()
@@ -383,9 +391,9 @@ module.exports = {
 
           return ({
             ...doc,
-            text: dataParse.text,
-            owner: dataParse.username || '',
-            timestamp: dataParse.createdAt,
+            text: dataParse.textContent || '',
+            owner: dataParse.owner || '',
+            timestamp: new Date(dataParse.createdAt).getTime(),
             reportedCount: dataParse.reportedCount,
             profilePicture: user.profilePicture || '',
             id: doc.idComment,
@@ -402,6 +410,39 @@ module.exports = {
         return err
       }
     },
+    async getDetailReportedComment(_, { idComment, idPost }, _ctx) {
+      try {
+
+        const endpoint = `/posts/${idPost}/comments/${idComment}`;
+        const comment = await db.doc(endpoint).get();
+        const dataParse = await comment.data()
+  
+        const request = await db.doc(`/posts/${idPost}`).get();
+        const dataParsePost = await request.data();
+  
+        const ownerPost = dataParsePost?.owner;
+        const ownerComment = dataParse?.owner;
+        
+        const requestOwnerPost = await db.doc(`/users/${ownerPost}`).get();
+        const dataParseOwner = await requestOwnerPost.data();
+  
+  
+        const requestOwnerComment = await db.doc(`/users/${ownerComment}`).get();
+        const dataParseOwnerComment = await requestOwnerComment.data();
+  
+        console.log('comment owner: ', dataParseOwnerComment);
+        console.log('post owner: ', dataParseOwner);
+        console.log('dataParsePost: ', dataParsePost);
+        return {
+          post: dataParsePost,
+          owner: dataParseOwner,
+          commentOwner: dataParseOwnerComment,
+          comment: dataParse
+        }
+      } catch (err) {
+        return err
+      }
+    }
   },
   Mutation: {
     async setStatusPost(_, props, _ctx) {
@@ -547,11 +588,19 @@ module.exports = {
           if (active) {
             status.active = true;
             status.takedown = false;
+            status.deleted = false;
           }
 
           if (takedown) {
             status.active = false;
-            status.takedown = true
+            status.takedown = true;
+            status.deleted = false;
+          }
+
+          if (deleted) {
+            status.deleted = true;
+            status.active = false;
+            status.takedown = false;
           }
 
           newData = { id: doc.id, ...oldData, status }
@@ -586,6 +635,7 @@ module.exports = {
     },
     async createReportPostById(_, { idPost, content, userIdReporter }, _ctx) {
       // TODO: makesure which level can reported post
+      console.log('test');
       const { name, level, id } = await adminAuthContext(_ctx)
 
       if (!name) throw new Error('permission denied')
@@ -603,11 +653,14 @@ module.exports = {
           }
         )
 
+        console.log('posts: ', posts);
+
         const index = server.initIndex(ALGOLIA_INDEX_REPORT_POSTS);
-        const oldDocAlgolia = await index.getObject(postId, {
-          attributesToRetrieve: ['_tags']
-        });
-        let _tags = oldDocAlgolia._tags || []
+        const indexPost = server.initIndex(ALGOLIA_INDEX_POSTS);
+        console.log('init server algo ....');
+        const oldDocAlgolia = await indexPost.search(idPost);
+        console.log('oldData: ', oldDocAlgolia);
+        let _tags = oldDocAlgolia.hits[0]._tags || []
         _tags.push('has_reported')
 
         const payload = {
@@ -615,7 +668,7 @@ module.exports = {
           content,
           userIdReporter
         }
-        const indexPost = server.initIndex(ALGOLIA_INDEX_POSTS);
+        console.log('payload: ', payload);
 
         const writeRequest = await db.collection('/reports').add(payload)
 
@@ -624,6 +677,7 @@ module.exports = {
           autoGenerateObjectIDIfNotExist: true,
         })
 
+        console.log('tags: ', _tags)
         // Update Algolia Search Posts
         await indexPost.partialUpdateObjects([{
           objectID: posts.id,
@@ -631,10 +685,10 @@ module.exports = {
           _tags,
         }]);
 
-        let message = ''
-        if (takedown) message = `Admin ${name} has reported Post Id ${posts.id}`
-        if (active) message = `Admin ${name} has activate Post Id ${posts.id}`
-        if (deleted) message = `Admin ${name} has deleted Post Id ${posts.id}`
+        let message = `Admin ${name} has reported Post Id ${posts.id}`
+        // if (takedown) message = `Admin ${name} has reported Post Id ${posts.id}`
+        // if (active) message = `Admin ${name} has activate Post Id ${posts.id}`
+        // if (deleted) message = `Admin ${name} has deleted Post Id ${posts.id}`
 
         await createLogs({ adminId: id, role: level, message })
 
@@ -650,21 +704,21 @@ module.exports = {
       }
     },
     async createReplicatePostAscDesc(_, { }, _ctx) {
-      const index = server.initIndex('posts');
+      const index = server.initIndex('rooms');
 
       await index.setSettings({
         replicas: [
-          'posts_rank_desc',
-          'posts_rank_asc'
+          'rooms_date_desc',
+          'rooms_date_asc'
         ]
       })
 
-      const replicasIndexDesc = server.initIndex('users_rank_desc')
-      const replicasIndexAsc = server.initIndex('users_rank_asc')
+      const replicasIndexDesc = server.initIndex('rooms_date_desc')
+      const replicasIndexAsc = server.initIndex('rooms_date_asc')
 
       await replicasIndexAsc.setSettings({
         ranking: [
-          "asc(rank)",
+          "asc(date_timestamp)",
           "typo",
           "geo",
           "words",
@@ -678,7 +732,7 @@ module.exports = {
 
       await replicasIndexDesc.setSettings({
         ranking: [
-          "desc(rank)",
+          "desc(date_timestamp)",
           "typo",
           "geo",
           "words",
@@ -692,7 +746,7 @@ module.exports = {
 
       return "Success Replication Posts Index Algolia"
     },
-    async reportedComment(_, { idComment, idPost, reason, roomId, username }) {
+    async reportedComment(_, { idComment, idPost, reason, roomId, username }, _ctx) {
       /**
        * Get Comment 
        */
@@ -728,7 +782,6 @@ module.exports = {
         if (flagHasReportedBefore) return `Already reported this comment before`
 
         const payload = {
-          objectID: idComment,
           idComment,
           idPost,
           idRoom: roomId,
@@ -765,7 +818,7 @@ module.exports = {
           }
         ).catch(
           async err => {
-            await index.saveObjects([payload], { autoGenerateObjectIDIfNotExist: false }).catch(err => {
+            await index.saveObjects([payload], { autoGenerateObjectIDIfNotExist: true }).catch(err => {
               console.log(err);
             })
           }

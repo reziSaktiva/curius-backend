@@ -169,7 +169,8 @@ module.exports = {
             }
         },
         async createNewTheme(_, { name, colors, adjective, nouns }, context) {
-            // const { name, level } = await adminAuthContext(context) // TODO: add condition action only for some privilage
+            const { name: adminName, level } = await adminAuthContext(context) // TODO: add condition action only for some privilage
+            if (adminName && (level !== 1)) throw new Error('Access Denied')
             try {
                 const payload = {
                     name,
@@ -194,6 +195,38 @@ module.exports = {
                 }   
             } catch (err) {
                 return err;
+            }
+        },
+        async deleteAdminAccount(_, { id }, context) {
+            const { name, level } = await adminAuthContext(context) // TODO: add condition action only for some privilage
+            if (name && (level !== 1)) throw new Error('Access Denied')
+
+            try {
+                await db.doc(`/admin/${id}`).delete()
+
+                return {
+                    id,
+                    status: 'Success',
+                    message: 'Success Delete admin '+id
+                }
+            } catch (err) {
+                return err
+            }
+        },
+        async deleteThemeById(_, { id }, context) {
+            const { name, level } = await adminAuthContext(context) // TODO: add condition action only for some privilage
+            if (name && (level !== 1)) throw new Error('Access Denied')
+
+            try {
+                await db.doc(`/themes/${id}`).delete();
+
+                return {
+                    id,
+                    status: 'Success',
+                    message: 'Success Delete theme '+id
+                }
+            } catch (err) {
+                return err
             }
         },
         async deleteConfigThemesById(_, { attr = '', id: idAttr, themeId }, ctx) {

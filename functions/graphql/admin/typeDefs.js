@@ -166,9 +166,10 @@ module.exports = gql`
         id: ID
         createdAt: String
         owner: String
-        text: String
+        textContent: String
         photoProfile: String
         photo: String
+        reportedCount: Float
         displayName: String
         displayImage: String
         colorCode: String
@@ -241,16 +242,24 @@ module.exports = gql`
         percentage: Int
     }
 
+    type DetailReportedPost {
+        post: Post!
+        owner: User!
+        commentOwner: User!
+        comment: Comment!
+    }
+
     type Query {
         getAdmin: [Admin]
         getReportedListByCommentId(search: String, commentId: ID, page: Int, perPage: Int): SearchCommentReported
         getRoomById(id: ID!): Room!
+        getDetailReportedComment(idComment: ID!, idPost: ID!): DetailReportedPost
 
         # Search
         searchUser(search: String, status: String, perPage: Int, page: Int, filters: RequestFilterUser, sortBy: String, useExport: Boolean ): SearchUser!
         searchPosts(search: String, perPage: Int, page: Int, useExport: Boolean, hasReported: Boolean, useDetailLocation: Boolean, range: Float, location: String, filters: RequestFilter, room: String, sortBy: String ): SearchPosts!
-        searchRoom(name: String, location: String, useDetailLocation: Boolean, page: Int, perPage: Int): SearchRoom
-        searchCommentReported(search: String, sortBy: String, page: Int, perPage: Int, filters: RequestFilter): SearchCommentReported
+        searchRoom(name: String, location: String, useDetailLocation: Boolean, page: Int, perPage: Int, isDeactive: Boolean, sortBy: String): SearchRoom
+        searchCommentReported(search: String, sortBy: String, page: Int, perPage: Int, filters: RequestFilter, useExport: Boolean): SearchCommentReported
         
         # Randomization
         searchThemes(name: String): [ThemeType]
@@ -346,6 +355,7 @@ module.exports = gql`
     input RequestFilterUser {
         hasEmail: Boolean
         hasPhoneNumber: Boolean
+        isSuspend: Boolean
     }
 
     type ReportPost {
@@ -446,6 +456,8 @@ module.exports = gql`
         reportedComment(idComment: ID!, idPost: ID, reason: String!, roomId: ID, username: String!): String
         createReportPostById(idPost: ID!, content: String, userIdReporter: ID!): ReportPost
         createNewTheme(name: String, colors: [Colors], adjective: [Adjective], nouns: [Nouns]): ThemeType
+        deleteThemeById(id: ID!): BasicResponseAction
+        deleteAdminAccount(id: ID!): BasicResponseAction
         
         # Replication
         createReplicatePostAscDesc: String
