@@ -12,7 +12,7 @@ const fbAuthContext = require('../../../utility/fbAuthContext')
 
 const { validateLoginInput } = require('../../../utility/validators');
 const { client } = require('../../../utility/algolia');
-const { ALGOLIA_INDEX_POSTS_RANK_DESC } = require('../../../constant/post');
+const { ALGOLIA_INDEX_POSTS_DESC } = require('../../../constant/post');
 
 firebase.initializeApp(config)
 
@@ -100,7 +100,7 @@ module.exports = {
         async getUserMedia(_, { page }, context) {
             const { username } = await fbAuthContext(context)
 
-            const index = client.initIndex(ALGOLIA_INDEX_POSTS_RANK_DESC)
+            const index = client.initIndex(ALGOLIA_INDEX_POSTS_DESC)
 
             const facetFilters = [["status.active:true"], [`owner:${username}`], [`media.type:image`]]
 
