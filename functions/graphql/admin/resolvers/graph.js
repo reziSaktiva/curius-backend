@@ -1,6 +1,6 @@
-const { client, server } = require('../../../utility/algolia')
+const { client } = require('../../../utility/algolia')
 const moment = require('moment');
-const { ALGOLIA_INDEX_POSTS_DESC, ALGOLIA_INDEX_USERS_DESC, ALGOLIA_INDEX_ADMIN_LOGS, ALGOLIA_INDEX_USERS, ALGOLIA_INDEX_POSTS, ALGOLIA_INDEX_POSTS_ASC } = require('../../../constant/post')
+const { ALGOLIA_INDEX_USERS_DESC, ALGOLIA_INDEX_ADMIN_LOGS, ALGOLIA_INDEX_USERS, ALGOLIA_INDEX_POSTS, ALGOLIA_INDEX_POSTS_ASC } = require('../../../constant/post')
 // const adminAuthContext = require('../../../utility/adminAuthContext')
 
 const getPersentate = (grandTotal, current) => {

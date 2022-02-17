@@ -240,7 +240,7 @@ module.exports = {
       } : {};
 
       const pagination = {
-        "hitsPerPage": useExport ? 100 : perPage || 10,
+        "hitsPerPage": useExport ? 1000 : perPage || 10,
         "page": page || 0,
       }
       const facetFilters = []

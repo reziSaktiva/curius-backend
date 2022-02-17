@@ -365,6 +365,7 @@ module.exports = gql`
         hasEmail: Boolean
         hasPhoneNumber: Boolean
         isSuspend: Boolean
+        timestamp: Timestamp
     }
 
     type ReportPost {
