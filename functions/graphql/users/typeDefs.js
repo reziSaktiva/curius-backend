@@ -159,7 +159,6 @@ module.exports = gql`
     type UserData {
         user: User!
         liked: [Like]
-        allMedia: [String]
     },
     type Subscribe {
         owner: String!
@@ -208,7 +207,7 @@ module.exports = gql`
         getProfileLikedPost(username: String): dataPost
         getPost(id: ID!): Post!
         getUserData(username: String): UserData
-        getUserMedia(page: Int): UserMedia
+        getUserMedia(page: Int, username: String): UserMedia
         getPostBasedOnNearestLoc(lat: String, lng: String): [Post]
         getNearRooms(lat: Float, lng: Float): [Room]
         searchRoom(search: String, status: String, perPage: Int, page: Int): SearchRoom

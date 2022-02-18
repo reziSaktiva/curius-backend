@@ -97,12 +97,12 @@ module.exports = {
 
             return filterLocation;
         },
-        async getUserMedia(_, { page }, context) {
+        async getUserMedia(_, { page, username: user }, context) {
             const { username } = await fbAuthContext(context)
 
             const index = client.initIndex(ALGOLIA_INDEX_POSTS_DESC)
 
-            const facetFilters = [["status.active:true"], [`owner:${username}`], [`media.type:image`]]
+            const facetFilters = [["status.active:true"], [`owner:${user ? user : username}`], [`media.type:image`]]
 
             const defaultPayload = {
                 "getRankingInfo": true,
@@ -149,18 +149,17 @@ module.exports = {
                 throw new Error(err)
             }
         },
-        async getUserData(_, { username: name }, context) {
+        async getUserData(_, { username: user }, context) {
             const { username } = await fbAuthContext(context)
 
             let dataUser = {
                 user: null,
-                allMedia: [],
                 liked: []
             }
 
             try {
-                if (username || name) {
-                    await db.doc(`/users/${name ? name : username}`).get()
+                if (username || user) {
+                    await db.doc(`/users/${user ? user : username}`).get()
                         .then(async doc => {
                             const getPosts = await db.collection(`posts`).where('owner', '==', doc.data().username).get()
 
@@ -176,24 +175,12 @@ module.exports = {
                                 }, 0)
                                 const likeCounter = posts.map((doc) => doc.likeCount);
                                 likesCount = likeCounter.reduce((total, num) => (total += num))
-
-                                if (posts.length) {
-                                    posts.forEach((post) => {
-                                        if (post.media) {
-                                            if (post.media.type !== "gif") {
-                                                post.media.content.forEach(data => {
-                                                    dataUser.allMedia.push(data)
-                                                })
-                                            }
-                                        }
-                                    })
-                                }
                             }
 
                             // const private = doc.data()._private
                             // const passwordUpdateHistory = private && private.filter(item => item.lastUpdate)
 
-                            dataUser.user = {
+                            dataUser.user = !user ? {
                                 email: doc.data().email,
                                 id: doc.data().id,
                                 username: doc.data().username,
@@ -208,9 +195,24 @@ module.exports = {
                                 postsCount,
                                 repostCount,
                                 likesCount
+                            } : {
+                                // email: doc.data().email,
+                                id: doc.data().id,
+                                username: doc.data().username,
+                                fullName: doc.data().fullName,
+                                // mobileNumber: doc.data().mobileNumber,
+                                // joinDate: doc.data().joinDate,
+                                gender: doc.data().gender,
+                                // dob: doc.data().dob,
+                                profilePicture: doc.data().profilePicture,
+                                // interest: doc.data().interest,
+                                // theme: doc.data().theme,
+                                postsCount,
+                                repostCount,
+                                likesCount
                             }
 
-                            return db.collection(`/users/${name ? name : username}/liked`).get()
+                            return db.collection(`/users/${user ? user : username}/liked`).get()
 
                         })
                         .then(data => {
