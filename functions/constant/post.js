@@ -18,6 +18,7 @@ const ALGOLIA_INDEX_POSTS_RANK_ASC = "posts_rank_asc"
 const ALGOLIA_INDEX_POSTS_RANK_DESC = "posts_rank_desc"
 const ALGOLIA_INDEX_POSTS_DESC = "posts_date_desc"
 const ALGOLIA_INDEX_ADMIN_LOGS = "admin_logs"
+const ALGOLIA_INDEX_ADMIN_LOGS_DESC = "admin_logs_desc"
 
 module.exports = {
   STATUS_POSTS,
@@ -34,5 +35,6 @@ module.exports = {
   ALGOLIA_INDEX_REPORT_POSTS,
   ALGOLIA_INDEX_POSTS_ASC,
   ALGOLIA_INDEX_POSTS_DESC,
-  ALGOLIA_INDEX_ADMIN_LOGS
+  ALGOLIA_INDEX_ADMIN_LOGS,
+  ALGOLIA_INDEX_ADMIN_LOGS_DESC
 }

@@ -46,7 +46,7 @@ module.exports = {
                 const dateFrom = moment(timestampFrom).startOf('day').valueOf();
                 const dateTo = moment(timestampTo).endOf('day').valueOf();
         
-                newFilters = `dob_timestamp:${dateFrom} TO ${dateTo}`
+                newFilters = `date_timestamp:${dateFrom} TO ${dateTo}`
             }
 
             console.log('[log] facetFilter: ', facetFilters);

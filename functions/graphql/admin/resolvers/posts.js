@@ -497,7 +497,7 @@ module.exports = {
         if (active) message = `Admin ${name} request to activate Post Id ${docId}`
         if (flags.length) message = `Admin ${name} request set flag ${flags.join(',')} to Post Id ${docId}`
 
-        await createLogs({ adminId: id, role: level, message })
+        await createLogs({ adminId: id, role: level, message, name })
 
         return {
           ...data.data(),
@@ -543,7 +543,7 @@ module.exports = {
           if (active) message = `Admin ${name} has activate Post Id ${docId}`
           if (flags.length) message = `Admin ${name} has set flag ${flags.join(',')} to Post Id ${docId}`
 
-          await createLogs({ adminId: id, role: level, message })
+          await createLogs({ adminId: id, role: level, message, name })
           // Update Algolia Search Posts
           await index.partialUpdateObjects([{
             objectID: postId,
@@ -622,7 +622,7 @@ module.exports = {
       if (active) message = `Admin ${name} has activate Comment Id ${idComment}`
       if (deleted) message = `Admin ${name} has deleted Comment Id ${idComment}`
 
-      await createLogs({ adminId: id, role: level, message })
+      await createLogs({ adminId: id, role: level, message, name })
 
       return {
         id: newData.id,
@@ -691,7 +691,7 @@ module.exports = {
         // if (active) message = `Admin ${name} has activate Post Id ${posts.id}`
         // if (deleted) message = `Admin ${name} has deleted Post Id ${posts.id}`
 
-        await createLogs({ adminId: id, role: level, message })
+        await createLogs({ adminId: id, role: level, message, name })
 
         const parseSnapshot = await (await writeRequest.get()).data()
 
@@ -705,21 +705,21 @@ module.exports = {
       }
     },
     async createReplicatePostAscDesc(_, { }, _ctx) {
-      const index = server.initIndex('rooms');
+      const index = server.initIndex('admin_logs');
 
       await index.setSettings({
         replicas: [
-          'rooms_date_desc',
-          'rooms_date_asc'
+          'admin_logs_desc',
+          'admin_logs_asc'
         ]
       })
 
-      const replicasIndexDesc = server.initIndex('rooms_date_desc')
-      const replicasIndexAsc = server.initIndex('rooms_date_asc')
+      const replicasIndexDesc = server.initIndex('admin_logs_desc')
+      const replicasIndexAsc = server.initIndex('admin_logs_asc')
 
       await replicasIndexAsc.setSettings({
         ranking: [
-          "asc(date_timestamp)",
+          "asc(createdAt)",
           "typo",
           "geo",
           "words",
@@ -733,7 +733,7 @@ module.exports = {
 
       await replicasIndexDesc.setSettings({
         ranking: [
-          "desc(date_timestamp)",
+          "desc(createdAt)",
           "typo",
           "geo",
           "words",
@@ -815,7 +815,7 @@ module.exports = {
             if (active) message = `Admin ${name} has activate Comment Id ${idComment}`
             if (deleted) message = `Admin ${name} has deleted Comment Id ${idComment}`
 
-            await createLogs({ adminId: id, role: level, message })
+            await createLogs({ adminId: id, role: level, message, name })
           }
         ).catch(
           async err => {
