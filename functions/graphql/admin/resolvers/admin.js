@@ -1,5 +1,6 @@
 const { UserInputError } = require('apollo-server-express')
 const { db } = require('../../../utility/admin')
+const { client, server } = require('../../../utility/algolia')
 const adminAuthContext = require('../../../utility/adminAuthContext')
 const { createLogs, hasAccessPriv, LIST_OF_PRIVILEGE } = require('../usecase/admin');
 
@@ -31,18 +32,42 @@ const separateNewAndUpdateData = (oldData, newData, target = '') => {
 
 module.exports = {
     Query: {
-        async getAdmin() {
-            const getAdmin = await db.collection('admin').get()
-            const admin = getAdmin.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-            }))
+        async getAdmin(_, { page, perPage }) {
+            const index = client.initIndex('admin');
+
+            const pagination = {
+                "hitsPerPage": perPage || 10,
+                "page": page || 0,
+              };
+        
+            const defaultPayload = {
+                "attributesToRetrieve": "*",
+                "attributesToSnippet": "*:20",
+                "snippetEllipsisText": "…",
+                "responseFields": "*",
+                "getRankingInfo": true,
+                "analytics": false,
+                "enableABTest": false,
+                "explain": "*",
+                "facets": ["*"]
+            };
+            const payload = {
+                ...defaultPayload,
+                ...pagination
+            }
+
+            const searchDocs = await index.search('', payload)
+
+            const ids = await searchDocs.hits.map(({ objectID }) => objectID);
+            
+            const newHits = await db.collection('admin').where('id', 'in', ids).get()
+            const newDataParse = newHits.docs.map(doc => doc.data());
 
             try {
-                return admin
+                return { ...searchDocs, hits: newDataParse}
             }
             catch (err) {
-                console.log(err);
+                return err
             }
         },
         async searchThemes(_, { name }, context) {
@@ -101,6 +126,7 @@ module.exports = {
             
             try {
                 if (level === 1) {
+                    const index = server.initIndex('admin');
                     const getAdminWithSameEmail = await db.collection('admin').where('email', '==', email).get()
                     const isEmailAlreadyExist = getAdminWithSameEmail.empty
 
@@ -112,7 +138,12 @@ module.exports = {
                             accessCode,
                             isActive: true,
                             isBanned: false
-                        }).then(doc => {
+                        }).then(async doc => {
+                            await index.saveObjects([{
+                                name: adminName,
+                                objectID: doc.id
+                            }])
+
                             doc.update({ id: doc.id })
                         })
 
@@ -127,6 +158,7 @@ module.exports = {
             }
         },
         async setStatusAdmin(_, { adminId, isActive, isBanned }, ctx) {
+            const index = server.initIndex('admin');
             const { name, level, id } = await adminAuthContext(ctx) // TODO: add condition action only for some privilage
             if (!hasAccessPriv({
                 id: level,
@@ -140,14 +172,20 @@ module.exports = {
                 await db.doc(`/admin/${adminId}`).get().then(
                     doc => {
                         const oldData = doc.data();
-                        const payload = {
-                            ...oldData,
-                            isActive: isBanned ? false : true,
-                            isBanned: isActive ? true : false
-                        }
+                        const payload = oldData
+
+                        if (isActive !== undefined && isActive) {
+                            payload.isActive = true;
+                            payload.isBanned = false;
+                        } 
+
+                        if (isBanned !== undefined && isBanned) {
+                            payload.isActive = false;
+                            payload.isBanned = true;
+                        } 
                         
                         newDataAdmin = { id: adminId, ...payload };
-                        doc.ref.update({ ...oldData, isActive: isBanned ? false : true, isBanned })
+                        doc.ref.update({ ...oldData, isActive: payload.isActive, isBanned: payload.isBanned })
                     }
                 )
     
@@ -163,7 +201,8 @@ module.exports = {
             }
         },
         async createNewTheme(_, { name, colors, adjective, nouns }, context) {
-            // const { name, level } = await adminAuthContext(context) // TODO: add condition action only for some privilage
+            const { name: adminName, level } = await adminAuthContext(context) // TODO: add condition action only for some privilage
+            if (adminName && (level !== 1)) throw new Error('Access Denied')
             try {
                 const payload = {
                     name,
@@ -188,6 +227,38 @@ module.exports = {
                 }   
             } catch (err) {
                 return err;
+            }
+        },
+        async deleteAdminAccount(_, { id }, context) {
+            const { name, level } = await adminAuthContext(context) // TODO: add condition action only for some privilage
+            if (name && (level !== 1)) throw new Error('Access Denied')
+
+            try {
+                await db.doc(`/admin/${id}`).delete()
+
+                return {
+                    id,
+                    status: 'Success',
+                    message: 'Success Delete admin '+id
+                }
+            } catch (err) {
+                return err
+            }
+        },
+        async deleteThemeById(_, { id }, context) {
+            const { name, level } = await adminAuthContext(context) // TODO: add condition action only for some privilage
+            if (name && (level !== 1)) throw new Error('Access Denied')
+
+            try {
+                await db.doc(`/themes/${id}`).delete();
+
+                return {
+                    id,
+                    status: 'Success',
+                    message: 'Success Delete theme '+id
+                }
+            } catch (err) {
+                return err
             }
         },
         async deleteConfigThemesById(_, { attr = '', id: idAttr, themeId }, ctx) {

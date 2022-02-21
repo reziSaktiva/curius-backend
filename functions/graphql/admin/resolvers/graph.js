@@ -1,6 +1,6 @@
-const { client, server } = require('../../../utility/algolia')
+const { client } = require('../../../utility/algolia')
 const moment = require('moment');
-const { ALGOLIA_INDEX_POSTS_DESC, ALGOLIA_INDEX_USERS_DESC, ALGOLIA_INDEX_ADMIN_LOGS, ALGOLIA_INDEX_USERS } = require('../../../constant/post')
+const { ALGOLIA_INDEX_USERS_DESC, ALGOLIA_INDEX_ADMIN_LOGS_DESC, ALGOLIA_INDEX_ADMIN_LOGS, ALGOLIA_INDEX_USERS, ALGOLIA_INDEX_POSTS, ALGOLIA_INDEX_POSTS_ASC } = require('../../../constant/post')
 // const adminAuthContext = require('../../../utility/adminAuthContext')
 
 const getPersentate = (grandTotal, current) => {
@@ -13,7 +13,7 @@ module.exports = {
       // const { name, level } = await adminAuthContext(context) // TODO: add condition action only for some privilage
 
       // if (name) {
-      const index = client.initIndex(ALGOLIA_INDEX_POSTS_DESC);
+      const index = client.initIndex(ALGOLIA_INDEX_POSTS);
       const indexUser = client.initIndex(ALGOLIA_INDEX_USERS_DESC);
 
       const facetFilters = []
@@ -47,23 +47,31 @@ module.exports = {
         dateFrom = new Date().setFullYear(new Date().getFullYear() - 1)
       }
 
-      facetFilters.push([`date_timestamp:${dateFrom} TO ${dateTo}`]);
+      facetFilters.push([`date_timestamp >= ${dateFrom} AND date_timestamp <= ${dateTo}`]);
 
       const payload = {
         ...defaultPayload,
         ...pagination
       }
+
+      // Posts
       const searchDocs = await index.search('', { ...payload, facetFilters })
 
+      const searchDocsReported = await index.search('', { ...payload, facetFilters: [ ...facetFilters, [`_tags:has_reported`]]})
+      
+      const searchDocsActive = await index.search('', { ...payload, facetFilters: [ ...facetFilters, [`status.active:true`]]})
+      
+      const searchDocsNonActive = await index.search('', { ...payload, facetFilters: [ ...facetFilters, [`status.takedown:true`]]})
+
+      // Users
       const searchUser = await indexUser.search('', payload)
       
       const searchNewUser = await indexUser.search('', { ...payload, facetFilters })
 
-      const activeUsers = await indexUser.search('', { ...payload, facetFilters: [[`active_timestamp:${dateFrom} TO ${dateTo}`]]})
+      const activeUsers = await indexUser.search('', { ...payload, facetFilters: [...facetFilters, [`status:active`]]})
 
       const searchDeletedUser = await indexUser.search('', { ...payload, facetFilters: [...facetFilters, [`_tags:has_deleted`]]})
 
-      const searchDocsReported = await index.search('', { ...payload, facetFilters: [ ...facetFilters, [`_tags:has_reported`]]})
 
       const section = state.split('.');
       const parentData = section[0];
@@ -76,6 +84,12 @@ module.exports = {
         }
         if (childData === 'totalReported') {
           dataDoc = searchDocsReported
+        }
+        if (childData === 'nonActive') {
+          dataDoc = searchDocsNonActive
+        }
+        if (childData === 'active') {
+          dataDoc = searchDocsActive
         }
       } else {
         if (childData === 'total') dataDoc = searchUser
@@ -117,14 +131,16 @@ module.exports = {
           },
           post: {
             total: searchDocs.nbHits,
+            active: searchDocsActive.nbHits,
+            nonActive: searchDocsNonActive.nbHits,
             totalReported: searchDocsReported.nbHits
           }
         },
         graph: groupArrays
       }
     },
-    async getAdminLogs(_, { page, perPage, search = '' }, context) {
-      const index = client.initIndex(ALGOLIA_INDEX_ADMIN_LOGS)
+    async getAdminLogs(_, { page, perPage, search = '', useExport }, context) {
+      const index = client.initIndex(ALGOLIA_INDEX_ADMIN_LOGS_DESC)
       const defaultPayload = {
         "attributesToRetrieve": "*",
         "attributesToSnippet": "*:20",
@@ -138,7 +154,7 @@ module.exports = {
       };
 
       const pagination = {
-        "hitsPerPage": perPage || 10,
+        "hitsPerPage": useExport ? 1000 : perPage || 10,
         "page": page || 0,
       };
 

@@ -78,8 +78,10 @@ exports.onUserCreate = functions.region('asia-southeast2')
             ...newData,
             objectID: id,
             _tags: tags,
+            status: 'active',
             // field algolia
-            date_timestamp: new Date(newData.joinDate).getTime()
+            date_timestamp: new Date(newData.joinDate).getTime(),
+            dob_timestamp: new Date(newData.dob).getTime(),
         }
         usersIndex.saveObjects([newPostPayload], { autoGenerateObjectIDIfNotExist: false })
     })
@@ -113,10 +115,11 @@ exports.onPostDelete = functions.region('asia-southeast2')
     .onDelete(async (snapshot, context) => {
         try {
             const data = snapshot.data()
+            postsIndex.deleteObject(context.params.id)
 
             if (data.room) {
                 roomIndex.partialUpdateObject({
-                    totalPosts: {
+                    postsCount: {
                         _operation: 'Decrement',
                         value: 1
                     },
@@ -127,7 +130,6 @@ exports.onPostDelete = functions.region('asia-southeast2')
                         doc.ref.update({ postsCount: doc.data().postsCount - 1 })
                     })
             }
-            postsIndex.deleteObject(context.params.id.toString())
         }
         catch (err) {
             functions.logger.log(err)
@@ -147,7 +149,7 @@ exports.onPostCreate = functions.region('asia-southeast2')
                 db.doc(`/room/${newData.room}`).get()
                     .then(doc => {
                         roomIndex.partialUpdateObject({
-                            totalPosts: {
+                            postsCount: {
                                 _operation: 'Increment',
                                 value: 1
                             },
@@ -195,8 +197,10 @@ exports.onPostUpdate = functions.region('asia-southeast2')
             if (!newData.room) {
                 tags.push("is_not_post_room")
             }
-            if (newData.reportedCount > 0) {
-                tags.push("has_reported")
+            if (newData.reportedCount) {
+                if (newData.reportedCount > 0) {
+                    tags.push("has_reported")
+                }
             }
 
             const newPostPayload = {

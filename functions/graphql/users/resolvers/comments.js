@@ -104,6 +104,80 @@ module.exports = {
 
                         doc.update({ id: doc.id, displayName: name, displayImage: displayImage, colorCode })
 
+                        subscribeCollection.get()
+                            .then(data => {
+                                if (!data.empty) {
+                                    return data.docs.forEach(doc => {
+                                        if (doc.data().owner !== username) {
+                                            // FIX ME
+                                            const notifSubscribe = {
+                                                owner: doc.data().owner,
+                                                recipient: postOwner,
+                                                sender: username,
+                                                read: false,
+                                                postId: id,
+                                                type: 'COMMENT',
+                                                createdAt: new Date().toISOString(),
+                                                displayName: name,
+                                                displayImage,
+                                                colorCode
+                                            }
+                                            return db.collection(`/users/${doc.data().owner}/notifications`).add(notifSubscribe)
+                                                .then(data => {
+                                                    data.update({ id: data.id })
+                                                })
+                                        }
+                                    })
+                                }
+                            })
+
+                        if (postOwner !== username) {
+                            // FIX ME (done)
+                            const notifData = {
+                                owner: postOwner,
+                                recipient: postOwner,
+                                sender: username,
+                                read: false,
+                                postId: id,
+                                type: 'COMMENT',
+                                createdAt: new Date().toISOString(),
+                                displayName: name,
+                                displayImage,
+                                colorCode
+                            }
+                            db.collection(`/users/${postOwner}/notifications`).add(notifData)
+                                .then(data => {
+                                    data.update({ id: data.id })
+
+                                    return subscribeCollection.get()
+                                        .then(data => {
+                                            if (!data.empty) {
+                                                return data.docs.forEach(doc => {
+                                                    if (doc.data().owner !== username) {
+                                                        // FIX ME
+                                                        const notifSubscribe = {
+                                                            owner: doc.data().owner,
+                                                            recipient: postOwner,
+                                                            sender: username,
+                                                            read: false,
+                                                            postId: id,
+                                                            type: 'COMMENT',
+                                                            createdAt: new Date().toISOString(),
+                                                            displayName: name,
+                                                            displayImage,
+                                                            colorCode
+                                                        }
+                                                        return db.collection(`/users/${doc.data().owner}/notifications`).add(notifSubscribe)
+                                                            .then(data => {
+                                                                data.update({ id: data.id })
+                                                            })
+                                                    }
+                                                })
+                                            }
+                                        })
+                                })
+                        }
+
                         if (newComment.reply.username && newComment.reply.id && newComment.reply.username !== username) {
                             const notifReply = {
                                 owner: newComment.reply.username,
@@ -120,83 +194,8 @@ module.exports = {
                             return db.collection(`/users/${newComment.reply.username}/notifications`).add(notifReply)
                                 .then(data => {
                                     data.update({ id: data.id })
-                                    pubSub.publish(NOTIFICATION_ADDED, { notificationAdded: { ...notifReply, id: data.id } })
-
-                                    return subscribeCollection.get()
-                                        .then(data => {
-                                            if (!data.empty) {
-                                                return data.docs.forEach(doc => {
-                                                    if (doc.data().owner !== username) {
-                                                        // FIX ME
-                                                        const notifSubscribe = {
-                                                            owner: doc.data().owner,
-                                                            recipient: postOwner,
-                                                            sender: username,
-                                                            read: false,
-                                                            postId: id,
-                                                            type: 'COMMENT',
-                                                            createdAt: new Date().toISOString(),
-                                                            displayName: name,
-                                                            displayImage,
-                                                            colorCode
-                                                        }
-                                                        return db.collection(`/users/${doc.data().owner}/notifications`).add(notifSubscribe)
-                                                            .then(data => {
-                                                                data.update({ id: data.id })
-                                                            })
-                                                    }
-                                                })
-                                            }
-                                        })
                                 })
 
-                        }
-
-                        if (postOwner !== username) {
-                            // FIX ME (done)
-                            const notifData = {
-                                owner: postOwner,
-                                recipient: postOwner,
-                                sender: username,
-                                read: false,
-                                postId: id,
-                                type: 'COMMENT',
-                                createdAt: new Date().toISOString(),
-                                displayName: name,
-                                displayImage,
-                                colorCode
-                            }
-                            return db.collection(`/users/${postOwner}/notifications`).add(notifData)
-                                .then(data => {
-                                    data.update({ id: data.id })
-
-                                    return subscribeCollection.get()
-                                        .then(data => {
-                                            if (!data.empty) {
-                                                return data.docs.forEach(doc => {
-                                                    if (doc.data().owner !== username) {
-                                                        // FIX ME
-                                                        const notifSubscribe = {
-                                                            owner: doc.data().owner,
-                                                            recipient: postOwner,
-                                                            sender: username,
-                                                            read: false,
-                                                            postId: id,
-                                                            type: 'COMMENT',
-                                                            createdAt: new Date().toISOString(),
-                                                            displayName: name,
-                                                            displayImage,
-                                                            colorCode
-                                                        }
-                                                        return db.collection(`/users/${doc.data().owner}/notifications`).add(notifSubscribe)
-                                                            .then(data => {
-                                                                data.update({ id: data.id })
-                                                            })
-                                                    }
-                                                })
-                                            }
-                                        })
-                                })
                         }
                     })
                 return newComment

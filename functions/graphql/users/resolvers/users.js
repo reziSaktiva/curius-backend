@@ -10,7 +10,9 @@ const firebase = require('firebase')
 const config = require('../../../utility/secret/config')
 const fbAuthContext = require('../../../utility/fbAuthContext')
 
-const { validateLoginInput } = require('../../../utility/validators')
+const { validateLoginInput } = require('../../../utility/validators');
+const { client } = require('../../../utility/algolia');
+const { ALGOLIA_INDEX_POSTS_DESC } = require('../../../constant/post');
 
 firebase.initializeApp(config)
 
@@ -95,6 +97,58 @@ module.exports = {
 
             return filterLocation;
         },
+        async getUserMedia(_, { page }, context) {
+            const { username } = await fbAuthContext(context)
+
+            const index = client.initIndex(ALGOLIA_INDEX_POSTS_DESC)
+
+            const facetFilters = [["status.active:true"], [`owner:${username}`], [`media.type:image`]]
+
+            const defaultPayload = {
+                "getRankingInfo": true,
+                "analytics": false,
+                "enableABTest": false,
+                "hitsPerPage": 10,
+                "attributesToRetrieve": "*",
+                "attributesToSnippet": "*:20",
+                "snippetEllipsisText": "…",
+                "responseFields": "*",
+                "explain": "*",
+                "maxValuesPerFacet": 100,
+                "page": 0,
+                "facets": [
+                    "*"
+                ],
+            };
+
+            const pagination = {
+                "hitsPerPage": 6,
+                "page": page || 0,
+            }
+
+            try {
+                return new Promise(async (resolve, reject) => {
+                    index.search("", { ...defaultPayload, ...pagination, facetFilters })
+                        .then(async res => {
+                            const { hits, page, nbHits, nbPages, hitsPerPage, processingTimeMS } = res;
+
+                            let media = [];
+                            if (hits.length) {
+                                hits.forEach(async doc => {
+                                    doc.media.content.forEach(data => {
+                                        media.push(data)
+                                    })
+                                })
+                            }
+
+                            resolve({ media, nextPage: page + 1, hasMore: page + 1 !== nbPages })
+                        })
+                })
+            }
+            catch (err) {
+                throw new Error(err)
+            }
+        },
         async getUserData(_, { username: name }, context) {
             const { username } = await fbAuthContext(context)
 
@@ -134,29 +188,30 @@ module.exports = {
                                         }
                                     })
                                 }
-
-                                // const private = doc.data()._private
-                                // const passwordUpdateHistory = private && private.filter(item => item.lastUpdate)
-
-                                dataUser.user = {
-                                    email: doc.data().email,
-                                    id: doc.data().id,
-                                    username: doc.data().username,
-                                    fullName: doc.data().fullName,
-                                    mobileNumber: doc.data().mobileNumber,
-                                    joinDate: doc.data().joinDate,
-                                    gender: doc.data().gender,
-                                    dob: doc.data().dob,
-                                    profilePicture: doc.data().profilePicture,
-                                    interest: doc.data().interest,
-                                    theme: doc.data().theme,
-                                    postsCount,
-                                    repostCount,
-                                    likesCount
-                                }
-
-                                return db.collection(`/users/${name ? name : username}/liked`).get()
                             }
+
+                            // const private = doc.data()._private
+                            // const passwordUpdateHistory = private && private.filter(item => item.lastUpdate)
+
+                            dataUser.user = {
+                                email: doc.data().email,
+                                id: doc.data().id,
+                                username: doc.data().username,
+                                fullName: doc.data().fullName,
+                                mobileNumber: doc.data().mobileNumber,
+                                joinDate: doc.data().joinDate,
+                                gender: doc.data().gender,
+                                dob: doc.data().dob,
+                                profilePicture: doc.data().profilePicture,
+                                interest: doc.data().interest,
+                                theme: doc.data().theme,
+                                postsCount,
+                                repostCount,
+                                likesCount
+                            }
+
+                            return db.collection(`/users/${name ? name : username}/liked`).get()
+
                         })
                         .then(data => {
                             data.docs.forEach(doc => {
@@ -181,38 +236,41 @@ module.exports = {
                     throw UserInputError("you must login first")
                 }
                 const getMuteData = await muteData.get();
-                const postId = getMuteData.docs.map(doc => doc.data().postId) || [];
+                const postData = getMuteData.docs.map(doc => doc.data().postData) || [];
 
-                const data = await db.collection('posts').where('id', 'in', postId).get()
-                const docs = data.docs.map(doc => doc.data())
+                return postData
+                // if (!postId.length) return []
 
-                return docs.map(async data => {
-                    const { repost: repostId } = data;
-                    let repost = {}
+                // const data = await db.collection('posts').where('id', 'in', postId).get()
+                // const docs = data.docs.map(doc => doc.data())
 
-                    if (repostId) {
-                        const repostData = await db.doc(`/${repostId.room ? `room/${repostId.room}/posts` : 'posts'}/${repostId.repost}`).get()
-                        repost = repostData.data() || {}
-                    }
+                // return docs.map(async data => {
+                //     const { repost: repostId } = data;
+                //     let repost = {}
 
-                    // Likes
-                    const likesData = await db.collection(`/posts/${data.id}/likes`).get()
-                    const likes = likesData.docs.map(doc => doc.data())
+                //     if (repostId) {
+                //         const repostData = await db.doc(`/${repostId.room ? `room/${repostId.room}/posts` : 'posts'}/${repostId.repost}`).get()
+                //         repost = repostData.data() || {}
+                //     }
 
-                    // Comments
-                    const commentsData = await db.collection(`/posts/${data.id}/comments`).get()
-                    const comments = commentsData.docs.map(doc => doc.data())
+                //     // Likes
+                //     const likesData = await db.collection(`/posts/${data.id}/likes`).get()
+                //     const likes = likesData.docs.map(doc => doc.data())
 
-                    // Muted
-                    const mutedData = await db.collection(`/posts/${data.id}/muted`).get();
-                    const muted = mutedData.docs.map(doc => doc.data());
+                //     // Comments
+                //     const commentsData = await db.collection(`/posts/${data.id}/comments`).get()
+                //     const comments = commentsData.docs.map(doc => doc.data())
 
-                    // Subscribed
-                    const subscribePost = await db.collection(`/posts/${data.id}/subscribes`).get();
-                    const subscribe = subscribePost.docs.map(doc => doc.data()) || [];
+                //     // Muted
+                //     const mutedData = await db.collection(`/posts/${data.id}/muted`).get();
+                //     const muted = mutedData.docs.map(doc => doc.data());
 
-                    return { ...data, likes, comments, muted, repost, subscribe }
-                });
+                //     // Subscribed
+                //     const subscribePost = await db.collection(`/posts/${data.id}/subscribes`).get();
+                //     const subscribe = subscribePost.docs.map(doc => doc.data()) || [];
+
+                //     return { ...data, likes, comments, muted, repost, subscribe }
+                // });
 
             } catch (err) {
                 console.log(err)
@@ -823,7 +881,7 @@ module.exports = {
             }
         },
         async registerUser(_, args, _context, _info) {
-            const { registerInput: { username, email, fullName, password, token, dob, mobileNumber } } = args;
+            const { registerInput: { username, email, fullName, password, token, dob, mobileNumber, profilePicture } } = args;
 
             try {
                 // const { valid, errors } = validateRegisterInput(email, password, username)
@@ -848,10 +906,10 @@ module.exports = {
                                 mobileNumber,
                                 fullName,
                                 dob,
+                                mutedUser: [],
+                                status: "active",
                                 joinDate: new Date().toISOString(),
-                                date_timestamp: new Date().getTime(),
-                                dob_timestamp: new Date(dob).getTime(),
-                                profilePicture: '',
+                                profilePicture: profilePicture ? profilePicture : 'https://firebasestorage.googleapis.com/v0/b/insvire-curious-app.appspot.com/o/avatars%2Fprofile_default.png?alt=media',
                                 _private: [],
                             }
 
@@ -873,10 +931,10 @@ module.exports = {
                         mobileNumber,
                         fullName,
                         dob,
+                        mutedUser: [],
+                        status: "active",
                         joinDate: new Date().toISOString(),
-                        date_timestamp: new Date().getTime(),
-                        dob_timestamp: new Date(dob).getTime(),
-                        profilePicture: ''
+                        profilePicture: profilePicture ? profilePicture : 'https://firebasestorage.googleapis.com/v0/b/insvire-curious-app.appspot.com/o/avatars%2Fprofile_default.png?alt=media'
                     }
 
                     db.doc(`/users/${username}`).set(newUser)

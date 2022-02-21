@@ -1,4 +1,6 @@
-const { db } = require('../../../utility/admin')
+const { db, docsId } = require('../../../utility/admin')
+const { get } = require('lodash')
+const moment = require('moment');
 const { client, server } = require('../../../utility/algolia')
 const { ALGOLIA_INDEX_USERS, ALGOLIA_INDEX_USERS_DESC, ALGOLIA_INDEX_USERS_ASC } = require('../../../constant/post')
 const adminAuthContext = require('../../../utility/adminAuthContext')
@@ -6,7 +8,7 @@ const { createLogs, hasAccessPriv, LIST_OF_PRIVILEGE } = require('../usecase/adm
 
 module.exports = {
     Query: {
-        async searchUser(_, { search, status, perPage, page, filters = {}, sortBy = 'desc' }, _context) {
+        async searchUser(_, { search, status, perPage, page, filters = {}, sortBy, useExport = false }, _context) {
             let indexKey = ALGOLIA_INDEX_USERS;
             if (sortBy == 'asc') indexKey = ALGOLIA_INDEX_USERS_ASC
             if (sortBy == 'desc') indexKey = ALGOLIA_INDEX_USERS_DESC
@@ -25,47 +27,77 @@ module.exports = {
             };
 
             const pagination = {
-                "hitsPerPage": perPage || 10,
+                "hitsPerPage": useExport ? 1000 : perPage || 10,
                 "page": page || 0,
             }
+            const timestampFrom = get(filters, 'timestamp.from', '');
+            const timestampTo = get(filters, 'timestamp.to', '');
             let facetFilters = []
+            let newFilters = ``
             const _tags = []
-            console.log('filters: ', filters)
+            
             if (status) facetFilters.push([`status:${status}`])
             if (filters?.hasEmail) _tags.push(`has_email`)
             if (filters?.hasPhoneNumber) _tags.push(`has_phone_number`)
             if (filters?.isSuspend) facetFilters.push([`status:suspended`])
 
             if (_tags.length) facetFilters.push([`_tags:${_tags.join(',')}`])
+            if (timestampFrom) {
+                const dateFrom = moment(timestampFrom).startOf('day').valueOf();
+                const dateTo = moment(timestampTo).endOf('day').valueOf();
+        
+                newFilters = `date_timestamp:${dateFrom} TO ${dateTo}`
+            }
 
-            console.log('facetFilter: ', facetFilters);
+            console.log('[log] facetFilter: ', facetFilters);
             try {
                 return new Promise(async (resolve, reject) => {
                     const payload = { ...defaultPayload, ...pagination }
 
                     if (facetFilters.length) payload.facetFilters = facetFilters
+                    if (newFilters) payload.filters = newFilters
 
-                    console.log('payload: ', payload);
                     index.search(search, payload)
                         .then(async res => {
                             const { hits, page: nbPage, nbHits, nbPages, hitsPerPage, processingTimeMS } = res;
-                            const userIds = [];
-                            if (hits.length) {
-                                hits.forEach(async data => {
-                                    userIds.push(data.objectID);
-                                })
-                            }
+                            // const userIds = [];
+                            // const batches = [];
 
-                            if (userIds.length < 10) {
-                                const getUsers = await db.collection('users').where('id', 'in', userIds).get()
-                                const users = getUsers.docs.map(doc => doc.data())
+                            // if (hits.length) {
+                            //     hits.forEach(async data => {
+                            //         userIds.push(data.username);
+                            //     })
+                            // }
 
-                                // return following structure data algolia
-                                resolve({ hits: users, page: nbPage, nbHits, nbPages: nbPages - 1, hitsPerPage, processingTimeMS })
-                                return;
-                            }
+                            /** Matching data to firebase with multiple requests */
+                            // userIds.forEach(username => {
+                            //     batches.push(
+                            //         db.doc(`/users/${username}`).get().then(doc => doc.data())
+                            //     )
+                            // })
+                            // const newHits = Promise.all(batches).then(content => content.flat());
 
-                            resolve({ hits: userIds.length ? hits : [], page: nbPage, nbHits, nbPages: nbPages - 1, hitsPerPage, processingTimeMS })
+                            /** Matching data to firebase with separate query by splice 10 data */
+                            // while (userIds.length) {
+                            //     // const batch = userIds.splice(0, 10);
+                            //     // console.log('userIds: ',userIds)
+                            
+                            //     batches.push(
+                            //         db.collection('users')
+                            //           .where(
+                            //             'id',
+                            //             'in',
+                            //             userIds
+                            //           )
+                            //           .get()
+                            //           .then(results => results.docs.map(result => {
+                            //               console.log('result: ', result.data())
+                            //               return ({ /* id: result.id, */ ...result.data() })
+                            //             }))
+                            //     )
+                            // }
+
+                            resolve({ hits, page: nbPage, nbHits, nbPages: nbPages - 1, hitsPerPage, processingTimeMS })
                         }).catch(err => {
                             reject(err)
                         })
@@ -98,7 +130,7 @@ module.exports = {
             const userData = user.data()
 
             try {
-                const index = client.initIndex(ALGOLIA_INDEX_USERS);
+                const index = server.initIndex(ALGOLIA_INDEX_USERS);
                 if (shouldBeRequestApproval) {
                     console.log('send request approval');
                     const getUsers = await db.collection('notifications')
@@ -135,10 +167,11 @@ module.exports = {
                 }
 
                 if (!shouldBeRequestApproval) {
-                    await index.partialUpdateObjects([{
+                    console.log('userData.id: ', userData.id);
+                    await index.partialUpdateObject({
                         objectID: userData.id,
                         status
-                    }])
+                    })
                 }
 
                 await createLogs({

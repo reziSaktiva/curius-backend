@@ -166,9 +166,10 @@ module.exports = gql`
         id: ID
         createdAt: String
         owner: String
-        text: String
+        textContent: String
         photoProfile: String
         photo: String
+        reportedCount: Float
         displayName: String
         displayImage: String
         colorCode: String
@@ -241,16 +242,33 @@ module.exports = gql`
         percentage: Int
     }
 
+    type DetailReportedPost {
+        post: Post!
+        owner: User!
+        commentOwner: User!
+        comment: Comment!
+    }
+
+    type AdminSearch {
+        hits: [Admin]
+        page: Int
+        nbHits: Int
+        nbPages: Int
+        hitsPerPage: Int
+        processingTimeMS: Float
+    }
+
     type Query {
-        getAdmin: [Admin]
+        getAdmin(page: Int, perPage: Int): AdminSearch
         getReportedListByCommentId(search: String, commentId: ID, page: Int, perPage: Int): SearchCommentReported
         getRoomById(id: ID!): Room!
+        getDetailReportedComment(idComment: ID!, idPost: ID!): DetailReportedPost
 
         # Search
-        searchUser(search: String, status: String, perPage: Int, page: Int, filters: RequestFilterUser, sortBy: String ): SearchUser!
+        searchUser(search: String, status: String, perPage: Int, page: Int, filters: RequestFilterUser, sortBy: String, useExport: Boolean ): SearchUser!
         searchPosts(search: String, perPage: Int, page: Int, useExport: Boolean, hasReported: Boolean, useDetailLocation: Boolean, range: Float, location: String, filters: RequestFilter, room: String, sortBy: String ): SearchPosts!
-        searchRoom(name: String, location: String, useDetailLocation: Boolean, page: Int, perPage: Int): SearchRoom
-        searchCommentReported(search: String, sortBy: String, page: Int, perPage: Int, filters: RequestFilter): SearchCommentReported
+        searchRoom(name: String, location: String, useDetailLocation: Boolean, page: Int, perPage: Int, isDeactive: Boolean, sortBy: String): SearchRoom
+        searchCommentReported(search: String, sortBy: String, page: Int, perPage: Int, filters: RequestFilter, useExport: Boolean): SearchCommentReported
         
         # Randomization
         searchThemes(name: String): [ThemeType]
@@ -261,7 +279,7 @@ module.exports = gql`
 
         # Graph
         getGraphSummary(graphType: String, state: String): GraphData
-        getAdminLogs(page: Int, perPage: Int, search: String): SearchAdminLogs
+        getAdminLogs(page: Int, perPage: Int, search: String, useExport: Boolean): SearchAdminLogs
         getStaticUserByAge: [StatisticUser]
     }
 
@@ -306,6 +324,8 @@ module.exports = gql`
     type PostStatistic {
         total: Int
         totalReported: Int
+        active: Int
+        nonActive: Int
     }
 
     type SummaryData {
@@ -336,7 +356,7 @@ module.exports = gql`
     input RequestFilter {
         timestamp: Timestamp
         rating: Rating
-        media: [String]
+        media: String
         status: String
         owner: String
     }
@@ -344,6 +364,8 @@ module.exports = gql`
     input RequestFilterUser {
         hasEmail: Boolean
         hasPhoneNumber: Boolean
+        isSuspend: Boolean
+        timestamp: Timestamp
     }
 
     type ReportPost {
@@ -418,13 +440,19 @@ module.exports = gql`
         message: String
     }
 
+    type BasicResponseAction {
+        id: ID
+        message: String
+        status: String
+    }
+
     type Mutation {
         checkEmail(email: String uid: String name: String, accessCode: String!): CheckEmailStatus
         registerAdmin(email: String! level: Int! name: String!, accessCode: String!): String
         changeUserStatus(status: String!, username: String!): UpdateUserStatus!
         setStatusComment(idComment: ID, active: Boolean, takedown: Boolean, deleted: Boolean): CommentReported
         setStatusPost(active: Boolean, flags: [String], takedown: Boolean, postId: String, deleted: Boolean): UpdatePostStatus!\
-        approveAdminAction(notifId: ID, approve: Boolean): ApprovalAdmin
+        approveAdminAction(notifId: ID, approve: Boolean): BasicResponseAction
 
         # Randomization
         updateThemesById(id: ID, name: String, colors: [Colors], adjective: [Adjective], nouns: [Nouns], isDeleted: Boolean, isActive: Boolean): ThemeType 
@@ -438,6 +466,8 @@ module.exports = gql`
         reportedComment(idComment: ID!, idPost: ID, reason: String!, roomId: ID, username: String!): String
         createReportPostById(idPost: ID!, content: String, userIdReporter: ID!): ReportPost
         createNewTheme(name: String, colors: [Colors], adjective: [Adjective], nouns: [Nouns]): ThemeType
+        deleteThemeById(id: ID!): BasicResponseAction
+        deleteAdminAccount(id: ID!): BasicResponseAction
         
         # Replication
         createReplicatePostAscDesc: String
@@ -445,5 +475,8 @@ module.exports = gql`
 
         # Admin
         getAdminLogin: Admin
+
+        # Room
+        deleteRoom(roomId: ID!): BasicResponseAction
     }
 `

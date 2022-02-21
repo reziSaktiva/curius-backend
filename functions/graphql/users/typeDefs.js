@@ -152,6 +152,7 @@ module.exports = gql`
         id:ID!
         owner: String!
         createdAt: String!
+        postData: Post
         postId: ID!
         mute: Boolean
     }
@@ -192,6 +193,11 @@ module.exports = gql`
         hitsPerPage: Int
         processingTimeMS: Float
     }
+    type UserMedia {
+        media: [String]
+        nextPage: Int
+        hasMore: Boolean
+    }
     type Query {
         moreForYou: dataPost
         getPosts(lat: Float, lng: Float, range: Float page: Int type: String, room: ID, username: String): dataPost
@@ -202,6 +208,7 @@ module.exports = gql`
         getProfileLikedPost(username: String): dataPost
         getPost(id: ID!): Post!
         getUserData(username: String): UserData
+        getUserMedia(page: Int): UserMedia
         getPostBasedOnNearestLoc(lat: String, lng: String): [Post]
         getNearRooms(lat: Float, lng: Float): [Room]
         searchRoom(search: String, status: String, perPage: Int, page: Int): SearchRoom
@@ -219,6 +226,7 @@ module.exports = gql`
         token: String
         dob: String
         gender: String
+        profilePicture: String
     },
     input FacebookData {
         id: String!
