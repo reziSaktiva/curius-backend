@@ -1,4 +1,6 @@
 const { db, docsId } = require('../../../utility/admin')
+const { get } = require('lodash')
+const moment = require('moment');
 const { client, server } = require('../../../utility/algolia')
 const { ALGOLIA_INDEX_USERS, ALGOLIA_INDEX_USERS_DESC, ALGOLIA_INDEX_USERS_ASC } = require('../../../constant/post')
 const adminAuthContext = require('../../../utility/adminAuthContext')
@@ -28,7 +30,10 @@ module.exports = {
                 "hitsPerPage": useExport ? 1000 : perPage || 10,
                 "page": page || 0,
             }
+            const timestampFrom = get(filters, 'timestamp.from', '');
+            const timestampTo = get(filters, 'timestamp.to', '');
             let facetFilters = []
+            let newFilters = ``
             const _tags = []
             
             if (status) facetFilters.push([`status:${status}`])
@@ -37,15 +42,21 @@ module.exports = {
             if (filters?.isSuspend) facetFilters.push([`status:suspended`])
 
             if (_tags.length) facetFilters.push([`_tags:${_tags.join(',')}`])
+            if (timestampFrom) {
+                const dateFrom = moment(timestampFrom).startOf('day').valueOf();
+                const dateTo = moment(timestampTo).endOf('day').valueOf();
+        
+                newFilters = `date_timestamp:${dateFrom} TO ${dateTo}`
+            }
 
-            console.log('facetFilter: ', facetFilters);
+            console.log('[log] facetFilter: ', facetFilters);
             try {
                 return new Promise(async (resolve, reject) => {
                     const payload = { ...defaultPayload, ...pagination }
 
                     if (facetFilters.length) payload.facetFilters = facetFilters
+                    if (newFilters) payload.filters = newFilters
 
-                    console.log('payload: ', payload);
                     index.search(search, payload)
                         .then(async res => {
                             const { hits, page: nbPage, nbHits, nbPages, hitsPerPage, processingTimeMS } = res;

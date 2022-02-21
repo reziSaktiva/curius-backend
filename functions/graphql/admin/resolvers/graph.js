@@ -1,6 +1,6 @@
-const { client, server } = require('../../../utility/algolia')
+const { client } = require('../../../utility/algolia')
 const moment = require('moment');
-const { ALGOLIA_INDEX_POSTS_DESC, ALGOLIA_INDEX_USERS_DESC, ALGOLIA_INDEX_ADMIN_LOGS, ALGOLIA_INDEX_USERS, ALGOLIA_INDEX_POSTS, ALGOLIA_INDEX_POSTS_ASC } = require('../../../constant/post')
+const { ALGOLIA_INDEX_USERS_DESC, ALGOLIA_INDEX_ADMIN_LOGS_DESC, ALGOLIA_INDEX_ADMIN_LOGS, ALGOLIA_INDEX_USERS, ALGOLIA_INDEX_POSTS, ALGOLIA_INDEX_POSTS_ASC } = require('../../../constant/post')
 // const adminAuthContext = require('../../../utility/adminAuthContext')
 
 const getPersentate = (grandTotal, current) => {
@@ -139,8 +139,8 @@ module.exports = {
         graph: groupArrays
       }
     },
-    async getAdminLogs(_, { page, perPage, search = '' }, context) {
-      const index = client.initIndex(ALGOLIA_INDEX_ADMIN_LOGS)
+    async getAdminLogs(_, { page, perPage, search = '', useExport }, context) {
+      const index = client.initIndex(ALGOLIA_INDEX_ADMIN_LOGS_DESC)
       const defaultPayload = {
         "attributesToRetrieve": "*",
         "attributesToSnippet": "*:20",
@@ -154,7 +154,7 @@ module.exports = {
       };
 
       const pagination = {
-        "hitsPerPage": perPage || 10,
+        "hitsPerPage": useExport ? 1000 : perPage || 10,
         "page": page || 0,
       };
 
