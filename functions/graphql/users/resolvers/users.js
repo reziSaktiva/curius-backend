@@ -13,6 +13,7 @@ const fbAuthContext = require('../../../utility/fbAuthContext')
 const { validateLoginInput } = require('../../../utility/validators');
 const { client } = require('../../../utility/algolia');
 const { ALGOLIA_INDEX_POSTS_DESC } = require('../../../constant/post');
+const randomGenerator = require('../../../utility/randomGenerator');
 
 firebase.initializeApp(config)
 
@@ -399,8 +400,101 @@ module.exports = {
 
             return filterLocation;
         },
+        async getUserBoards(_, { username }, context) {
+            const boardCollection = await db.collection(`/users/${username}/boards`).orderBy('createdAt', 'desc').get()
+
+            try {
+                return boardCollection.docs.map(doc => doc.data())
+            }
+            catch (err) {
+                throw new Error(err)
+            }
+        }
     },
     Mutation: {
+        async createBoard(_, { username: recipient, textContent, media }, context) {
+            const { username } = await fbAuthContext(context);
+            const { name, displayImage, colorCode } = await randomGenerator(username, recipient, true);
+            const userDocument = await db.doc(`/users/${recipient}`).get()
+            const boardCollection = db.collection(`/users/${recipient}/boards`)
+
+            try {
+                let newBoard = {
+                    owner: username,
+                    recipient,
+                    createdAt: new Date().toISOString(),
+                    textContent,
+                    media,
+                    children: []
+                }
+
+                if (!userDocument.exists) {
+                    throw new UserInputError('Pengguna tidak ditemukan/sudah dihapus')
+                } else {
+                    const isUserHasBoard = await boardCollection.where('owner', '==', username).get();
+
+                    if (!isUserHasBoard.empty) {
+                        throw new UserInputError('Pengguna hanya bisa memposting board sekali pada satu pengguna')
+                    }
+
+                    boardCollection.add(newBoard)
+                        .then(doc => {
+                            newBoard.id = doc.id
+                            newBoard.displayName = name
+                            newBoard.displayImage = displayImage
+                            newBoard.colorCode = colorCode
+
+                            doc.update({ id: doc.id, displayName: name, displayImage: displayImage, colorCode })
+                        })
+
+                    if (username !== recipient) {
+                        // FIX ME (done)
+                        const notifData = {
+                            owner: recipient,
+                            recipient: recipient,
+                            sender: username,
+                            read: false,
+                            postId: null,
+                            type: 'BOARD',
+                            createdAt: new Date().toISOString(),
+                            displayName: name,
+                            displayImage,
+                            colorCode
+                        }
+                        db.collection(`/users/${recipient}/notifications`).add(notifData)
+                            .then(data => {
+                                data.update({ id: data.id })
+                            })
+                    }
+
+                    return newBoard
+                    // if (newBoard.reply.username && newBoard.reply.id && newBoard.reply.username !== username) {
+                    //     const notifReply = {
+                    //         owner: newComment.reply.username,
+                    //         recipient: newComment.reply.username,
+                    //         sender: username,
+                    //         read: false,
+                    //         postId: id,
+                    //         type: 'REPLY_COMMENT',
+                    //         createdAt: new Date().toISOString(),
+                    //         displayName: name,
+                    //         displayImage,
+                    //         colorCode
+                    //     }
+                    //     return db.collection(`/users/${newComment.reply.username}/notifications`).add(notifReply)
+                    //         .then(data => {
+                    //             data.update({ id: data.id })
+                    //         })
+
+                    // }
+
+                }
+
+            }
+            catch (err) {
+                throw new Error(err)
+            }
+        },
         async privateSetting(_, _args, context) {
             const { username } = await fbAuthContext(context)
             let result;

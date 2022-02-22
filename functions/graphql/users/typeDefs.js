@@ -197,6 +197,20 @@ module.exports = gql`
         nextPage: Int
         hasMore: Boolean
     }
+    type Board {
+        id: ID
+        createdAt: String
+        owner: String
+        textContent: String
+        recipient: String
+        media: Media
+        displayName: String
+        displayImage: String
+        colorCode: String
+        replyCount: Int
+        children: [Board]
+        reply: ReplyData
+    }
     type Query {
         moreForYou: dataPost
         getPosts(lat: Float, lng: Float, range: Float page: Int type: String, room: ID, username: String): dataPost
@@ -215,6 +229,7 @@ module.exports = gql`
         getSubscribePosts: [Post]!
         setRulesSearchAlgolia(index: String!, rank: [String]!): String
         explorePlace: [GeoLocation]
+        getUserBoards(username: String): [Board]
     },
     input RegisterInput {
         email: String
@@ -299,6 +314,7 @@ module.exports = gql`
         checkPhoneNumber( phoneNumber: String ): Boolean
         setUserTheme(theme: String): String
         setPersonalInterest(interest: [String] ): [String]
+        createBoard(username: String textContent: String reply: Reply media: MediaInput): Board
 
         # posts mutation
         nextProfilePosts(id:ID! username: String): dataPost
