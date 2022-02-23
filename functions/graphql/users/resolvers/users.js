@@ -425,6 +425,9 @@ module.exports = {
                     createdAt: new Date().toISOString(),
                     textContent,
                     media,
+                    displayName: name,
+                    displayImage,
+                    colorCode,
                     children: []
                 }
 
@@ -437,56 +440,34 @@ module.exports = {
                         throw new UserInputError('Pengguna hanya bisa memposting board sekali pada satu pengguna')
                     }
 
-                    boardCollection.add(newBoard)
+                    return boardCollection.add(newBoard)
                         .then(doc => {
                             newBoard.id = doc.id
-                            newBoard.displayName = name
-                            newBoard.displayImage = displayImage
-                            newBoard.colorCode = colorCode
 
-                            doc.update({ id: doc.id, displayName: name, displayImage: displayImage, colorCode })
+                            doc.update({ id: doc.id })
+
+                            if (username !== recipient) {
+                                // FIX ME (done)
+                                const notifData = {
+                                    owner: recipient,
+                                    recipient: recipient,
+                                    sender: username,
+                                    read: false,
+                                    postId: null,
+                                    type: 'BOARD',
+                                    createdAt: new Date().toISOString(),
+                                    displayName: name,
+                                    displayImage,
+                                    colorCode
+                                }
+                                db.collection(`/users/${recipient}/notifications`).add(notifData)
+                                    .then(data => {
+                                        data.update({ id: data.id })
+                                    })
+                            }
+
+                            return newBoard
                         })
-
-                    if (username !== recipient) {
-                        // FIX ME (done)
-                        const notifData = {
-                            owner: recipient,
-                            recipient: recipient,
-                            sender: username,
-                            read: false,
-                            postId: null,
-                            type: 'BOARD',
-                            createdAt: new Date().toISOString(),
-                            displayName: name,
-                            displayImage,
-                            colorCode
-                        }
-                        db.collection(`/users/${recipient}/notifications`).add(notifData)
-                            .then(data => {
-                                data.update({ id: data.id })
-                            })
-                    }
-
-                    return newBoard
-                    // if (newBoard.reply.username && newBoard.reply.id && newBoard.reply.username !== username) {
-                    //     const notifReply = {
-                    //         owner: newComment.reply.username,
-                    //         recipient: newComment.reply.username,
-                    //         sender: username,
-                    //         read: false,
-                    //         postId: id,
-                    //         type: 'REPLY_COMMENT',
-                    //         createdAt: new Date().toISOString(),
-                    //         displayName: name,
-                    //         displayImage,
-                    //         colorCode
-                    //     }
-                    //     return db.collection(`/users/${newComment.reply.username}/notifications`).add(notifReply)
-                    //         .then(data => {
-                    //             data.update({ id: data.id })
-                    //         })
-
-                    // }
 
                 }
 
