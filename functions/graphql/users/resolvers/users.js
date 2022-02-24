@@ -187,7 +187,7 @@ module.exports = {
                             // dob: doc.data().dob,
                             profilePicture: doc.data().profilePicture,
                             // interest: doc.data().interest,
-                            // theme: doc.data().theme,
+                            settings: doc.data().settings,
                             postsCount,
                             repostCount,
                             likesCount
@@ -249,7 +249,7 @@ module.exports = {
                             dob: doc.data().dob,
                             profilePicture: doc.data().profilePicture,
                             interest: doc.data().interest,
-                            theme: doc.data().theme,
+                            settings: doc.data().settings,
                             postsCount,
                             repostCount,
                             likesCount
@@ -542,7 +542,10 @@ module.exports = {
                 await db.doc(`/users/${username}`).get()
                     .then(doc => {
                         doc.ref.update({
-                            theme
+                            settings: {
+                                ...doc.data().settings,
+                                theme
+                            }
                         })
                     })
 

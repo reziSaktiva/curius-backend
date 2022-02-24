@@ -89,6 +89,15 @@ module.exports = gql`
         hash: String
         lastUpdate: String
     }
+    type IsPrivate {
+        board: Boolean
+        media: Boolean
+        posts: Boolean
+    }
+    type Settings {
+        theme: String,
+        isPrivate: IsPrivate
+    }
     type User {
         id: ID!
         username: String
@@ -100,6 +109,7 @@ module.exports = gql`
         joinDate: String
         profilePicture: String
         theme: String
+        settings: Settings
         interest: [String]
         passwordUpdateHistory: [Private]
         postsCount: Int
