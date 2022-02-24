@@ -1028,6 +1028,14 @@ module.exports = {
                                 fullName,
                                 dob,
                                 mutedUser: [],
+                                settings: {
+                                    isPrivate: {
+                                        board: false,
+                                        posts: false,
+                                        media: false
+                                    },
+                                    theme: "light"
+                                },
                                 status: "active",
                                 joinDate: new Date().toISOString(),
                                 profilePicture: profilePicture ? profilePicture : 'https://firebasestorage.googleapis.com/v0/b/insvire-curious-app.appspot.com/o/avatars%2Fprofile_default.png?alt=media',
@@ -1053,6 +1061,14 @@ module.exports = {
                         fullName,
                         dob,
                         mutedUser: [],
+                        settings: {
+                            isPrivate: {
+                                board: false,
+                                posts: false,
+                                media: false
+                            },
+                            theme: "light"
+                        },
                         status: "active",
                         joinDate: new Date().toISOString(),
                         profilePicture: profilePicture ? profilePicture : 'https://firebasestorage.googleapis.com/v0/b/insvire-curious-app.appspot.com/o/avatars%2Fprofile_default.png?alt=media'
