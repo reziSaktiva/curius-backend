@@ -98,12 +98,10 @@ module.exports = {
 
             return filterLocation;
         },
-        async getUserMedia(_, { page, username: user }, context) {
-            const { username } = await fbAuthContext(context)
-
+        async getUserMedia(_, { page, username }, _context) {
             const index = client.initIndex(ALGOLIA_INDEX_POSTS_DESC)
 
-            const facetFilters = [["status.active:true"], [`owner:${user ? user : username}`], [`media.type:image`]]
+            const facetFilters = [["status.active:true"], [`owner:${username}`], [`media.type:image`]]
 
             const defaultPayload = {
                 "getRankingInfo": true,
@@ -150,7 +148,67 @@ module.exports = {
                 throw new Error(err)
             }
         },
-        async getUserData(_, { username: user }, context) {
+        async getOtherUserData(_, { username }, context) {
+            let dataUser = {
+                user: null,
+                liked: []
+            }
+
+            try {
+                await db.doc(`/users/${username}`).get()
+                    .then(async doc => {
+                        const getPosts = await db.collection(`posts`).where('owner', '==', doc.data().username).get()
+
+                        let postsCount = 0;
+                        let repostCount = 0;
+                        let likesCount = 0;
+                        if (!getPosts.empty) {
+                            const posts = getPosts.docs.map(doc => doc.data())
+                            postsCount = posts.length
+
+                            repostCount = posts.reduce((accumulator, current) => {
+                                return accumulator + current.repostCount;
+                            }, 0)
+                            const likeCounter = posts.map((doc) => doc.likeCount);
+                            likesCount = likeCounter.reduce((total, num) => (total += num))
+                        }
+
+                        // const private = doc.data()._private
+                        // const passwordUpdateHistory = private && private.filter(item => item.lastUpdate)
+
+                        dataUser.user = {
+                            // email: doc.data().email,
+                            id: doc.data().id,
+                            username: doc.data().username,
+                            fullName: doc.data().fullName,
+                            // mobileNumber: doc.data().mobileNumber,
+                            // joinDate: doc.data().joinDate,
+                            gender: doc.data().gender,
+                            // dob: doc.data().dob,
+                            profilePicture: doc.data().profilePicture,
+                            // interest: doc.data().interest,
+                            // theme: doc.data().theme,
+                            postsCount,
+                            repostCount,
+                            likesCount
+                        }
+
+                        return db.collection(`/users/${username}/liked`).get()
+
+                    })
+                    .then(data => {
+                        data.docs.forEach(doc => {
+                            dataUser.liked.push(doc.data())
+                        })
+                    })
+
+                return dataUser
+            }
+            catch (err) {
+                throw new Error(err)
+            }
+        },
+        async getUserData(_, _args, context) {
             const { username } = await fbAuthContext(context)
 
             let dataUser = {
@@ -159,69 +217,52 @@ module.exports = {
             }
 
             try {
-                if (username || user) {
-                    await db.doc(`/users/${user ? user : username}`).get()
-                        .then(async doc => {
-                            const getPosts = await db.collection(`posts`).where('owner', '==', doc.data().username).get()
+                await db.doc(`/users/${username}`).get()
+                    .then(async doc => {
+                        const getPosts = await db.collection(`posts`).where('owner', '==', doc.data().username).get()
 
-                            let postsCount = 0;
-                            let repostCount = 0;
-                            let likesCount = 0;
-                            if (!getPosts.empty) {
-                                const posts = getPosts.docs.map(doc => doc.data())
-                                postsCount = posts.length
+                        let postsCount = 0;
+                        let repostCount = 0;
+                        let likesCount = 0;
+                        if (!getPosts.empty) {
+                            const posts = getPosts.docs.map(doc => doc.data())
+                            postsCount = posts.length
 
-                                repostCount = posts.reduce((accumulator, current) => {
-                                    return accumulator + current.repostCount;
-                                }, 0)
-                                const likeCounter = posts.map((doc) => doc.likeCount);
-                                likesCount = likeCounter.reduce((total, num) => (total += num))
-                            }
+                            repostCount = posts.reduce((accumulator, current) => {
+                                return accumulator + current.repostCount;
+                            }, 0)
+                            const likeCounter = posts.map((doc) => doc.likeCount);
+                            likesCount = likeCounter.reduce((total, num) => (total += num))
+                        }
 
-                            // const private = doc.data()._private
-                            // const passwordUpdateHistory = private && private.filter(item => item.lastUpdate)
+                        // const private = doc.data()._private
+                        // const passwordUpdateHistory = private && private.filter(item => item.lastUpdate)
 
-                            dataUser.user = !user ? {
-                                email: doc.data().email,
-                                id: doc.data().id,
-                                username: doc.data().username,
-                                fullName: doc.data().fullName,
-                                mobileNumber: doc.data().mobileNumber,
-                                joinDate: doc.data().joinDate,
-                                gender: doc.data().gender,
-                                dob: doc.data().dob,
-                                profilePicture: doc.data().profilePicture,
-                                interest: doc.data().interest,
-                                theme: doc.data().theme,
-                                postsCount,
-                                repostCount,
-                                likesCount
-                            } : {
-                                // email: doc.data().email,
-                                id: doc.data().id,
-                                username: doc.data().username,
-                                fullName: doc.data().fullName,
-                                // mobileNumber: doc.data().mobileNumber,
-                                // joinDate: doc.data().joinDate,
-                                gender: doc.data().gender,
-                                // dob: doc.data().dob,
-                                profilePicture: doc.data().profilePicture,
-                                // interest: doc.data().interest,
-                                // theme: doc.data().theme,
-                                postsCount,
-                                repostCount,
-                                likesCount
-                            }
+                        dataUser.user = {
+                            email: doc.data().email,
+                            id: doc.data().id,
+                            username: doc.data().username,
+                            fullName: doc.data().fullName,
+                            mobileNumber: doc.data().mobileNumber,
+                            joinDate: doc.data().joinDate,
+                            gender: doc.data().gender,
+                            dob: doc.data().dob,
+                            profilePicture: doc.data().profilePicture,
+                            interest: doc.data().interest,
+                            theme: doc.data().theme,
+                            postsCount,
+                            repostCount,
+                            likesCount
+                        }
 
-                            return db.collection(`/users/${user ? user : username}/liked`).get()
+                        return db.collection(`/users/${username}/liked`).get()
 
+                    })
+                    .then(data => {
+                        data.docs.forEach(doc => {
+                            dataUser.liked.push(doc.data())
                         })
-                        .then(data => {
-                            data.docs.forEach(doc => {
-                                dataUser.liked.push(doc.data())
-                            })
-                        })
-                }
+                    })
 
                 return dataUser
             }

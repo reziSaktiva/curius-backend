@@ -220,7 +220,8 @@ module.exports = gql`
         getRoomPosts(room: String!):[Post]!
         getProfileLikedPost(username: String): dataPost
         getPost(id: ID!): Post!
-        getUserData(username: String): UserData
+        getUserData: UserData
+        getOtherUserData(username: String): UserData
         getUserMedia(page: Int, username: String): UserMedia
         getPostBasedOnNearestLoc(lat: String, lng: String): [Post]
         getNearRooms(lat: Float, lng: Float): [Room]

@@ -12,7 +12,9 @@ const { ALGOLIA_INDEX_ROOMS } = require('../../../constant/post');
 module.exports = {
   Query: {
     async getPosts(_, { lat, lng, range = 1, type, page, room, username }, context) {
-      const { mutedUser } = await fbAuthContext(context)
+      const { mutedUser } = username || room ? {
+        mutedUser: []
+      } : await fbAuthContext(context)
 
       if ((!lat && !lng) && (!room && !username)) {
         throw new UserInputError('Lat and Lng is Required')
