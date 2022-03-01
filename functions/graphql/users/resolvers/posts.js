@@ -12,7 +12,9 @@ const { ALGOLIA_INDEX_ROOMS } = require('../../../constant/post');
 module.exports = {
   Query: {
     async getPosts(_, { lat, lng, range = 1, type, page, room, username }, context) {
-      const { mutedUser } = await fbAuthContext(context)
+      const { mutedUser } = username || room ? {
+        mutedUser: []
+      } : await fbAuthContext(context)
 
       if ((!lat && !lng) && (!room && !username)) {
         throw new UserInputError('Lat and Lng is Required')
@@ -1201,7 +1203,7 @@ module.exports = {
               .then(async doc => {
                 doc.ref.update({ repostCount: doc.data().repostCount + 1, rank: doc.data().rank + 1 })
                 if (doc.data().owner !== username) {
-                  const { name, displayImage, colorCode } = await randomGenerator(username, repost.repost, repost.room)
+                  const { name, displayImage, colorCode } = await randomGenerator(username, repost.repost, false)
 
                   const notification = {
                     owner: doc.data().owner,
@@ -1339,7 +1341,7 @@ module.exports = {
     },
     async likePost(_, { id }, context) {
       const { username } = await fbAuthContext(context);
-      const { name, displayImage, colorCode } = await randomGenerator(username, id);
+      const { name, displayImage, colorCode } = await randomGenerator(username, id, false);
 
       const postDocument = db.doc(`/posts/${id}`);
       const likeCollection = db.collection(`/posts/${id}/likes`);
@@ -1617,7 +1619,8 @@ module.exports = {
       const { username } = await fbAuthContext(context);
       const { name, displayImage, colorCode } = await randomGenerator(
         username,
-        postId
+        postId,
+        false
       );
 
       const postDocument = db.doc(`/posts/${postId}`);

@@ -43,7 +43,7 @@ module.exports = {
         },
         async createComment(_, { id, textContent, reply, media }, context) {
             const { username } = await fbAuthContext(context)
-            const { name, displayImage, colorCode } = await randomGenerator(username, id)
+            const { name, displayImage, colorCode } = await randomGenerator(username, id, false)
             const postDocument = db.doc(`/posts/${id}`)
             const commentCollection = db.collection(`/posts/${id}/comments`)
             const subscribeCollection = db.collection(`/posts/${id}/subscribes`)

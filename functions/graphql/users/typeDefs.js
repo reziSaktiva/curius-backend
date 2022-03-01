@@ -89,6 +89,15 @@ module.exports = gql`
         hash: String
         lastUpdate: String
     }
+    type IsPrivate {
+        board: Boolean
+        media: Boolean
+        posts: Boolean
+    }
+    type Settings {
+        theme: String,
+        isPrivate: IsPrivate
+    }
     type User {
         id: ID!
         username: String
@@ -100,6 +109,7 @@ module.exports = gql`
         joinDate: String
         profilePicture: String
         theme: String
+        settings: Settings
         interest: [String]
         passwordUpdateHistory: [Private]
         postsCount: Int
@@ -159,7 +169,6 @@ module.exports = gql`
     type UserData {
         user: User!
         liked: [Like]
-        allMedia: [String]
     },
     type Subscribe {
         owner: String!
@@ -198,6 +207,20 @@ module.exports = gql`
         nextPage: Int
         hasMore: Boolean
     }
+    type Board {
+        id: ID
+        createdAt: String
+        owner: String
+        textContent: String
+        recipient: String
+        media: Media
+        displayName: String
+        displayImage: String
+        colorCode: String
+        replyCount: Int
+        children: [Board]
+        reply: ReplyData
+    }
     type Query {
         moreForYou: dataPost
         getPosts(lat: Float, lng: Float, range: Float page: Int type: String, room: ID, username: String): dataPost
@@ -207,8 +230,9 @@ module.exports = gql`
         getRoomPosts(room: String!):[Post]!
         getProfileLikedPost(username: String): dataPost
         getPost(id: ID!): Post!
-        getUserData(username: String): UserData
-        getUserMedia(page: Int): UserMedia
+        getUserData: UserData
+        getOtherUserData(username: String): UserData
+        getUserMedia(page: Int, username: String): UserMedia
         getPostBasedOnNearestLoc(lat: String, lng: String): [Post]
         getNearRooms(lat: Float, lng: Float): [Room]
         searchRoom(search: String, status: String, perPage: Int, page: Int): SearchRoom
@@ -216,6 +240,7 @@ module.exports = gql`
         getSubscribePosts: [Post]!
         setRulesSearchAlgolia(index: String!, rank: [String]!): String
         explorePlace: [GeoLocation]
+        getUserBoards(username: String): [Board]
     },
     input RegisterInput {
         email: String
@@ -300,6 +325,7 @@ module.exports = gql`
         checkPhoneNumber( phoneNumber: String ): Boolean
         setUserTheme(theme: String): String
         setPersonalInterest(interest: [String] ): [String]
+        createBoard(username: String textContent: String reply: Reply media: MediaInput): Board
 
         # posts mutation
         nextProfilePosts(id:ID! username: String): dataPost
