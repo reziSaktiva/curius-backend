@@ -279,7 +279,7 @@ module.exports = gql`
 
         # Graph
         getGraphSummary(graphType: String, state: String): GraphData
-        getAdminLogs(page: Int, perPage: Int, search: String): SearchAdminLogs
+        getAdminLogs(page: Int, perPage: Int, search: String, useExport: Boolean): SearchAdminLogs
         getStaticUserByAge: [StatisticUser]
     }
 
@@ -365,6 +365,7 @@ module.exports = gql`
         hasEmail: Boolean
         hasPhoneNumber: Boolean
         isSuspend: Boolean
+        timestamp: Timestamp
     }
 
     type ReportPost {

@@ -105,6 +105,35 @@ module.exports = {
           }
         })
 
+        // Will enable if data firebase and algolia not sync (special case)
+        // const ids = searchDocs.hits.map(doc => doc.objectID)
+        // if (!ids.length) return searchDocs
+
+        // const getRooms = await db.collection('room').where('id', 'in', ids).get()
+        // const rooms = await getRooms.docs.map(async (doc, idx) => {
+        //   const dataParse = doc.data()
+        //   if (!useDetailLocation || !dataParse?.location?.lat) return dataParse
+
+        //   const request = await googleMapsClient
+        //     .reverseGeocode({
+        //       params: {
+        //         latlng: `${dataParse?.location?.lat}, ${dataParse?.location?.lng}`,
+        //         language: 'en',
+        //         result_type: 'street_address|administrative_area_level_4',
+        //         location_type: 'APPROXIMATE',
+        //         key: API_KEY_GEOCODE
+        //       },
+        //       timeout: 5000 // milliseconds
+        //     }, axios)
+
+        //   const address = request.data.results[0].formatted_address
+
+        //   return {
+        //     ...dataParse,
+        //     address
+        //   }
+        // })
+
         return { ...searchDocs, hits: rooms }
       } catch (err) {
         return err

@@ -1,6 +1,7 @@
 const { get } = require('lodash')
 const { Client } = require("@googlemaps/google-maps-services-js");
 const axios = require('axios')
+const moment = require('moment');
 const { server, client } = require('../../../utility/algolia')
 const { db } = require('../../../utility/admin')
 const { UserInputError } = require('apollo-server-express');
@@ -239,7 +240,7 @@ module.exports = {
       } : {};
 
       const pagination = {
-        "hitsPerPage": useExport ? 100 : perPage || 10,
+        "hitsPerPage": useExport ? 1000 : perPage || 10,
         "page": page || 0,
       }
       const facetFilters = []
@@ -251,8 +252,8 @@ module.exports = {
       // if (hasReported) facetFilters.push([`reportedCount > 1`])
 
       if (timestampFrom) {
-        const dateFrom = new Date(timestampFrom).getTime();
-        const dateTo = new Date(timestampTo).getTime();
+        const dateFrom = moment(timestampFrom).startOf('day').valueOf();
+        const dateTo = moment(timestampTo).endOf('day').valueOf();
 
         newFilters = `date_timestamp:${dateFrom} TO ${dateTo}`
       }
@@ -277,25 +278,25 @@ module.exports = {
         // Algolia Search
         const searchDocs = await index.search(search, payload)
 
-        const ids = searchDocs.hits.map(doc => doc.objectID)
-        const batches = [];
+        // const ids = searchDocs.hits.map(doc => doc.objectID)
+        // const batches = [];
 
-        if (!ids.length) return searchDocs
+        // if (!ids.length) return searchDocs
 
-        while (ids.length) {
-          const batch = ids.splice(0, 10);
+        // while (ids.length) {
+        //   const batch = ids.splice(0, 10);
           
-          batches.push(
-            db.collection('posts')
-              .where('id', 'in', [...batch]).get()
-              .then(results => results.docs.map(result => ({ ...result.data()})))
-          )
-        }
+        //   batches.push(
+        //     db.collection('posts')
+        //       .where('id', 'in', [...batch]).get()
+        //       .then(results => results.docs.map(result => ({ ...result.data()})))
+        //   )
+        // }
 
-        const getPosts = await Promise.all(batches).then(content => content.flat());
+        // const getPosts = await Promise.all(batches).then(content => content.flat());
 
         // const getPosts = await db.collection('posts').where('id', 'in', ids).get()
-        const posts = await getPosts.map(async (doc, idx) => {
+        const posts = await searchDocs.hits.map(async (doc, idx) => {
           const dataParse = doc
           console.log('timestamp: ', dataParse?.createdAt)
           if (!useDetailLocation) return dataParse
@@ -496,7 +497,7 @@ module.exports = {
         if (active) message = `Admin ${name} request to activate Post Id ${docId}`
         if (flags.length) message = `Admin ${name} request set flag ${flags.join(',')} to Post Id ${docId}`
 
-        await createLogs({ adminId: id, role: level, message })
+        await createLogs({ adminId: id, role: level, message, name })
 
         return {
           ...data.data(),
@@ -542,7 +543,7 @@ module.exports = {
           if (active) message = `Admin ${name} has activate Post Id ${docId}`
           if (flags.length) message = `Admin ${name} has set flag ${flags.join(',')} to Post Id ${docId}`
 
-          await createLogs({ adminId: id, role: level, message })
+          await createLogs({ adminId: id, role: level, message, name })
           // Update Algolia Search Posts
           await index.partialUpdateObjects([{
             objectID: postId,
@@ -621,7 +622,7 @@ module.exports = {
       if (active) message = `Admin ${name} has activate Comment Id ${idComment}`
       if (deleted) message = `Admin ${name} has deleted Comment Id ${idComment}`
 
-      await createLogs({ adminId: id, role: level, message })
+      await createLogs({ adminId: id, role: level, message, name })
 
       return {
         id: newData.id,
@@ -690,7 +691,7 @@ module.exports = {
         // if (active) message = `Admin ${name} has activate Post Id ${posts.id}`
         // if (deleted) message = `Admin ${name} has deleted Post Id ${posts.id}`
 
-        await createLogs({ adminId: id, role: level, message })
+        await createLogs({ adminId: id, role: level, message, name })
 
         const parseSnapshot = await (await writeRequest.get()).data()
 
@@ -704,21 +705,21 @@ module.exports = {
       }
     },
     async createReplicatePostAscDesc(_, { }, _ctx) {
-      const index = server.initIndex('rooms');
+      const index = server.initIndex('admin_logs');
 
       await index.setSettings({
         replicas: [
-          'rooms_date_desc',
-          'rooms_date_asc'
+          'admin_logs_desc',
+          'admin_logs_asc'
         ]
       })
 
-      const replicasIndexDesc = server.initIndex('rooms_date_desc')
-      const replicasIndexAsc = server.initIndex('rooms_date_asc')
+      const replicasIndexDesc = server.initIndex('admin_logs_desc')
+      const replicasIndexAsc = server.initIndex('admin_logs_asc')
 
       await replicasIndexAsc.setSettings({
         ranking: [
-          "asc(date_timestamp)",
+          "asc(createdAt)",
           "typo",
           "geo",
           "words",
@@ -732,7 +733,7 @@ module.exports = {
 
       await replicasIndexDesc.setSettings({
         ranking: [
-          "desc(date_timestamp)",
+          "desc(createdAt)",
           "typo",
           "geo",
           "words",
@@ -814,7 +815,7 @@ module.exports = {
             if (active) message = `Admin ${name} has activate Comment Id ${idComment}`
             if (deleted) message = `Admin ${name} has deleted Comment Id ${idComment}`
 
-            await createLogs({ adminId: id, role: level, message })
+            await createLogs({ adminId: id, role: level, message, name })
           }
         ).catch(
           async err => {
