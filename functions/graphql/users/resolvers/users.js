@@ -13,6 +13,7 @@ const fbAuthContext = require('../../../utility/fbAuthContext')
 const { validateLoginInput } = require('../../../utility/validators');
 const { client } = require('../../../utility/algolia');
 const { ALGOLIA_INDEX_POSTS_DESC } = require('../../../constant/post');
+const randomGenerator = require('../../../utility/randomGenerator');
 
 firebase.initializeApp(config)
 
@@ -97,9 +98,7 @@ module.exports = {
 
             return filterLocation;
         },
-        async getUserMedia(_, { page }, context) {
-            const { username } = await fbAuthContext(context)
-
+        async getUserMedia(_, { page, username }, _context) {
             const index = client.initIndex(ALGOLIA_INDEX_POSTS_DESC)
 
             const facetFilters = [["status.active:true"], [`owner:${username}`], [`media.type:image`]]
@@ -149,76 +148,121 @@ module.exports = {
                 throw new Error(err)
             }
         },
-        async getUserData(_, { username: name }, context) {
-            const { username } = await fbAuthContext(context)
-
+        async getOtherUserData(_, { username }, context) {
             let dataUser = {
                 user: null,
-                allMedia: [],
                 liked: []
             }
 
             try {
-                if (username || name) {
-                    await db.doc(`/users/${name ? name : username}`).get()
-                        .then(async doc => {
-                            const getPosts = await db.collection(`posts`).where('owner', '==', doc.data().username).get()
+                await db.doc(`/users/${username}`).get()
+                    .then(async doc => {
+                        const getPosts = await db.collection(`posts`).where('owner', '==', doc.data().username).where('status.active', '==', true).get()
 
-                            let postsCount = 0;
-                            let repostCount = 0;
-                            let likesCount = 0;
-                            if (!getPosts.empty) {
-                                const posts = getPosts.docs.map(doc => doc.data())
-                                postsCount = posts.length
+                        let postsCount = 0;
+                        let repostCount = 0;
+                        let likesCount = 0;
+                        if (!getPosts.empty) {
+                            const posts = getPosts.docs.map(doc => doc.data())
+                            postsCount = posts.length
 
-                                repostCount = posts.reduce((accumulator, current) => {
-                                    return accumulator + current.repostCount;
-                                }, 0)
-                                const likeCounter = posts.map((doc) => doc.likeCount);
-                                likesCount = likeCounter.reduce((total, num) => (total += num))
+                            repostCount = posts.reduce((accumulator, current) => {
+                                return accumulator + current.repostCount;
+                            }, 0)
+                            const likeCounter = posts.map((doc) => doc.likeCount);
+                            likesCount = likeCounter.reduce((total, num) => (total += num))
+                        }
 
-                                if (posts.length) {
-                                    posts.forEach((post) => {
-                                        if (post.media) {
-                                            if (post.media.type !== "gif") {
-                                                post.media.content.forEach(data => {
-                                                    dataUser.allMedia.push(data)
-                                                })
-                                            }
-                                        }
-                                    })
-                                }
-                            }
+                        // const private = doc.data()._private
+                        // const passwordUpdateHistory = private && private.filter(item => item.lastUpdate)
 
-                            // const private = doc.data()._private
-                            // const passwordUpdateHistory = private && private.filter(item => item.lastUpdate)
+                        dataUser.user = {
+                            // email: doc.data().email,
+                            id: doc.data().id,
+                            username: doc.data().username,
+                            fullName: doc.data().fullName,
+                            // mobileNumber: doc.data().mobileNumber,
+                            // joinDate: doc.data().joinDate,
+                            gender: doc.data().gender,
+                            // dob: doc.data().dob,
+                            profilePicture: doc.data().profilePicture,
+                            // interest: doc.data().interest,
+                            settings: doc.data().settings,
+                            postsCount,
+                            repostCount,
+                            likesCount
+                        }
 
-                            dataUser.user = {
-                                email: doc.data().email,
-                                id: doc.data().id,
-                                username: doc.data().username,
-                                fullName: doc.data().fullName,
-                                mobileNumber: doc.data().mobileNumber,
-                                joinDate: doc.data().joinDate,
-                                gender: doc.data().gender,
-                                dob: doc.data().dob,
-                                profilePicture: doc.data().profilePicture,
-                                interest: doc.data().interest,
-                                theme: doc.data().theme,
-                                postsCount,
-                                repostCount,
-                                likesCount
-                            }
+                        return db.collection(`/users/${username}/liked`).get()
 
-                            return db.collection(`/users/${name ? name : username}/liked`).get()
-
+                    })
+                    .then(data => {
+                        data.docs.forEach(doc => {
+                            dataUser.liked.push(doc.data())
                         })
-                        .then(data => {
-                            data.docs.forEach(doc => {
-                                dataUser.liked.push(doc.data())
-                            })
+                    })
+
+                return dataUser
+            }
+            catch (err) {
+                throw new Error(err)
+            }
+        },
+        async getUserData(_, _args, context) {
+            const { username } = await fbAuthContext(context)
+
+            let dataUser = {
+                user: null,
+                liked: []
+            }
+
+            try {
+                await db.doc(`/users/${username}`).get()
+                    .then(async doc => {
+                        const getPosts = await db.collection(`posts`).where('owner', '==', doc.data().username).where('status.active', '==', true).get()
+
+                        let postsCount = 0;
+                        let repostCount = 0;
+                        let likesCount = 0;
+                        if (!getPosts.empty) {
+                            const posts = getPosts.docs.map(doc => doc.data())
+                            postsCount = posts.length
+
+                            repostCount = posts.reduce((accumulator, current) => {
+                                return accumulator + current.repostCount;
+                            }, 0)
+                            const likeCounter = posts.map((doc) => doc.likeCount);
+                            likesCount = likeCounter.reduce((total, num) => (total += num))
+                        }
+
+                        // const private = doc.data()._private
+                        // const passwordUpdateHistory = private && private.filter(item => item.lastUpdate)
+
+                        dataUser.user = {
+                            email: doc.data().email,
+                            id: doc.data().id,
+                            username: doc.data().username,
+                            fullName: doc.data().fullName,
+                            mobileNumber: doc.data().mobileNumber,
+                            joinDate: doc.data().joinDate,
+                            gender: doc.data().gender,
+                            dob: doc.data().dob,
+                            profilePicture: doc.data().profilePicture,
+                            interest: doc.data().interest,
+                            settings: doc.data().settings,
+                            postsCount,
+                            repostCount,
+                            likesCount
+                        }
+
+                        return db.collection(`/users/${username}/liked`).get()
+
+                    })
+                    .then(data => {
+                        data.docs.forEach(doc => {
+                            dataUser.liked.push(doc.data())
                         })
-                }
+                    })
 
                 return dataUser
             }
@@ -397,8 +441,82 @@ module.exports = {
 
             return filterLocation;
         },
+        async getUserBoards(_, { username }, context) {
+            const boardCollection = await db.collection(`/users/${username}/boards`).orderBy('createdAt', 'desc').get()
+
+            try {
+                return boardCollection.docs.map(doc => doc.data())
+            }
+            catch (err) {
+                throw new Error(err)
+            }
+        }
     },
     Mutation: {
+        async createBoard(_, { username: recipient, textContent, media }, context) {
+            const { username } = await fbAuthContext(context);
+            const { name, displayImage, colorCode } = await randomGenerator(username, recipient, true);
+            const userDocument = await db.doc(`/users/${recipient}`).get()
+            const boardCollection = db.collection(`/users/${recipient}/boards`)
+
+            try {
+                let newBoard = {
+                    owner: username,
+                    recipient,
+                    createdAt: new Date().toISOString(),
+                    textContent,
+                    media,
+                    displayName: name,
+                    displayImage,
+                    colorCode,
+                    children: []
+                }
+
+                if (!userDocument.exists) {
+                    throw new UserInputError('Pengguna tidak ditemukan/sudah dihapus')
+                } else {
+                    const isUserHasBoard = await boardCollection.where('owner', '==', username).get();
+
+                    if (!isUserHasBoard.empty) {
+                        throw new UserInputError('Pengguna hanya bisa memposting board sekali pada satu pengguna')
+                    }
+
+                    return boardCollection.add(newBoard)
+                        .then(doc => {
+                            newBoard.id = doc.id
+
+                            doc.update({ id: doc.id })
+
+                            if (username !== recipient) {
+                                // FIX ME (done)
+                                const notifData = {
+                                    owner: recipient,
+                                    recipient: recipient,
+                                    sender: username,
+                                    read: false,
+                                    postId: null,
+                                    type: 'BOARD',
+                                    createdAt: new Date().toISOString(),
+                                    displayName: name,
+                                    displayImage,
+                                    colorCode
+                                }
+                                db.collection(`/users/${recipient}/notifications`).add(notifData)
+                                    .then(data => {
+                                        data.update({ id: data.id })
+                                    })
+                            }
+
+                            return newBoard
+                        })
+
+                }
+
+            }
+            catch (err) {
+                throw new Error(err)
+            }
+        },
         async privateSetting(_, _args, context) {
             const { username } = await fbAuthContext(context)
             let result;
@@ -424,7 +542,10 @@ module.exports = {
                 await db.doc(`/users/${username}`).get()
                     .then(doc => {
                         doc.ref.update({
-                            theme
+                            settings: {
+                                ...doc.data().settings,
+                                theme
+                            }
                         })
                     })
 
@@ -907,6 +1028,14 @@ module.exports = {
                                 fullName,
                                 dob,
                                 mutedUser: [],
+                                settings: {
+                                    isPrivate: {
+                                        board: false,
+                                        posts: false,
+                                        media: false
+                                    },
+                                    theme: "light"
+                                },
                                 status: "active",
                                 joinDate: new Date().toISOString(),
                                 profilePicture: profilePicture ? profilePicture : 'https://firebasestorage.googleapis.com/v0/b/insvire-curious-app.appspot.com/o/avatars%2Fprofile_default.png?alt=media',
@@ -932,6 +1061,14 @@ module.exports = {
                         fullName,
                         dob,
                         mutedUser: [],
+                        settings: {
+                            isPrivate: {
+                                board: false,
+                                posts: false,
+                                media: false
+                            },
+                            theme: "light"
+                        },
                         status: "active",
                         joinDate: new Date().toISOString(),
                         profilePicture: profilePicture ? profilePicture : 'https://firebasestorage.googleapis.com/v0/b/insvire-curious-app.appspot.com/o/avatars%2Fprofile_default.png?alt=media'

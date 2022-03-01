@@ -1,10 +1,10 @@
 const { UserInputError } = require('apollo-server-express')
 const { db } = require('./admin')
 
-module.exports = async (username, postId) => {
-    const postDocument = db.doc(`/posts/${postId}`)
+module.exports = async (username, id, isOnBoard) => {
+    const document = !isOnBoard ? db.doc(`/posts/${id}`) : db.doc(`/users/${id}`);
 
-    const randomNameCollection = db.collection(`/posts/${postId}/randomizedData`)
+    const randomNameCollection = !isOnBoard ? db.collection(`/posts/${id}/randomizedData`) : db.collection(`/users/${id}/randomizedData`);
     const randomNameData = {
         displayName: '',
         owner: username
@@ -13,7 +13,8 @@ module.exports = async (username, postId) => {
     try {
         const { randomName, randomImage, randomCode } = await db.collection('themes').where("isActive", "==", true).get()
             .then(data => {
-                const theme = data.docs[Math.floor(Math.random() * data.docs.length)].data()
+                // console.log(Math.floor(Math.random() * data.docs.length));
+                const theme = data.docs[0].data()
 
                 const randomAdjective = theme.adjective[Math.floor(Math.random() * theme.adjective.length)];
                 const randomNoun = theme.nouns[Math.floor(Math.random() * theme.nouns.length)];
@@ -33,19 +34,31 @@ module.exports = async (username, postId) => {
         await randomNameCollection.where('owner', '==', username).limit(1).get()
             .then(data => {
                 if (data.empty) {
-                    return postDocument.get()
+                    return document.get()
                         .then(doc => {
                             if (!doc.exists) {
-                                throw new UserInputError('Postingan tidak ditemukan/sudah dihapus')
+                                throw new UserInputError('document tidak ditemukan/sudah dihapus')
                             } else {
-                                if (username === doc.data().owner) {
-                                    randomNameData.displayName = 'Author'
-                                    randomNameData.colorCode = randomCode
-                                    randomNameData.displayImage = `https://firebasestorage.googleapis.com/v0/b/insvire-curious-app.appspot.com/o/avatars%2Fauthor.png?alt=media&token=623d83c1-16e1-401d-8897-39cd485fa685`
+                                if (isOnBoard) {
+                                    if (username === id) {
+                                        randomNameData.displayName = doc.data().username
+                                        randomNameData.colorCode = randomCode
+                                        randomNameData.displayImage = doc.data().profilePicture
+                                    } else {
+                                        randomNameData.displayName = randomName
+                                        randomNameData.colorCode = randomCode
+                                        randomNameData.displayImage = randomImage
+                                    }
                                 } else {
-                                    randomNameData.displayName = randomName
-                                    randomNameData.colorCode = randomCode
-                                    randomNameData.displayImage = randomImage
+                                    if (username === doc.data().owner) {
+                                        randomNameData.displayName = 'Author'
+                                        randomNameData.colorCode = randomCode
+                                        randomNameData.displayImage = `https://firebasestorage.googleapis.com/v0/b/insvire-curious-app.appspot.com/o/avatars%2Fauthor.png?alt=media&token=623d83c1-16e1-401d-8897-39cd485fa685`
+                                    } else {
+                                        randomNameData.displayName = randomName
+                                        randomNameData.colorCode = randomCode
+                                        randomNameData.displayImage = randomImage
+                                    }
                                 }
                                 return randomNameCollection.add(randomNameData)
                             }
