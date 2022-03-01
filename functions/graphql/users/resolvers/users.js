@@ -157,7 +157,7 @@ module.exports = {
             try {
                 await db.doc(`/users/${username}`).get()
                     .then(async doc => {
-                        const getPosts = await db.collection(`posts`).where('owner', '==', doc.data().username).get()
+                        const getPosts = await db.collection(`posts`).where('owner', '==', doc.data().username).where('status.active', '==', true).get()
 
                         let postsCount = 0;
                         let repostCount = 0;
@@ -219,7 +219,7 @@ module.exports = {
             try {
                 await db.doc(`/users/${username}`).get()
                     .then(async doc => {
-                        const getPosts = await db.collection(`posts`).where('owner', '==', doc.data().username).get()
+                        const getPosts = await db.collection(`posts`).where('owner', '==', doc.data().username).where('status.active', '==', true).get()
 
                         let postsCount = 0;
                         let repostCount = 0;
