@@ -14,6 +14,7 @@ const { validateLoginInput } = require('../../../utility/validators');
 const { client } = require('../../../utility/algolia');
 const { ALGOLIA_INDEX_POSTS_DESC } = require('../../../constant/post');
 const randomGenerator = require('../../../utility/randomGenerator');
+const { CreateUser } = require('../../../utility/chat');
 
 firebase.initializeApp(config)
 
@@ -1019,7 +1020,7 @@ module.exports = {
                             id = data.user.uid
                             return data.user.getIdToken()
                         })
-                        .then(resultToken => {
+                        .then(async resultToken => {
                             let saveUserData = {
                                 id,
                                 username,
@@ -1027,6 +1028,7 @@ module.exports = {
                                 mobileNumber,
                                 fullName,
                                 dob,
+                                getStreamID,
                                 mutedUser: [],
                                 settings: {
                                     isPrivate: {
@@ -1047,7 +1049,8 @@ module.exports = {
                                 lastUpdate: new Date().toISOString()
                             })
 
-                            db.doc(`/users/${username}`).set(saveUserData)
+                            await CreateUser({ username, email, gender }); // create getStream Account
+                            await db.doc(`/users/${username}`).set(saveUserData)
                             return resultToken
                         })
                 } else if (token && !password) {
