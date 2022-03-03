@@ -1,5 +1,5 @@
 const { UserInputError } = require('apollo-server-express')
-const { db } = require('../../../utility/admin')
+const { db, storage } = require('../../../utility/admin')
 const { client, server } = require('../../../utility/algolia')
 const adminAuthContext = require('../../../utility/adminAuthContext')
 const { createLogs, hasAccessPriv, LIST_OF_PRIVILEGE } = require('../usecase/admin');
@@ -28,6 +28,19 @@ const separateNewAndUpdateData = (oldData, newData, target = '') => {
     })
 
     return { update: dataNeedUpdateNouns, newData: newDataNouns}
+}
+
+const getPathStorageFromUrl = (url) => {
+    const baseUrl = "https://firebasestorage.googleapis.com/v0/b/insvire-curious-app.appspot.com/o/";
+    let imagePath = url.replace(baseUrl,"");
+
+    const indexOfEndPath = imagePath.indexOf("?");
+
+    imagePath = imagePath.substring(0,indexOfEndPath);    
+    imagePath = imagePath.replace("%2F","/");
+    imagePath = imagePath.replace("%2F","/");
+
+    return imagePath;
 }
 
 module.exports = {
@@ -268,11 +281,19 @@ module.exports = {
             try {
                 let newDataTheme = {}
                 await db.doc(`/themes/${themeId}`).get().then(
-                    doc => {
+                    async doc => {
                         const oldData = doc.data();
 
+                        const currentData = (oldData[attr] || []).filter(({ id }) => id === idAttr);
                         newDataTheme[attr] = (oldData[attr] || []).filter(({ id }) => id !== idAttr)
-
+                        if (currentData[0].avatarUrl) {
+                            await storage.bucket().file(
+                                getPathStorageFromUrl(
+                                    currentData[0].avatarUrl
+                                )
+                            ).delete();
+                        }
+                        
                         newDataTheme = {
                             id: doc.id,
                             ...oldData,
