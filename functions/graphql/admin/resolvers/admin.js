@@ -263,8 +263,12 @@ module.exports = {
             if (name && (level !== 1)) throw new Error('Access Denied')
 
             try {
-                await db.doc(`/themes/${id}`).delete();
+                const oldData = await db.doc(`/themes/${id}`).get();
+                await storage.bucket().deleteFiles({
+                    prefix: `avatars/${oldData.data().name}/`
+                })
 
+                await db.doc(`/themes/${id}`).delete();
                 return {
                     id,
                     status: 'Success',
