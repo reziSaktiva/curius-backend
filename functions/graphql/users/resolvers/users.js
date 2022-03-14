@@ -1028,7 +1028,7 @@ module.exports = {
                                 mobileNumber,
                                 fullName,
                                 dob,
-                                getStreamID,
+                                getStreamID: '',
                                 mutedUser: [],
                                 settings: {
                                     isPrivate: {
@@ -1049,7 +1049,9 @@ module.exports = {
                                 lastUpdate: new Date().toISOString()
                             })
 
-                            await CreateUser({ username, email, gender }); // create getStream Account
+                            const getStreamUID = await CreateUser({ username, email, gender }); // create getStream Account
+                            if (getStreamUID) saveUserData.getStreamID = getStreamUID.userId;
+                            
                             await db.doc(`/users/${username}`).set(saveUserData)
                             return resultToken
                         })

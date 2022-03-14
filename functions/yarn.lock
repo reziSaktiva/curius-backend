@@ -5506,10 +5506,10 @@ stack-trace@0.0.x:
   resolved "https://registry.yarnpkg.com/statuses/-/statuses-1.5.0.tgz#161c7dac177659fd9811f43771fa99381478628c"
   integrity sha1-Fhx9rBd2Wf2YEfQ3cfqZOBR4Yow=
 
-stream-chat@^5.5.0:
-  version "5.5.0"
-  resolved "https://registry.yarnpkg.com/stream-chat/-/stream-chat-5.5.0.tgz#ef9fa1117290e9e4dd455e346cf69a1d1501853c"
-  integrity sha512-oW0rw0Z4x+OikBUwWV+HBWTwCa8PLlEEV4PpEbk36kBbJoyqZMbaF5Xd/SPGPsPGEn6WHPTH0gq/ZkeoRdJyFg==
+stream-chat@^6.2.0:
+  version "6.2.0"
+  resolved "https://registry.yarnpkg.com/stream-chat/-/stream-chat-6.2.0.tgz#9d01c2926cc7a0270b187c90e24bf52739d14e16"
+  integrity sha512-s6BkkU0IJJyaPDNGc3V8d3WF/ZnM6bgFNdEpHGkwS9oX8+caxvhmKSpEY6l5srq4+O61trUHF3yyij8CLno7ew==
   dependencies:
     "@babel/runtime" "^7.16.3"
     "@types/jsonwebtoken" "^8.5.6"
