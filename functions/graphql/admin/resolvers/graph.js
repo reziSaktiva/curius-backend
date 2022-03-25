@@ -98,6 +98,7 @@ module.exports = {
         if (childData === 'active') dataDoc = activeUsers
       }
 
+      console.log('dataDoc: ', dataDoc.hits.length);
       const groups = (dataDoc.hits || []).reduce((groups, doc) => {
         const date = doc[`${parentData === 'user' ? 'joinDate':'createdAt'}`].split('T')[0];
         const parseDate = date.split('-')
@@ -128,24 +129,31 @@ module.exports = {
         return dateA > dateB ? 1 : -1;  
       })
 
+      console.log('sortDataByDate: ', sortDataByDate);
+      sortDataByDate.push({ date: '01-12-2021', total: 40 })
       const newGraph = sortDataByDate.reduce(
         (prev, curr) => {
           if (!prev.length) return [curr]; // return initial data
 
-          const diffDate = moment.duration(
+          const diffDuration = moment.duration(
             moment(prev[prev.length -1]?.date).diff(
                 moment(curr.date)
               )
-            ).asDays()
+            )
+          const diffDate = graphType ==='monthly' ? diffDuration.asMonths() : (graphType ==='yearly' ? diffDuration.asYears() : diffDuration.asDays());
 
           const differentTime = Math.abs(diffDate + 1);
 
           const missedDate = []
           
+          console.log('differentTime: ', differentTime);
           // calculate missing data between prev and current date
           for(let i = 0; i < differentTime; i++) {
             missedDate.push({
-              date: moment(curr.date).subtract(i+1, 'days').format('YYYY-MM-DD'),
+              date: moment(curr.date).subtract(
+                i+1,
+                graphType ==='monthly' ? 'months' : (graphType ==='yearly' ? 'years' : 'days')
+              ).format('YYYY-MM-DD'),
               total: 0
             })
           }
