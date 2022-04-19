@@ -207,6 +207,10 @@ module.exports = gql`
         nextPage: Int
         hasMore: Boolean
     }
+    type UserCredentials {
+        token: String!
+        chatToken: String!
+    }
     type Board {
         id: ID
         createdAt: String
@@ -222,6 +226,7 @@ module.exports = gql`
         reply: ReplyData
     }
     type Query {
+        createNewUser(username: String, fullName: String): String
         moreForYou: dataPost
         getPosts(lat: Float, lng: Float, range: Float page: Int type: String, room: ID, username: String): dataPost
         getPopularPosts(lat: Float, lng: Float range: Float): dataPost
@@ -309,10 +314,11 @@ module.exports = gql`
         meta: String
         type: String
     }
+    
     type Mutation {
         # users mutation
         registerUser(registerInput: RegisterInput): String
-        login(username: String!, password: String!): String!
+        login(username: String!, password: String!): UserCredentials
         loginWithFacebook(username: String!, token: String!): String!
         checkUserAccount(email: String): Boolean!
         readNotification( id: ID! ): Notification!

@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "getstream": "^8.0.0",
     "stream-chat": "^6.0.0"
   }
 }

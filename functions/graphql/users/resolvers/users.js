@@ -15,6 +15,7 @@ const { client } = require('../../../utility/algolia');
 const { ALGOLIA_INDEX_POSTS_DESC } = require('../../../constant/post');
 const randomGenerator = require('../../../utility/randomGenerator');
 const { CreateUser } = require('../../../utility/chat');
+const { generateTokenUserChat } = require('../controllers/chats');
 
 firebase.initializeApp(config)
 
@@ -937,7 +938,9 @@ module.exports = {
                     })
                     .then(idToken => idToken)
 
-                return token
+                const chatToken = await generateTokenUserChat(username);
+
+                return { token, chatToken }
             }
             catch (err) {
                 if (err.code === "auth/wrong-password") {
@@ -1050,6 +1053,8 @@ module.exports = {
                             })
 
                             const getStreamUID = await CreateUser({ username, email, gender }); // create getStream Account
+                            console.log('GETSTREAMID: ', getStreamUID);
+                            
                             if (getStreamUID) saveUserData.getStreamID = getStreamUID.userId;
                             
                             await db.doc(`/users/${username}`).set(saveUserData)
@@ -1078,6 +1083,10 @@ module.exports = {
                         joinDate: new Date().toISOString(),
                         profilePicture: profilePicture ? profilePicture : 'https://firebasestorage.googleapis.com/v0/b/insvire-curious-app.appspot.com/o/avatars%2Fprofile_default.png?alt=media'
                     }
+
+                    const getStreamUID = await CreateUser({ username, email, gender }); // create getStream Account
+                    console.log('GETSTREAMID: ', getStreamUID);
+                    if (getStreamUID) newUser.getStreamID = getStreamUID.userId;
 
                     db.doc(`/users/${username}`).set(newUser)
                     return token
