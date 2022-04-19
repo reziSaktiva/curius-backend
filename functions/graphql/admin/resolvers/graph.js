@@ -98,7 +98,6 @@ module.exports = {
         if (childData === 'active') dataDoc = activeUsers
       }
 
-      console.log('dataDoc: ', dataDoc.hits.length);
       const groups = (dataDoc.hits || []).reduce((groups, doc) => {
         const date = doc[`${parentData === 'user' ? 'joinDate':'createdAt'}`].split('T')[0];
         const parseDate = date.split('-')
@@ -129,8 +128,6 @@ module.exports = {
         return dateA > dateB ? 1 : -1;  
       })
 
-      console.log('sortDataByDate: ', sortDataByDate);
-      sortDataByDate.push({ date: '01-12-2021', total: 40 })
       const newGraph = sortDataByDate.reduce(
         (prev, curr) => {
           if (!prev.length) return [curr]; // return initial data
@@ -142,7 +139,7 @@ module.exports = {
             )
           const diffDate = graphType ==='monthly' ? diffDuration.asMonths() : (graphType ==='yearly' ? diffDuration.asYears() : diffDuration.asDays());
 
-          const differentTime = Math.abs(diffDate + 1);
+          const differentTime = Math.floor(Math.abs(diffDate + 1));
 
           const missedDate = []
           
