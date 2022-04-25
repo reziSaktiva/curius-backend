@@ -117,6 +117,15 @@ exports.onPostDelete = functions.region('asia-southeast2')
             const data = snapshot.data()
             postsIndex.deleteObject(context.params.id)
 
+            const userData = await db.doc(`/users/${data.owner}`).get()
+
+            if (userData.exists) {
+                userData.ref.update({
+                    postsCount: userData.data().postsCount - 1,
+                    likesCount: userData.data().likesCount - data.likeCount
+                })
+            }
+
             if (data.room) {
                 roomIndex.partialUpdateObject({
                     postsCount: {
@@ -144,6 +153,14 @@ exports.onPostCreate = functions.region('asia-southeast2')
             const newData = snapshot.data();
             const id = context.params.id;
             let tags = []
+
+            const userData = await db.doc(`/users/${newData.owner}`).get()
+
+            if (userData.exists) {
+                userData.ref.update({
+                    postsCount: userData.data().postsCount + 1
+                })
+            }
 
             if (newData.room) {
                 db.doc(`/room/${newData.room}`).get()
@@ -188,8 +205,18 @@ exports.onPostUpdate = functions.region('asia-southeast2')
     .onUpdate(async (snapshot, _context) => {
         try {
             const newData = snapshot.after.data();
+            const oldData = snapshot.before.data()
+
             const id = newData.id
             const tags = [];
+
+            const userData = await db.doc(`/users/${newData.owner}`).get()
+
+            if (userData.exists) {
+                userData.ref.update({
+                    likesCount: userData.data().likesCount + (newData.likeCount - oldData.likeCount)
+                })
+            }
 
             if (newData.room) {
                 tags.push("has_post_room")
