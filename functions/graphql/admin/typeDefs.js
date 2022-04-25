@@ -356,7 +356,7 @@ module.exports = gql`
     input RequestFilter {
         timestamp: Timestamp
         rating: Rating
-        media: String
+        media: [String]
         status: String
         owner: String
     }

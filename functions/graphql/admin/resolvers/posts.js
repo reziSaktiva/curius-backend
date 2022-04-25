@@ -261,7 +261,11 @@ module.exports = {
         facetFilters.push([`rank: ${ratingFrom} TO ${ratingTo}`])
       }
 
-      if (media) facetFilters.push([`media.type:${media}`])
+      if (media && media.length) {
+        media.map(mediaSearch => {
+          facetFilters.push([`media.type:${mediaSearch}`])
+        })
+      }
 
       if (hasReported) facetFilters.push(['_tags:has_reported'])
 
@@ -372,7 +376,12 @@ module.exports = {
 
       if (ownerPost) facetFilters.push([`owner:${ownerPost}`])
       if (status) facetFilters.push([`status.active:${status == "active" ? 'true' : 'false'}`])
-      
+      if (media && media.length) {
+        media.map(mediaSearch => {
+          facetFilters.push([`media.type:${mediaSearch}`])
+        })
+      }
+
       try {
         const payload = {
           ...defaultPayload,

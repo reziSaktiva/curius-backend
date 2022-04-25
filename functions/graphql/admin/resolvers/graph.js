@@ -121,6 +121,56 @@ module.exports = {
         };
       });
 
+      const sortDataByDate = groupArrays.sort((a, b) => {
+        var dateA = new Date(a.date).getTime();
+        var dateB = new Date(b.date).getTime();
+    
+        return dateA > dateB ? 1 : -1;  
+      })
+
+      const newGraph = sortDataByDate.reduce(
+        (prev, curr) => {
+          if (!prev.length) return [curr]; // return initial data
+
+          const diffDuration = moment.duration(
+            moment(prev[prev.length -1]?.date).diff(
+                moment(curr.date)
+              )
+            )
+          const diffDate = graphType ==='monthly' ? diffDuration.asMonths() : (graphType ==='yearly' ? diffDuration.asYears() : diffDuration.asDays());
+
+          const differentTime = Math.floor(Math.abs(diffDate + 1));
+
+          const missedDate = []
+          
+          console.log('differentTime: ', differentTime);
+          // calculate missing data between prev and current date
+          for(let i = 0; i < differentTime; i++) {
+            missedDate.push({
+              date: moment(curr.date).subtract(
+                i+1,
+                graphType ==='monthly' ? 'months' : (graphType ==='yearly' ? 'years' : 'days')
+              ).format('YYYY-MM-DD'),
+              total: 0
+            })
+          }
+
+          const missedDateSort = missedDate.sort((a, b) => {
+            var dateA = new Date(a.date).getTime();
+            var dateB = new Date(b.date).getTime();
+        
+            return dateA > dateB ? 1 : -1;  
+          });
+          
+          return [
+            ...prev,
+            ...missedDateSort,
+            curr
+          ]
+        },
+        []
+      )
+
       return {
         summary: {
           user: {
@@ -136,7 +186,7 @@ module.exports = {
             totalReported: searchDocsReported.nbHits
           }
         },
-        graph: groupArrays
+        graph: newGraph
       }
     },
     async getAdminLogs(_, { page, perPage, search = '', useExport }, context) {
