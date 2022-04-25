@@ -219,28 +219,31 @@ module.exports = {
             try {
                 await db.doc(`/users/${username}`).get()
                     .then(async doc => {
-                        const getPosts = await db.collection(`posts`).where('owner', '==', doc.data().username).where('status.active', '==', true).get()
+                        // const getPosts = await db.collection(`posts`).where('owner', '==', doc.data().username).where('status.active', '==', true).get()
 
-                        let postsCount = 0;
-                        let repostCount = 0;
-                        let likesCount = 0;
-                        if (!getPosts.empty) {
-                            const posts = getPosts.docs.map(doc => doc.data())
-                            postsCount = posts.length
+                        // let postsCount = 0;
+                        // let repostCount = 0;
+                        // let likesCount = 0;
+                        // if (!getPosts.empty) {
+                        //     const posts = getPosts.docs.map(doc => doc.data())
+                        //     postsCount = posts.length
 
-                            repostCount = posts.reduce((accumulator, current) => {
-                                return accumulator + current.repostCount;
-                            }, 0)
-                            const likeCounter = posts.map((doc) => doc.likeCount);
-                            likesCount = likeCounter.reduce((total, num) => (total += num))
-                        }
+                        //     repostCount = posts.reduce((accumulator, current) => {
+                        //         return accumulator + current.repostCount;
+                        //     }, 0)
+                        //     const likeCounter = posts.map((doc) => doc.likeCount);
+                        //     likesCount = likeCounter.reduce((total, num) => (total += num))
+                        // }
 
-                        // const private = doc.data()._private
-                        // const passwordUpdateHistory = private && private.filter(item => item.lastUpdate)
+                        // // const private = doc.data()._private
+                        // // const passwordUpdateHistory = private && private.filter(item => item.lastUpdate)
 
                         dataUser.user = {
                             email: doc.data().email,
                             id: doc.data().id,
+                            postsCount: doc.data().postsCount,
+                            repostCount: doc.data().repostCount,
+                            likesCount: doc.data().likesCount,
                             username: doc.data().username,
                             fullName: doc.data().fullName,
                             mobileNumber: doc.data().mobileNumber,
