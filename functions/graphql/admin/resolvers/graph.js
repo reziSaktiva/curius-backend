@@ -44,7 +44,14 @@ module.exports = {
 
       if (graphType === 'monthly') {
         dateTo = new Date().getTime();
-        dateFrom = new Date().setFullYear(new Date().getFullYear() - 1)
+        dateFrom = moment().subtract(12, 'month').valueOf()
+
+        // console.log('dateFrom: ', dateFrom.toString());
+      }
+
+      if (graphType === 'yearly') {
+        dateTo = new Date().getTime();
+        dateFrom = moment().subtract(10, 'years').valueOf();
       }
 
       facetFilters.push([`date_timestamp >= ${dateFrom} AND date_timestamp <= ${dateTo}`]);
@@ -98,13 +105,17 @@ module.exports = {
         if (childData === 'active') dataDoc = activeUsers
       }
 
+      // console.log('before regroup: ', dataDoc.hits);
+
       const groups = (dataDoc.hits || []).reduce((groups, doc) => {
         const date = doc[`${parentData === 'user' ? 'joinDate':'createdAt'}`].split('T')[0];
         const parseDate = date.split('-')
         const month = parseDate[1]
         const year = parseDate[0]
 
-        const point = `${graphType === 'monthly' ? `01-${month}-${year}` : date}`;
+        const point = `${graphType === 'monthly'
+          ? `01-${month}-${year}`
+          : graphType === 'yearly'? year : date}`;
 
         if (!groups[point]) {
           groups[point] = [];
@@ -128,7 +139,7 @@ module.exports = {
         return dateA > dateB ? 1 : -1;  
       })
 
-      const newGraph = sortDataByDate.reduce(
+      let newGraph = sortDataByDate.reduce(
         (prev, curr) => {
           if (!prev.length) return [curr]; // return initial data
 
@@ -143,7 +154,6 @@ module.exports = {
 
           const missedDate = []
           
-          console.log('differentTime: ', differentTime);
           // calculate missing data between prev and current date
           for(let i = 0; i < differentTime; i++) {
             missedDate.push({
@@ -169,7 +179,27 @@ module.exports = {
           ]
         },
         []
-      )
+      );
+
+      if (graphType === 'yearly' || graphType === 'monthly') {
+        const target = graphType === 'yearly' ? 'years' : 'months'
+        const diff = moment().diff(moment(dateFrom), target, false);
+
+        // update format date
+        newGraph = newGraph.map(
+          ({ total, date }) => ({
+            total,
+            date: moment(date).format('YYYY-MM-DD')
+          })
+        );
+
+        for (let i = 0; i < diff; i++) {
+          newGraph.push({
+            date: moment().subtract(i+1, target).format('YYYY-MM-DD'),
+            total: 0
+          })
+        }
+      }
 
       return {
         summary: {
