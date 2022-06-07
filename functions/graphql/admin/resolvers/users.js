@@ -35,7 +35,7 @@ module.exports = {
             let facetFilters = []
             let newFilters = ``
             const _tags = []
-            
+
             if (status) facetFilters.push([`status:${status}`])
             if (filters?.hasEmail) _tags.push(`has_email`)
             if (filters?.hasPhoneNumber) _tags.push(`has_phone_number`)
@@ -45,7 +45,7 @@ module.exports = {
             if (timestampFrom) {
                 const dateFrom = moment(timestampFrom).startOf('day').valueOf();
                 const dateTo = moment(timestampTo).endOf('day').valueOf();
-        
+
                 newFilters = `date_timestamp:${dateFrom} TO ${dateTo}`
             }
 
@@ -81,7 +81,7 @@ module.exports = {
                             // while (userIds.length) {
                             //     // const batch = userIds.splice(0, 10);
                             //     // console.log('userIds: ',userIds)
-                            
+
                             //     batches.push(
                             //         db.collection('users')
                             //           .where(

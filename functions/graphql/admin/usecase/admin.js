@@ -18,7 +18,7 @@ const LIST_OF_PRIVILEGE = {
 
 const ROLE_AND_ACCESS = [
   {
-    id: 1, 
+    id: 1,
     name: 'Super Admin',
     priv: [
       LIST_OF_PRIVILEGE.RANDOM,
@@ -82,9 +82,8 @@ module.exports = {
       message,
       createdAt: new Date().getTime()
     };
-
     const index = server.initIndex(ALGOLIA_INDEX_ADMIN_LOGS);
-  
+
     const adminData = await db.collection('/admin_logs').add(payload).then(doc => {
       console.log(doc.id)
       return doc
