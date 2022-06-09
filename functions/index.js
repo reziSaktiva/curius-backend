@@ -45,6 +45,7 @@ serverAdmin.applyMiddleware({ app: admin, path: '/', cors: true })
 const postsIndex = algoliaClient.initIndex(ALGOLIA_INDEX_POSTS)
 const usersIndex = algoliaClient.initIndex(ALGOLIA_INDEX_USERS)
 const roomIndex = algoliaClient.initIndex(ALGOLIA_INDEX_ROOMS)
+const adminIndex = algoliaClient.initIndex('admin')
 
 exports.onUserDelete = functions.region('asia-southeast2')
     .firestore
@@ -237,6 +238,33 @@ exports.onPostUpdate = functions.region('asia-southeast2')
             }
 
             postsIndex.partialUpdateObject(newPostPayload)
+        }
+        catch (err) {
+            functions.logger.log(err)
+        }
+    })
+
+exports.onAdminUpdate = functions.region('asia-southeast2')
+    .firestore
+    .document('/admin/{id}')
+    .onUpdate(async (snapshot, _context) => {
+        const newData = snapshot.after.data();
+        const id = newData.id;
+
+        const newPostPayload = {
+            ...newData,
+            objectID: id,
+        }
+        adminIndex.partialUpdateObject(newPostPayload)
+    })
+
+exports.onAdminDelete = functions.region('asia-southeast2')
+    .firestore
+    .document('/posts/{id}')
+    .onDelete(async (snapshot) => {
+        try {
+            const data = snapshot.data()
+            adminIndex.deleteObject(data.id.toString())
         }
         catch (err) {
             functions.logger.log(err)

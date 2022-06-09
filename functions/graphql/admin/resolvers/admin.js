@@ -71,6 +71,16 @@ module.exports = {
 
             const searchDocs = await index.search('', payload)
 
+            // db.collection('admin').get()
+            //     .then(data => {
+            //         data.docs.forEach(doc => {
+            //             index.saveObject({
+            //                 ...doc.data(),
+            //                 objectID: doc.data().id
+            //             }, { autoGenerateObjectIDIfNotExist: false })
+            //         })
+            //     })
+
             const ids = await searchDocs.hits.map(({ objectID }) => objectID);
 
             const newHits = await db.collection('admin').where('id', 'in', ids).get()
@@ -104,6 +114,8 @@ module.exports = {
     },
     Mutation: {
         async checkEmail(_, { email, uid: id, name, accessCode }) {
+            const index = server.initIndex('admin');
+
             const getAdmin = await db.collection('admin')
                 .where('email', '==', email)
                 .where('accessCode', '==', accessCode)
@@ -117,8 +129,19 @@ module.exports = {
                             console.log(!doc.data().id && !doc.data().name);
                             if (!doc.data().id && !doc.data().name) {
                                 doc.ref.update({ id, name })
+
+                                index.saveObject({
+                                    ...doc.data(),
+                                    objectID: id,
+                                    name
+                                }, { autoGenerateObjectIDIfNotExist: false })
                             } else if (doc.data().id !== id) {
                                 doc.ref.update({ id })
+
+                                index.saveObject({
+                                    ...doc.data(),
+                                    objectID: id
+                                }, { autoGenerateObjectIDIfNotExist: false })
                             }
                             return { valid: !getAdmin.empty, isBanned: false }
                         })
@@ -139,7 +162,6 @@ module.exports = {
 
             try {
                 if (level === 1) {
-                    const index = server.initIndex('admin');
                     const getAdminWithSameEmail = await db.collection('admin').where('email', '==', email).get()
                     const isEmailAlreadyExist = getAdminWithSameEmail.empty
 
@@ -152,11 +174,6 @@ module.exports = {
                             isActive: true,
                             isBanned: false
                         }).then(async doc => {
-                            await index.saveObjects([{
-                                name: adminName,
-                                objectID: doc.id
-                            }])
-
                             doc.update({ id: doc.id })
                         })
 
