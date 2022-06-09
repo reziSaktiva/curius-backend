@@ -27,18 +27,18 @@ const separateNewAndUpdateData = (oldData, newData, target = '') => {
         else newDataNouns.push(noun)
     })
 
-    return { update: dataNeedUpdateNouns, newData: newDataNouns}
+    return { update: dataNeedUpdateNouns, newData: newDataNouns }
 }
 
 const getPathStorageFromUrl = (url) => {
     const baseUrl = "https://firebasestorage.googleapis.com/v0/b/insvire-curious-app.appspot.com/o/";
-    let imagePath = url.replace(baseUrl,"");
+    let imagePath = url.replace(baseUrl, "");
 
     const indexOfEndPath = imagePath.indexOf("?");
 
-    imagePath = imagePath.substring(0,indexOfEndPath);    
-    imagePath = imagePath.replace("%2F","/");
-    imagePath = imagePath.replace("%2F","/");
+    imagePath = imagePath.substring(0, indexOfEndPath);
+    imagePath = imagePath.replace("%2F", "/");
+    imagePath = imagePath.replace("%2F", "/");
 
     return imagePath;
 }
@@ -51,8 +51,8 @@ module.exports = {
             const pagination = {
                 "hitsPerPage": perPage || 10,
                 "page": page || 0,
-              };
-        
+            };
+
             const defaultPayload = {
                 "attributesToRetrieve": "*",
                 "attributesToSnippet": "*:20",
@@ -72,12 +72,12 @@ module.exports = {
             const searchDocs = await index.search('', payload)
 
             const ids = await searchDocs.hits.map(({ objectID }) => objectID);
-            
+
             const newHits = await db.collection('admin').where('id', 'in', ids).get()
             const newDataParse = newHits.docs.map(doc => doc.data());
 
             try {
-                return { ...searchDocs, hits: newDataParse}
+                return { ...searchDocs, hits: newDataParse }
             }
             catch (err) {
                 return err
@@ -90,12 +90,12 @@ module.exports = {
                 const findThemes = name
                     ? await collectionThemes.where('name', '==', name).get()
                     : await collectionThemes.get()
-    
+
                 const data = await findThemes.docs.map(doc => ({
                     id: doc.id,
                     ...doc.data()
                 }))
-    
+
                 return data
             } catch (err) {
                 return err
@@ -136,7 +136,7 @@ module.exports = {
                 id: level,
                 action: LIST_OF_PRIVILEGE.ADD_OR_DELETE_ADMIN
             })) throw new Error('Permission Denied')
-            
+
             try {
                 if (level === 1) {
                     const index = server.initIndex('admin');
@@ -177,7 +177,7 @@ module.exports = {
                 id: level,
                 action: LIST_OF_PRIVILEGE.ADD_OR_DELETE_ADMIN
             })) throw new Error('Permission Denied')
-            
+
             if (!name) throw new Error('Access Denied')
 
             let newDataAdmin = {}
@@ -190,18 +190,18 @@ module.exports = {
                         if (isActive !== undefined && isActive) {
                             payload.isActive = true;
                             payload.isBanned = false;
-                        } 
+                        }
 
                         if (isBanned !== undefined && isBanned) {
                             payload.isActive = false;
                             payload.isBanned = true;
-                        } 
-                        
+                        }
+
                         newDataAdmin = { id: adminId, ...payload };
                         doc.ref.update({ ...oldData, isActive: payload.isActive, isBanned: payload.isBanned })
                     }
                 )
-    
+
                 await createLogs({
                     adminId: id,
                     role: level,
@@ -237,7 +237,7 @@ module.exports = {
                 return {
                     id: writeRequest.id,
                     ...parseSnapshot
-                }   
+                }
             } catch (err) {
                 return err;
             }
@@ -252,7 +252,7 @@ module.exports = {
                 return {
                     id,
                     status: 'Success',
-                    message: 'Success Delete admin '+id
+                    message: 'Success Delete admin ' + id
                 }
             } catch (err) {
                 return err
@@ -272,7 +272,7 @@ module.exports = {
                 return {
                     id,
                     status: 'Success',
-                    message: 'Success Delete theme '+id
+                    message: 'Success Delete theme ' + id
                 }
             } catch (err) {
                 return err
@@ -297,13 +297,13 @@ module.exports = {
                                 )
                             ).delete();
                         }
-                        
+
                         newDataTheme = {
                             id: doc.id,
                             ...oldData,
                             ...newDataTheme
                         }
-                        
+
                         return doc.ref.update(newDataTheme)
                     }
                 )
@@ -330,26 +330,26 @@ module.exports = {
                             newThemes.isDeleted = false;
                             newThemes.isActive = isActive
                         }
-        
+
                         if (colors && colors.length) {
                             const { update, newData } = separateNewAndUpdateData(oldData, colors, 'colors')
 
                             newThemes.colors = (oldData.colors || []).map(updateNewDataArray(update))
-                            if (newData.length) newThemes.colors = [ ...newThemes.colors, ...newData]
+                            if (newData.length) newThemes.colors = [...newThemes.colors, ...newData]
                         }
-        
+
                         if (adjective && adjective.length) {
                             const { update, newData } = separateNewAndUpdateData(oldData, adjective, 'adjective')
 
                             newThemes.adjective = (oldData.adjective || []).map(updateNewDataArray(update))
-                            if (newData.length) newThemes.adjective = [ ...newThemes.adjective, ...newData]
+                            if (newData.length) newThemes.adjective = [...newThemes.adjective, ...newData]
                         }
-        
+
                         if (nouns && nouns.length) {
                             const { update, newData } = separateNewAndUpdateData(oldData, nouns, 'nouns')
 
                             newThemes.nouns = (oldData.nouns || []).map(updateNewDataArray(update))
-                            if (newData.length) newThemes.nouns = [ ...newThemes.nouns, ...newData]
+                            if (newData.length) newThemes.nouns = [...newThemes.nouns, ...newData]
                         }
 
                         newThemes = {
@@ -357,7 +357,7 @@ module.exports = {
                             ...doc.data(),
                             ...newThemes
                         }
-        
+
                         return doc.ref.update(newThemes)
                     }
                 )

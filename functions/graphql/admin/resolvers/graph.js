@@ -1,6 +1,7 @@
 const { client } = require('../../../utility/algolia')
 const moment = require('moment');
-const { ALGOLIA_INDEX_USERS_DESC, ALGOLIA_INDEX_ADMIN_LOGS_DESC, ALGOLIA_INDEX_ADMIN_LOGS, ALGOLIA_INDEX_USERS, ALGOLIA_INDEX_POSTS, ALGOLIA_INDEX_POSTS_ASC } = require('../../../constant/post')
+const { ALGOLIA_INDEX_USERS_DESC, ALGOLIA_INDEX_ADMIN_LOGS_DESC, ALGOLIA_INDEX_ADMIN_LOGS, ALGOLIA_INDEX_USERS, ALGOLIA_INDEX_POSTS, ALGOLIA_INDEX_POSTS_ASC } = require('../../../constant/post');
+const { db } = require('../../../utility/admin');
 // const adminAuthContext = require('../../../utility/adminAuthContext')
 
 const getPersentate = (grandTotal, current) => {
@@ -64,20 +65,20 @@ module.exports = {
       // Posts
       const searchDocs = await index.search('', { ...payload, facetFilters })
 
-      const searchDocsReported = await index.search('', { ...payload, facetFilters: [ ...facetFilters, [`_tags:has_reported`]]})
-      
-      const searchDocsActive = await index.search('', { ...payload, facetFilters: [ ...facetFilters, [`status.active:true`]]})
-      
-      const searchDocsNonActive = await index.search('', { ...payload, facetFilters: [ ...facetFilters, [`status.takedown:true`]]})
+      const searchDocsReported = await index.search('', { ...payload, facetFilters: [...facetFilters, [`_tags:has_reported`]] })
+
+      const searchDocsActive = await index.search('', { ...payload, facetFilters: [...facetFilters, [`status.active:true`]] })
+
+      const searchDocsNonActive = await index.search('', { ...payload, facetFilters: [...facetFilters, [`status.takedown:true`]] })
 
       // Users
       const searchUser = await indexUser.search('', payload)
-      
+
       const searchNewUser = await indexUser.search('', { ...payload, facetFilters })
 
-      const activeUsers = await indexUser.search('', { ...payload, facetFilters: [...facetFilters, [`status:active`]]})
+      const activeUsers = await indexUser.search('', { ...payload, facetFilters: [...facetFilters, [`status:active`]] })
 
-      const searchDeletedUser = await indexUser.search('', { ...payload, facetFilters: [...facetFilters, [`_tags:has_deleted`]]})
+      const searchDeletedUser = await indexUser.search('', { ...payload, facetFilters: [...facetFilters, [`_tags:has_deleted`]] })
 
 
       const section = state.split('.');
@@ -108,14 +109,14 @@ module.exports = {
       // console.log('before regroup: ', dataDoc.hits);
 
       const groups = (dataDoc.hits || []).reduce((groups, doc) => {
-        const date = doc[`${parentData === 'user' ? 'joinDate':'createdAt'}`].split('T')[0];
+        const date = doc[`${parentData === 'user' ? 'joinDate' : 'createdAt'}`].split('T')[0];
         const parseDate = date.split('-')
         const month = parseDate[1]
         const year = parseDate[0]
 
         const point = `${graphType === 'monthly'
           ? `01-${month}-${year}`
-          : graphType === 'yearly'? year : date}`;
+          : graphType === 'yearly' ? year : date}`;
 
         if (!groups[point]) {
           groups[point] = [];
@@ -123,7 +124,7 @@ module.exports = {
         groups[point].push(doc);
         return groups;
       }, {});
-      
+
       // Edit: to add it in the array format instead
       const groupArrays = Object.keys(groups).map((date) => {
         return {
@@ -135,8 +136,8 @@ module.exports = {
       const sortDataByDate = groupArrays.sort((a, b) => {
         var dateA = new Date(a.date).getTime();
         var dateB = new Date(b.date).getTime();
-    
-        return dateA > dateB ? 1 : -1;  
+
+        return dateA > dateB ? 1 : -1;
       })
 
       let newGraph = sortDataByDate.reduce(
@@ -144,22 +145,22 @@ module.exports = {
           if (!prev.length) return [curr]; // return initial data
 
           const diffDuration = moment.duration(
-            moment(prev[prev.length -1]?.date).diff(
-                moment(curr.date)
-              )
+            moment(prev[prev.length - 1]?.date).diff(
+              moment(curr.date)
             )
-          const diffDate = graphType ==='monthly' ? diffDuration.asMonths() : (graphType ==='yearly' ? diffDuration.asYears() : diffDuration.asDays());
+          )
+          const diffDate = graphType === 'monthly' ? diffDuration.asMonths() : (graphType === 'yearly' ? diffDuration.asYears() : diffDuration.asDays());
 
           const differentTime = Math.floor(Math.abs(diffDate + 1));
 
           const missedDate = []
-          
+
           // calculate missing data between prev and current date
-          for(let i = 0; i < differentTime; i++) {
+          for (let i = 0; i < differentTime; i++) {
             missedDate.push({
               date: moment(curr.date).subtract(
-                i+1,
-                graphType ==='monthly' ? 'months' : (graphType ==='yearly' ? 'years' : 'days')
+                i + 1,
+                graphType === 'monthly' ? 'months' : (graphType === 'yearly' ? 'years' : 'days')
               ).format('YYYY-MM-DD'),
               total: 0
             })
@@ -168,10 +169,10 @@ module.exports = {
           const missedDateSort = missedDate.sort((a, b) => {
             var dateA = new Date(a.date).getTime();
             var dateB = new Date(b.date).getTime();
-        
-            return dateA > dateB ? 1 : -1;  
+
+            return dateA > dateB ? 1 : -1;
           });
-          
+
           return [
             ...prev,
             ...missedDateSort,
@@ -195,7 +196,7 @@ module.exports = {
 
         for (let i = 0; i < diff; i++) {
           newGraph.push({
-            date: moment().subtract(i+1, target).format('YYYY-MM-DD'),
+            date: moment().subtract(i + 1, target).format('YYYY-MM-DD'),
             total: 0
           })
         }
@@ -220,6 +221,7 @@ module.exports = {
       }
     },
     async getAdminLogs(_, { page, perPage, search = '', useExport }, context) {
+
       const index = client.initIndex(ALGOLIA_INDEX_ADMIN_LOGS_DESC)
       const defaultPayload = {
         "attributesToRetrieve": "*",
@@ -279,14 +281,14 @@ module.exports = {
       // Static 3
       const twentyEightYearAgo = moment().subtract(23, 'years').unix()
       const thirtytwoYearAgo = moment().subtract(27, 'years').unix()
-      
+
       const index = client.initIndex(ALGOLIA_INDEX_USERS)
 
       const payload = {
         ...defaultPayload,
         ...pagination
       };
-      
+
       console.log(`dob_timestamp:${twentytwoYearAgo * 1000} TO ${eightteenYearAgo * 1000}`)
       console.log(`dob_timestamp:${twentysevenYearAgo * 1000} TO ${twentythreeYearAgo * 1000}`)
       const searchDocsParameterOne = await index.search('', { ...payload, filters: `dob_timestamp:${seventeenYearAgo * 1000} TO ${thirdteenYearAgo * 1000}` })

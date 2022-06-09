@@ -289,7 +289,7 @@ module.exports = {
 
         // while (ids.length) {
         //   const batch = ids.splice(0, 10);
-          
+
         //   batches.push(
         //     db.collection('posts')
         //       .where('id', 'in', [...batch]).get()
@@ -426,23 +426,20 @@ module.exports = {
         const endpoint = `/posts/${idPost}/comments/${idComment}`;
         const comment = await db.doc(endpoint).get();
         const dataParse = await comment.data()
-  
+
         const request = await db.doc(`/posts/${idPost}`).get();
         const dataParsePost = await request.data();
-  
+
         const ownerPost = dataParsePost?.owner;
         const ownerComment = dataParse?.owner;
-        
+
         const requestOwnerPost = await db.doc(`/users/${ownerPost}`).get();
         const dataParseOwner = await requestOwnerPost.data();
-  
-  
+
+
         const requestOwnerComment = await db.doc(`/users/${ownerComment}`).get();
         const dataParseOwnerComment = await requestOwnerComment.data();
-  
-        console.log('comment owner: ', dataParseOwnerComment);
-        console.log('post owner: ', dataParseOwner);
-        console.log('dataParsePost: ', dataParsePost);
+
         return {
           post: dataParsePost,
           owner: dataParseOwner,
@@ -498,7 +495,8 @@ module.exports = {
           adminName: name,
           adminRole: levelName,
           action,
-          isRead: false
+          isRead: false,
+          status: data.data().status.active ? 'active' : data.data().status.takedown && "takedown"
         })
 
         let message = ''

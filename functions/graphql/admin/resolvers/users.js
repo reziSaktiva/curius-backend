@@ -154,7 +154,8 @@ module.exports = {
                         adminName: name,
                         adminRole: levelName,
                         action: "Banned",
-                        isRead: false
+                        isRead: false,
+                        status: user.data().status
                     })
 
                 } else {
