@@ -71,16 +71,6 @@ module.exports = {
 
             const searchDocs = await index.search('', payload)
 
-            // db.collection('admin').get()
-            //     .then(data => {
-            //         data.docs.forEach(doc => {
-            //             index.saveObject({
-            //                 ...doc.data(),
-            //                 objectID: doc.data().id
-            //             }, { autoGenerateObjectIDIfNotExist: false })
-            //         })
-            //     })
-
             const ids = await searchDocs.hits.map(({ objectID }) => objectID);
 
             const newHits = await db.collection('admin').where('id', 'in', ids).get()
@@ -188,7 +178,6 @@ module.exports = {
             }
         },
         async setStatusAdmin(_, { adminId, isActive, isBanned }, ctx) {
-            const index = server.initIndex('admin');
             const { name, level, id } = await adminAuthContext(ctx) // TODO: add condition action only for some privilage
             if (!hasAccessPriv({
                 id: level,
@@ -199,25 +188,27 @@ module.exports = {
 
             let newDataAdmin = {}
             try {
-                await db.doc(`/admin/${adminId}`).get().then(
-                    doc => {
-                        const oldData = doc.data();
-                        const payload = oldData
+                await db.collection('admin')
+                    .where('id', '==', adminId)
+                    .get().then(
+                        (data) => {
+                            const oldData = data.docs[0].data();
+                            const payload = oldData
 
-                        if (isActive !== undefined && isActive) {
-                            payload.isActive = true;
-                            payload.isBanned = false;
+                            if (isActive !== undefined && isActive) {
+                                payload.isActive = true;
+                                payload.isBanned = false;
+                            }
+
+                            if (isBanned !== undefined && isBanned) {
+                                payload.isActive = false;
+                                payload.isBanned = true;
+                            }
+
+                            newDataAdmin = { id: adminId, ...payload };
+                            data.docs[0].ref.update({ ...oldData, isActive: payload.isActive, isBanned: payload.isBanned })
                         }
-
-                        if (isBanned !== undefined && isBanned) {
-                            payload.isActive = false;
-                            payload.isBanned = true;
-                        }
-
-                        newDataAdmin = { id: adminId, ...payload };
-                        doc.ref.update({ ...oldData, isActive: payload.isActive, isBanned: payload.isBanned })
-                    }
-                )
+                    )
 
                 await createLogs({
                     adminId: id,

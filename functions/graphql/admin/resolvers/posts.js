@@ -471,6 +471,7 @@ module.exports = {
       const index = server.initIndex(ALGOLIA_INDEX_POSTS);
       const targetCollection = `/posts/${postId}`
       const data = await db.doc(targetCollection).get()
+      const owner = await db.doc(`/users/${data.data().owner}`).get()
 
       if (shouldBeRequestApproval) {
         console.log('should request approval');
@@ -490,7 +491,12 @@ module.exports = {
 
         await db.collection('/notifications').add({
           type: 'posts',
-          data: { postId, ...(flags.length ? { flags } : {}) },
+          data: {
+            ...(flags.length ? { flags } : {}),
+            postId,
+            username: owner.data().username,
+            profilePicture: owner.data().profilePicture
+          },
           isVerify: false,
           adminName: name,
           adminRole: levelName,

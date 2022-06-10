@@ -149,13 +149,16 @@ module.exports = {
                     }
                     await db.collection('/notifications').add({
                         type: 'users',
-                        data: { username },
+                        data: {
+                            username,
+                            profilePicture: userData.profilePicture
+                        },
                         isVerify: false,
                         adminName: name,
                         adminRole: levelName,
                         action: "Banned",
                         isRead: false,
-                        status: user.data().status
+                        status: userData.status
                     })
 
                 } else {
