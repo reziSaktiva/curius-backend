@@ -116,7 +116,6 @@ module.exports = {
                 if (!getAdmin.empty) {
                     return db.doc(`/admin/${getAdmin.docs[0].id}`).get()
                         .then(doc => {
-                            console.log(!doc.data().id && !doc.data().name);
                             if (!doc.data().id && !doc.data().name) {
                                 doc.ref.update({ id, name })
 
@@ -125,8 +124,14 @@ module.exports = {
                                     objectID: id,
                                     name
                                 }, { autoGenerateObjectIDIfNotExist: false })
-                            } else if (doc.data().id !== id) {
+                            }
+                            if (doc.data().id !== id) {
                                 doc.ref.update({ id })
+
+                                console.log({
+                                    ...doc.data(),
+                                    objectID: id
+                                });
 
                                 index.saveObject({
                                     ...doc.data(),
@@ -163,8 +168,6 @@ module.exports = {
                             accessCode,
                             isActive: true,
                             isBanned: false
-                        }).then(async doc => {
-                            doc.update({ id: doc.id })
                         })
 
                         return `new admin has been created by ${name}`

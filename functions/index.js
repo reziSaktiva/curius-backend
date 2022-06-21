@@ -271,5 +271,34 @@ exports.onAdminDelete = functions.region('asia-southeast2')
         }
     })
 
+exports.onRoomUpdate = functions.region('asia-southeast2')
+    .firestore
+    .document('/room/{id}')
+    .onDelete(async (snapshot) => {
+        try {
+            const data = snapshot.data()
+
+            if (new Date(data.startingDate).getTime() < Date.now() && new Date(data.tillDate).getTime() > Date.now()) {
+                db.doc(`/room/${snapshot.id}`).update({ isDeactive: true })
+
+                roomIndex.partialUpdateObject({
+                    ...data,
+                    isDeactive: true,
+                    objectID: snapshot.id
+                })
+            } else {
+                db.doc(`/room/${snapshot.id}`).update({ isDeactive: false })
+                roomIndex.partialUpdateObject({
+                    ...data,
+                    isDeactive: false,
+                    objectID: snapshot.id
+                })
+            }
+        }
+        catch (err) {
+            functions.logger.log(err)
+        }
+    })
+
 exports.graphql = functions.region('asia-southeast2').https.onRequest(client)
 exports.admin = functions.region('asia-southeast2').https.onRequest(admin)

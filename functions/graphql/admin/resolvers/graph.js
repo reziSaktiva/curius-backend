@@ -1,6 +1,6 @@
 const { client } = require('../../../utility/algolia')
 const moment = require('moment');
-const { ALGOLIA_INDEX_USERS_DESC, ALGOLIA_INDEX_ADMIN_LOGS_DESC, ALGOLIA_INDEX_ADMIN_LOGS, ALGOLIA_INDEX_USERS, ALGOLIA_INDEX_POSTS, ALGOLIA_INDEX_POSTS_ASC } = require('../../../constant/post');
+const { ALGOLIA_INDEX_USERS_DESC, ALGOLIA_INDEX_ADMIN_LOGS_DESC, ALGOLIA_INDEX_USERS, ALGOLIA_INDEX_POSTS } = require('../../../constant/post');
 const { db } = require('../../../utility/admin');
 // const adminAuthContext = require('../../../utility/adminAuthContext')
 
@@ -37,23 +37,24 @@ module.exports = {
 
       let dateTo = ''
       let dateFrom = ''
+      const today = new Date();
 
       if (graphType === 'daily') {
-        dateTo = new Date().getTime();
-        dateFrom = new Date().setMonth(new Date().getMonth() - 1)
+        dateTo = today.getTime();
+        dateFrom = today.setMonth(today.getMonth() - 1);
       }
 
       if (graphType === 'monthly') {
-        dateTo = new Date().getTime();
+        dateTo = today.getTime();
         dateFrom = moment().subtract(12, 'month').valueOf()
-
-        // console.log('dateFrom: ', dateFrom.toString());
       }
 
       if (graphType === 'yearly') {
-        dateTo = new Date().getTime();
+        dateTo = today.getTime();
         dateFrom = moment().subtract(10, 'years').valueOf();
       }
+
+      console.log(Date(dateFrom));
 
       facetFilters.push([`date_timestamp >= ${dateFrom} AND date_timestamp <= ${dateTo}`]);
 
