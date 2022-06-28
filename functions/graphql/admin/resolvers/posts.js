@@ -302,8 +302,13 @@ module.exports = {
         // const getPosts = await db.collection('posts').where('id', 'in', ids).get()
         const posts = await searchDocs.hits.map(async (doc, idx) => {
           const dataParse = doc
-          console.log('timestamp: ', dataParse?.createdAt)
-          if (!useDetailLocation) return dataParse
+          const userData = await db.doc(`/users/${dataParse.owner}`).get()
+
+          if (!useDetailLocation) return {
+            ...dataParse,
+            profilePicture: userData.data().profilePicture,
+            id: dataParse.id ? dataParse.id : dataParse.objectID,
+          }
 
           const request = await googleMapsClient
             .reverseGeocode({
@@ -320,6 +325,8 @@ module.exports = {
 
           return {
             ...dataParse,
+            profilePicture: userData.data().profilePicture,
+            id: dataParse.id ? dataParse.id : dataParse.objectID,
             reportedCount: searchDocs[idx].reportedCount,
             location: {
               ...dataParse.location,
@@ -341,6 +348,9 @@ module.exports = {
       const timestampFrom = get(filters, 'timestamp.from', '');
       const ownerPost = get(filters, 'owner', '');
       const status = get(filters, 'status', 0);
+      const ratingFrom = get(filters, 'ratingFrom', 0);
+      const ratingTo = get(filters, 'ratingTo', 0);
+      const media = get(filters, 'media', []);
 
       let indexKey = 'report_comments'
       if (sortBy === 'desc') indexKey = 'report_comments_date_desc'
@@ -376,6 +386,9 @@ module.exports = {
 
       if (ownerPost) facetFilters.push([`owner:${ownerPost}`])
       if (status) facetFilters.push([`status.active:${status == "active" ? 'true' : 'false'}`])
+      if (ratingFrom && ratingTo) {
+        facetFilters.push([`rank: ${ratingFrom} TO ${ratingTo}`])
+      }
       if (media && media.length) {
         media.map(mediaSearch => {
           facetFilters.push([`media.type:${mediaSearch}`])
@@ -403,11 +416,12 @@ module.exports = {
             ...doc,
             text: dataParse.textContent || '',
             owner: dataParse.owner || '',
-            timestamp: new Date(dataParse.createdAt).getTime(),
+            timestamp: dataParse.createdAt,
             reportedCount: dataParse.reportedCount,
             profilePicture: user.profilePicture || '',
             id: doc.idComment,
-            status: dataParse.status.active ? 'Active' : (dataParse.status.takedown && 'Takedown')
+            status: dataParse.status.active ? 'Active' : (dataParse.status.takedown && 'Takedown'),
+            media: dataParse.media
           })
         })
 

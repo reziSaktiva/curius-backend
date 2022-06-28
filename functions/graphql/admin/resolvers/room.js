@@ -13,7 +13,7 @@ const { hasAccessPriv, LIST_OF_PRIVILEGE } = require('../usecase/admin');
 
 module.exports = {
   Query: {
-    async searchRoom(_, { name, location, useDetailLocation, perPage, page, isDeactive, sortBy }, context) {
+    async searchRoom(_, { name, location, useDetailLocation, perPage, page, isDeactive, sortBy = 'desc' }, context) {
       let indexKey = ALGOLIA_INDEX_ROOMS
       if (sortBy === 'asc') indexKey = ALGOLIA_INDEX_ROOMS_ASC
       if (sortBy === 'desc') indexKey = ALGOLIA_INDEX_ROOMS_DESC
@@ -60,7 +60,6 @@ module.exports = {
 
       const geoLocPayload = location && aroundLatLng ? {
         "aroundLatLng": aroundLatLng,
-        "aroundRadius": range * 1000,
       } : {};
 
       const pagination = {
@@ -80,7 +79,7 @@ module.exports = {
         const ids = searchDocs.hits.map(doc => doc.objectID)
         if (!ids.length) return searchDocs
 
-        const getRooms = await db.collection('room').where('id', 'in', ids).get()
+        const getRooms = await db.collection('room').where('id', 'in', ids).orderBy('createdAt', sortBy).get()
         const rooms = await getRooms.docs.map(async (doc, idx) => {
           const dataParse = doc.data()
           if (!useDetailLocation || !dataParse?.location?.lat) return dataParse
@@ -171,7 +170,7 @@ module.exports = {
 
       try {
         if (name) {
-          await db.collection('room').add(data)
+          return await db.collection('room').add(data)
             .then(async doc => {
               const newRoomPayload = {
                 ...data,
@@ -187,9 +186,12 @@ module.exports = {
               };
               await index.saveObjects([newRoomPayload], { autoGenerateObjectIDIfNotExist: false })
               doc.update({ id: doc.id })
-            })
 
-          return `room ${roomName} has been created by ${name}`
+              return {
+                ...data,
+                id: doc.id,
+              }
+            })
         } else {
           throw new UserInputError("please login first")
         }

@@ -29,6 +29,7 @@ module.exports = gql`
         subscribe: [Subscribe],
         hastags: [String]
         room: String
+        profilePicture: String
     }
     type Room {
         id: ID
@@ -221,12 +222,13 @@ module.exports = gql`
         id: ID
         text: String
         owner: String
-        timestamp: Float
+        timestamp: String
         reportedCount: Int
         status: String
         profilePicture: String
         isTakedown: Boolean
         isActive: Boolean
+        media: Media
     }
     type SearchCommentReported {
         hits: [CommentReported]
@@ -279,6 +281,7 @@ module.exports = gql`
 
         # Graph
         getGraphSummary(graphType: String, state: String): GraphData
+        getGraphData(graphType: String, state: String): [DataStatistic]
         getAdminLogs(page: Int, perPage: Int, search: String, useExport: Boolean): SearchAdminLogs
         getStaticUserByAge: [StatisticUser]
     }
@@ -460,7 +463,7 @@ module.exports = gql`
         deleteConfigThemesById(attr: String!, themeId: ID! , id: ID!): ThemeType
 
         # Create New Data
-        createRoom(roomName: String, description: String, startingDate: String, tillDate: String, displayPicture: String, location: LatLongWithRangeInput, range: Int): String
+        createRoom(roomName: String, description: String, startingDate: String, tillDate: String, displayPicture: String, location: LatLongWithRangeInput, range: Int): Room
         updateRoom(isDeactive: Boolean, roomId: ID, roomName: String, description: String, startingDate: String, tillDate: String, displayPicture: String, location: LatLongWithRangeInput, range: Int): Room
         reportPostById(idPost: ID!, content: String, userIdReporter: ID!): ReportPost!
         reportedComment(idComment: ID!, idPost: ID, reason: String!, roomId: ID, username: String!): String
