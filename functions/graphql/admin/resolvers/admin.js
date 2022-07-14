@@ -224,7 +224,7 @@ module.exports = {
                 return err;
             }
         },
-        async createNewTheme(_, { name, colors, adjective, nouns }, context) {
+        async createNewTheme(_, { name, colors = [], adjective = [], nouns = [] }, context) {
             const { name: adminName, level } = await adminAuthContext(context) // TODO: add condition action only for some privilage
             if (adminName && (level !== 1)) throw new Error('Access Denied')
             try {
@@ -242,13 +242,16 @@ module.exports = {
 
                 if (isExists.length) throw new Error("Name is already exists")
 
-                const writeRequest = await db.collection('/themes').add(payload)
-                const parseSnapshot = await (await writeRequest.get()).data()
+                return await db.collection('/themes').add(payload).then(async (doc) => {
+                    doc.update({ id: doc.id })
 
-                return {
-                    id: writeRequest.id,
-                    ...parseSnapshot
-                }
+                    const parseSnapshot = await doc.get()
+
+                    return {
+                        id: doc.id,
+                        ...parseSnapshot.data()
+                    }
+                })
             } catch (err) {
                 return err;
             }

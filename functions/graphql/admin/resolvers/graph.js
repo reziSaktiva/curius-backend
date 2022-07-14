@@ -504,8 +504,10 @@ module.exports = {
         "facets": ["*"]
       };
 
+      const totalLogs = await index.search('', { "hitsPerPage": 1 })
+
       const pagination = {
-        "hitsPerPage": useExport ? 1000 : perPage || 10,
+        "hitsPerPage": useExport ? totalLogs.nbHits || 0 : perPage || 10,
         "page": page || 0,
       };
 

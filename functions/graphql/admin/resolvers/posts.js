@@ -55,7 +55,7 @@ module.exports = {
       const userReporter = await getUserReported.docs.map(doc => doc.data());
 
       const list = searchDocs.hits.map(doc => {
-        const username = userReporter.filter(v => v.id === doc.userIdReporter)[0].username
+        const username = userReporter.filter(v => v.id === doc.userIdReporter)[0].username;
 
         return { ...doc, username }
       })
@@ -152,21 +152,17 @@ module.exports = {
         const searchDocs = await index.search(search, payload)
 
         const comments = await searchDocs.hits.map(async doc => {
-          const comment = await db.doc(`/posts/${doc.idPost}/comments/${doc.idComment}`).get()
-          const dataParse = await comment.data()
-          console.log('entrypoint: ', `/posts/${doc.idPost}/comments/${doc.idComment}`)
-          console.log('dataParse: ', dataParse)
-          return ({
-            text: dataParse.text,
-            owner: dataParse.owner,
-            id: doc.idComment,
-            timestamp: dataParse.timestamp,
-            reportedCount: dataParse.reportedCount,
-            status: dataParse.status.active ? 'Active' : (dataParse.status.takedown && 'Takedown')
-          })
+          // const comment = await db.doc(`/posts/${doc.idPost}/comments/${doc.idComment}`).get()
+          // const dataParse = await comment.data()
+          const getReportComment = await db.collection('reports_comment').where('idComment', '==', doc.idComment).get()
+          const ReportComment = !getReportComment.empty && getReportComment.docs[0].data()
+
+          const getUsername = await db.collection('users').where('id', '==', ReportComment.userIdReporter).get()
+          const username = getUsername.docs[0].data().username;
+
+          return ({ ...ReportComment, content: ReportComment.reason, username })
         })
 
-        console.log(await comments)
         return {
           ...searchDocs,
           hits: comments
@@ -239,8 +235,10 @@ module.exports = {
         "aroundRadius": range * 1000,
       } : {};
 
+      const totalPosts = await index.search('', { "hitsPerPage": 1 })
+
       const pagination = {
-        "hitsPerPage": useExport ? 1000 : perPage || 10,
+        "hitsPerPage": useExport ? totalPosts.nbHits || 0 : perPage || 10,
         "page": page || 0,
       }
       const facetFilters = []
@@ -307,6 +305,8 @@ module.exports = {
           if (!useDetailLocation) return {
             ...dataParse,
             profilePicture: userData.data().profilePicture,
+            email: userData.data().email,
+            mobileNumber: userData.data().mobileNumber,
             id: dataParse.id ? dataParse.id : dataParse.objectID,
           }
 
@@ -326,6 +326,8 @@ module.exports = {
           return {
             ...dataParse,
             profilePicture: userData.data().profilePicture,
+            email: userData.data().email,
+            mobileNumber: userData.data().mobileNumber,
             id: dataParse.id ? dataParse.id : dataParse.objectID,
             reportedCount: searchDocs[idx].reportedCount,
             location: {
@@ -343,7 +345,7 @@ module.exports = {
         return err
       }
     },
-    async searchCommentReported(_, { search, sortBy = 'desc', page, perPage, filters, useExport = false }) {
+    async searchCommentReported(_, { search, sortBy = "desc", page, perPage, filters, useExport = false }) {
       const timestampTo = get(filters, 'timestamp.to', '');
       const timestampFrom = get(filters, 'timestamp.from', '');
       const ownerPost = get(filters, 'owner', '');
@@ -370,8 +372,10 @@ module.exports = {
         "facets": ["*"]
       };
 
+      const totalComment = await index.search('', { "hitsPerPage": 1 })
+
       const pagination = {
-        "hitsPerPage": useExport ? 100 : perPage || 10,
+        "hitsPerPage": useExport ? totalComment.nbHits || 0 : perPage || 10,
         "page": page || 0,
       }
 
@@ -401,7 +405,7 @@ module.exports = {
           ...pagination
         };
         if (facetFilters.length) payload.facetFilters = facetFilters
-        // console.log('payload: ', payload)
+
         const searchDocs = await index.search(search, payload)
 
         const comments = !searchDocs.hits.length ? [] : searchDocs.hits.map(async doc => {
@@ -420,7 +424,7 @@ module.exports = {
             reportedCount: dataParse.reportedCount,
             profilePicture: user.profilePicture || '',
             id: doc.idComment,
-            status: dataParse.status.active ? 'Active' : (dataParse.status.takedown && 'Takedown'),
+            status: dataParse.status,
             media: dataParse.media
           })
         })
@@ -497,10 +501,11 @@ module.exports = {
         const posts = getPosts.docs.map(doc => doc.data())
         // send request approval
         if (posts.length) {
-          return {
-            ...data.data(),
-            message: `You or other admin already request to set ${action} this post`
-          }
+          // return {
+          //   ...data.data(),
+          //   message: `You or other admin already request to set ${action} this post`
+          // }
+          throw new Error(`You or other admin already request to set ${action} this post`)
         }
 
         await db.collection('/notifications').add({
@@ -520,9 +525,9 @@ module.exports = {
         })
 
         let message = ''
-        if (takedown) message = `Admin ${name} request to reported Post Id ${docId}`
-        if (active) message = `Admin ${name} request to activate Post Id ${docId}`
-        if (flags.length) message = `Admin ${name} request set flag ${flags.join(',')} to Post Id ${docId}`
+        if (takedown) message = `Admin ${name} request to reported Post Id ${postId}`
+        if (active) message = `Admin ${name} request to activate Post Id ${postId}`
+        if (flags.length) message = `Admin ${name} request set flag ${flags.join(',')} to Post Id ${postId}`
 
         await createLogs({ adminId: id, role: level, message, name })
 
@@ -657,13 +662,11 @@ module.exports = {
         owner: newData.owner,
         timestamp: newData.createAt,
         reportedCount: newData.reportedCount,
-        status: newData.status.active ? 'Active' : (newData.status.takedown && 'Takedown')
+        status: newData.status
       }
 
     },
     async createReportPostById(_, { idPost, content, userIdReporter }, _ctx) {
-      // TODO: makesure which level can reported post
-      console.log('test');
       const { name, level, id } = await adminAuthContext(_ctx)
 
       if (!name) throw new Error('permission denied')
@@ -685,9 +688,9 @@ module.exports = {
 
         const index = server.initIndex(ALGOLIA_INDEX_REPORT_POSTS);
         const indexPost = server.initIndex(ALGOLIA_INDEX_POSTS);
-        console.log('init server algo ....');
+
         const oldDocAlgolia = await indexPost.search(idPost);
-        console.log('oldData: ', oldDocAlgolia);
+
         let _tags = oldDocAlgolia.hits[0]._tags || []
         _tags.push('has_reported')
 

@@ -26,8 +26,10 @@ module.exports = {
                 "facets": ["*"]
             };
 
+            const totalUsers = await index.search('', { "hitsPerPage": 1 })
+
             const pagination = {
-                "hitsPerPage": useExport ? 1000 : perPage || 10,
+                "hitsPerPage": useExport ? totalUsers.nbHits || 0 : perPage || 10,
                 "page": page || 0,
             }
             const timestampFrom = get(filters, 'timestamp.from', '');
@@ -111,14 +113,14 @@ module.exports = {
     },
     Mutation: {
         async changeUserStatus(_, { status, username }, _context) {
-            const { name, level, id, levelName } = await adminAuthContext(_context)
+            const { name, level, id, levelName } = await adminAuthContext(_context);
             // only level 3 should be ask for review update user status
             const listStatus = ['active', 'banned', 'delete', 'cancel'];
 
-            const includeStatus = listStatus.includes(status)
-            const shouldBeRequestApproval = !!(status && level === 3)
+            const includeStatus = listStatus.includes(status);
+            const shouldBeRequestApproval = !!(status && level === 3);
 
-            if (status === 'banned' && !hasAccessPriv({ id: level, action: LIST_OF_PRIVILEGE.BAN_USER })) throw new Error('Permission Denied')
+            if (!hasAccessPriv({ id: level, action: LIST_OF_PRIVILEGE.BAN_USER })) throw new Error('Permission Denied')
 
             if (!includeStatus) {
                 return {
@@ -141,11 +143,12 @@ module.exports = {
                     const users = getUsers.docs.map(doc => doc.data())
 
                     if (users.length) {
-                        return {
-                            ...userData,
-                            status: userData.status,
-                            message: "You or other admin already request to change status for this user"
-                        }
+                        // return {
+                        //     ...userData,
+                        //     status: userData.status,
+                        //     message: "You or other admin already request to change status for this user"
+                        // }
+                        throw new Error('You or other admin already request to change status for this user')
                     }
                     await db.collection('/notifications').add({
                         type: 'users',
