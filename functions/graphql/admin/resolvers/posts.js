@@ -252,7 +252,7 @@ module.exports = {
       if (timestampFrom) {
         const dateFrom = moment(timestampFrom).startOf('day').valueOf();
         const dateTo = moment(timestampTo).endOf('day').valueOf();
-
+        console.log(dateTo);
         newFilters = `date_timestamp:${dateFrom} TO ${dateTo}`
       }
       if (ratingFrom && ratingTo) {
@@ -380,16 +380,17 @@ module.exports = {
       }
 
       const facetFilters = []
+      let newFilters = ``
 
-      if (timestampFrom) {
+      if (timestampFrom && timestampTo) {
         const dateFrom = new Date(timestampFrom).getTime();
         const dateTo = new Date(timestampTo).getTime();
 
-        facetFilters.push([`date_timestamp >= ${dateFrom} AND date_timestamp <= ${dateTo}`]);
+        newFilters = `comment_timestamp:${dateFrom} TO ${dateTo}`
       }
 
       if (ownerPost) facetFilters.push([`owner:${ownerPost}`])
-      if (status) facetFilters.push([`status.active:${status == "active" ? 'true' : 'false'}`])
+      if (status) facetFilters.push([`isActive:${status == "active" ? 'true' : 'false'}`])
       if (ratingFrom && ratingTo) {
         facetFilters.push([`rank: ${ratingFrom} TO ${ratingTo}`])
       }
@@ -402,19 +403,27 @@ module.exports = {
       try {
         const payload = {
           ...defaultPayload,
-          ...pagination
+          ...pagination,
+          filters: newFilters,
         };
         if (facetFilters.length) payload.facetFilters = facetFilters
+
+        console.log(payload);
 
         const searchDocs = await index.search(search, payload)
 
         const comments = !searchDocs.hits.length ? [] : searchDocs.hits.map(async doc => {
-          const endpoint = doc.parentTypePost === 'global-posts' ? `/posts/${doc.idPost}/comments/${doc.idComment}` : `/room/${doc.idRoom}/posts/${doc.idPost}/comments/${doc.idComment}`
+          const endpoint = `/posts/${doc.idPost}/comments/${doc.idComment}`;
           const comment = await db.doc(endpoint).get()
           const dataParse = await comment.data()
 
           const getUserDetail = dataParse && await db.doc(`/users/${dataParse.owner}`).get()
           const user = dataParse && await getUserDetail.data()
+
+          // await index.partialUpdateObject({
+          //   objectID: comment.id,
+          //   status: dataParse.status
+          // })
 
           return ({
             ...doc,
@@ -777,18 +786,18 @@ module.exports = {
 
       return "Success Replication Posts Index Algolia"
     },
-    async reportedComment(_, { idComment, idPost, reason, roomId, username }, _ctx) {
+    async reportedComment(_, { idComment, idPost, reason, roomId, username }) {
       /**
        * Get Comment 
        */
-      const { name, level, id } = await adminAuthContext(_ctx)
-      if (!name) throw new Error('permission denied')
+      // const { name, level, id } = await adminAuthContext(_ctx)
+      // if (!name) throw new Error('permission denied')
 
       try {
         let commentText = ''
         let flagHasReportedBefore = false;
-        const commentCollection = db.doc(`/${roomId ? `room/${roomId}/posts` : 'posts'}/${idPost}/comments/${idComment}`)
-        await commentCollection.get().then(
+        const commentData = db.doc(`/posts/${idPost}/comments/${idComment}`)
+        await commentData.get().then(
           doc => {
             if (!doc.exists) throw new UserInputError('Postingan tidak ditemukan/sudah dihapus')
 
@@ -812,6 +821,8 @@ module.exports = {
 
         if (flagHasReportedBefore) return `Already reported this comment before`
 
+        const dataComment = await commentData.get()
+
         const payload = {
           idComment,
           idPost,
@@ -819,10 +830,12 @@ module.exports = {
           parentTypePost: roomId ? 'room' : 'global-posts',
           text: commentText,
           date_timestamp: new Date().getTime(),
+          comment_timestamp: new Date(dataComment.data().createdAt).getTime(),
           reason,
-          totalReported: 1,
-          isTakedown: false,
-          isActive: true
+          commentOwner: dataComment.data().owner,
+          isActive: dataComment.data().status.active,
+          isTakedown: dataComment.data().status.takedown,
+          media: dataComment.data().media,
         }
 
         const writeRequest = await db.collection('/reports_comment').add(payload)
@@ -840,16 +853,16 @@ module.exports = {
             })
 
 
-            let message = ''
-            if (takedown) message = `Admin ${name} has reported Comment Id ${idComment}`
-            if (active) message = `Admin ${name} has activate Comment Id ${idComment}`
-            if (deleted) message = `Admin ${name} has deleted Comment Id ${idComment}`
+            // let message = ''
+            // if (takedown) message = `Admin ${name} has reported Comment Id ${idComment}`
+            // if (active) message = `Admin ${name} has activate Comment Id ${idComment}`
+            // if (deleted) message = `Admin ${name} has deleted Comment Id ${idComment}`
 
-            await createLogs({ adminId: id, role: level, message, name })
+            // await createLogs({ adminId: id, role: level, message, name })
           }
         ).catch(
-          async err => {
-            await index.saveObjects([payload], { autoGenerateObjectIDIfNotExist: true }).catch(err => {
+          async () => {
+            await index.saveObjects([{ ...payload, objectID: commentData.id }], { autoGenerateObjectIDIfNotExist: true }).catch(err => {
               console.log(err);
             })
           }

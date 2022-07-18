@@ -148,10 +148,9 @@ module.exports = {
   },
   Mutation: {
     async createRoom(_, { roomName, description, startingDate, tillDate, displayPicture, location, range }, context) {
-      const { name, level } = await adminAuthContext(context)
-      console.log('location: ', location);
-      console.log(typeof location.lat);
-      if (!hasAccessPriv({ id: level, action: LIST_OF_PRIVILEGE.CREATE_ROOM })) throw new Error('Permission Denied')
+      const { name, level } = await adminAuthContext(context);
+
+      if (!hasAccessPriv({ id: level, action: LIST_OF_PRIVILEGE.CREATE_ROOM })) throw new Error('Permission Denied');
 
       const index = server.initIndex(ALGOLIA_INDEX_ROOMS)
 
@@ -166,7 +165,7 @@ module.exports = {
         },
         displayPicture,
         totalPosts: 0,
-        isDeactive: new Date(data.startingDate).getTime() < Date.now() && new Date(data.tillDate).getTime() > Date.now(),
+        isDeactive: new Date(startingDate).getTime() < Date.now() && new Date(tillDate).getTime() > Date.now(),
         createdBy: name,
         createdAt: new Date().toISOString()
       }
