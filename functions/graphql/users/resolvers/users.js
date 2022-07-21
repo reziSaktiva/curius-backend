@@ -253,9 +253,6 @@ module.exports = {
                             profilePicture: doc.data().profilePicture,
                             interest: doc.data().interest,
                             settings: doc.data().settings,
-                            postsCount,
-                            repostCount,
-                            likesCount
                         }
 
                         return db.collection(`/users/${username}/liked`).get()

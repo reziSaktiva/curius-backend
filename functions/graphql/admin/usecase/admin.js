@@ -9,6 +9,7 @@ const LIST_OF_PRIVILEGE = {
   BAN_USER: 'Ban-User',
   ADD_OR_DELETE_ADMIN: 'Add-or-Delete-Admin',
   SET_FLAGS: 'Set-Flags',
+  REMOVE_FLAGS: 'Remove-Flags',
   TAKEDOWN: 'Takedown',
   DELETE_POSTS: 'Delete-Posts',
   ACTIVE_POSTS: 'Active-Posts',
@@ -30,7 +31,8 @@ const ROLE_AND_ACCESS = [
       LIST_OF_PRIVILEGE.DELETE_POSTS,
       LIST_OF_PRIVILEGE.CREATE_ROOM,
       LIST_OF_PRIVILEGE.ACTIVE_POSTS,
-      LIST_OF_PRIVILEGE.CMS
+      LIST_OF_PRIVILEGE.CMS,
+      LIST_OF_PRIVILEGE.REMOVE_FLAGS
     ]
   },
   {
@@ -45,7 +47,8 @@ const ROLE_AND_ACCESS = [
       LIST_OF_PRIVILEGE.DELETE_POSTS,
       LIST_OF_PRIVILEGE.CREATE_ROOM,
       LIST_OF_PRIVILEGE.ACTIVE_POSTS,
-      LIST_OF_PRIVILEGE.CMS
+      LIST_OF_PRIVILEGE.CMS,
+      LIST_OF_PRIVILEGE.REMOVE_FLAGS
     ]
   },
   {
@@ -65,6 +68,7 @@ const ROLE_AND_ACCESS = [
       LIST_OF_PRIVILEGE.ACTIVE_POSTS,
       LIST_OF_PRIVILEGE.EXPORT,
       LIST_OF_PRIVILEGE.SET_FLAGS,
+      LIST_OF_PRIVILEGE.REMOVE_FLAGS,
       LIST_OF_PRIVILEGE.TAKEDOWN,
       LIST_OF_PRIVILEGE.DELETE_POSTS
     ]
@@ -84,10 +88,7 @@ module.exports = {
     };
     const index = server.initIndex(ALGOLIA_INDEX_ADMIN_LOGS);
 
-    const adminData = await db.collection('/admin_logs').add(payload).then(doc => {
-      console.log(doc.id)
-      return doc
-    })
+    const adminData = await db.collection('/admin_logs').add(payload).then(doc => doc)
     const parseSnapshot = await (await adminData.get()).data()
 
     await index.saveObjects([{

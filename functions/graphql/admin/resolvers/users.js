@@ -159,13 +159,12 @@ module.exports = {
                         isVerify: false,
                         adminName: name,
                         adminRole: levelName,
-                        action: "Banned",
+                        action: status,
                         isRead: false,
                         status: userData.status
                     })
 
                 } else {
-                    console.log('approve direct');
                     await db.doc(`/users/${username}`)
                         .get()
                         .then(doc => {
@@ -174,7 +173,6 @@ module.exports = {
                 }
 
                 if (!shouldBeRequestApproval) {
-                    console.log('userData.id: ', userData.id);
                     await index.partialUpdateObject({
                         objectID: userData.id,
                         status
@@ -190,7 +188,6 @@ module.exports = {
                     name
                 })
 
-                console.log('userData.status: ', userData.status);
                 const message = shouldBeRequestApproval ? 'waiting approval from super admin' : 'success'
                 const response = {
                     ...userData,
@@ -215,11 +212,15 @@ module.exports = {
                 .get()
                 .then(doc => {
                     notifData = doc.data()
-                    if (notifData.type === 'users' && notifData.action === 'Banned') {
+                    if (notifData.type === 'users' && notifData.action) {
                         return doc.ref.update({ isVerify: true, approve })
                     }
 
                     if (notifData.type === 'posts' && notifData.action) {
+                        return doc.ref.update({ isVerify: true, approve })
+                    }
+
+                    if (notifData.type === 'comments' && notifData.action) {
                         return doc.ref.update({ isVerify: true, approve })
                     }
 
@@ -229,11 +230,10 @@ module.exports = {
             const dataParse = userData.data();
 
             if (!approve) {
-                console.log('decline log')
                 await createLogs({
                     adminId: id,
                     role: level,
-                    message: `Admin ${name} has decline ${notifData.adminName} request for status user ${notifData.data.username} to Banned`,
+                    message: `Admin ${name} has decline ${notifData.adminName} request for status ${notifData.type} ${notifData.data.username} to ${notifData.action}`,
                     name
                 })
 
@@ -279,9 +279,16 @@ module.exports = {
                 if (notifData.action === LIST_OF_PRIVILEGE.SET_FLAGS) {
                     status = {
                         ...status,
-                        flag: [...flags, ...notifData.flags || []]
+                        flags: [...flags, ...notifData.data.flags || []]
                     }
 
+                }
+
+                if (notifData.action === LIST_OF_PRIVILEGE.REMOVE_FLAGS) {
+                    status = {
+                        ...status,
+                        flags: []
+                    }
                 }
 
                 await db.doc(`/posts/${notifData.data.postId}`).get()
@@ -292,31 +299,87 @@ module.exports = {
                 return {
                     id: postsParse.id,
                     status: notifData.action,
-                    message: `Success Approve to action ${notifData.action} post `
+                    message: `Success Approve to action ${notifData.action} post`
+                }
+            }
+
+            if (notifData.type === 'comments') {
+                const postsData = await db.doc(`/posts/${notifData.data.postId}/comments/${notifData.data.commentId}`).get()
+                const commentParse = postsData.data();
+                let status = commentParse?.status;
+                let flags = commentParse?.status.flag || [];
+
+                if (notifData.action === LIST_OF_PRIVILEGE.TAKEDOWN) {
+                    status = {
+                        ...status,
+                        active: false,
+                        takedown: true,
+                        deleted: false
+                    }
+                }
+                if (notifData.action === LIST_OF_PRIVILEGE.ACTIVE_POSTS) {
+                    status = {
+                        ...status,
+                        active: true,
+                        takedown: false,
+                        deleted: false
+                    }
+                }
+
+                if (notifData.action === LIST_OF_PRIVILEGE.DELETE_POSTS) {
+                    status = {
+                        ...status,
+                        active: false,
+                        takedown: false,
+                        deleted: true
+                    }
+                }
+
+                if (notifData.action === LIST_OF_PRIVILEGE.SET_FLAGS) {
+                    status = {
+                        ...status,
+                        flags: [...flags, ...notifData.data.flags || []]
+                    }
+
+                }
+
+                if (notifData.action === LIST_OF_PRIVILEGE.REMOVE_FLAGS) {
+                    status = {
+                        ...status,
+                        flags: []
+                    }
+                }
+
+                await db.doc(`/posts/${notifData.data.postId}`).get()
+                    .then(doc => {
+                        doc.ref.update({ status })
+                    })
+
+                return {
+                    id: commentParse.id,
+                    status: notifData.action,
+                    message: `Success Approve to action ${notifData.action} Comment`
                 }
             }
 
             if (notifData.type === "users") {
-                if (notifData.action === "Banned") {
-                    await db.doc(`/users/${notifData.data.username}`)
-                        .get()
-                        .then(doc => {
-                            return doc.ref.update({ status: 'banned' })
-                        })
-
-                    console.log('approve log')
-                    await createLogs({
-                        adminId: id,
-                        role: level,
-                        message: `Admin ${name} has approved ${notifData.adminName} request for status user ${notifData.data.username} to Banned`,
-                        name
+                await db.doc(`/users/${notifData.data.username}`)
+                    .get()
+                    .then(doc => {
+                        return doc.ref.update({ status: notifData.action === "Banned" ? 'banned' : 'active' })
                     })
 
-                    return {
-                        id: dataParse.id,
-                        status: notifData.action, // still return previous data status
-                        message: "Success Approve admin action"
-                    }
+                await createLogs({
+                    adminId: id,
+                    role: level,
+                    message: `Admin ${name} has approved ${notifData.adminName} request for status user ${notifData.data.username} to ${notifData.action}`,
+                    name
+                })
+
+                return {
+                    id: dataParse.id,
+                    status: notifData.action, // still return previous data status
+                    message: "Success Approve admin action"
                 }
             } else {
                 return {

@@ -231,7 +231,7 @@ module.exports = {
                 const payload = {
                     name,
                     isDeleted: false,
-                    isActive: true,
+                    isActive: false,
                     colors,
                     adjective,
                     nouns

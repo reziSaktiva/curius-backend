@@ -386,7 +386,6 @@ module.exports = gql`
         content: String
         idPost: ID
         idComment:ID
-        userIdReporter: ID
         username: String
         totalReported: Int
     }
@@ -465,8 +464,8 @@ module.exports = gql`
         checkEmail(email: String uid: String name: String, accessCode: String!): CheckEmailStatus
         registerAdmin(email: String! level: Int! name: String!, accessCode: String!): String
         changeUserStatus(status: String!, username: String!): UpdateUserStatus!
-        setStatusComment(idComment: ID, active: Boolean, takedown: Boolean, deleted: Boolean): CommentReported
-        setStatusPost(active: Boolean, flags: [String], takedown: Boolean, postId: String, deleted: Boolean): UpdatePostStatus!
+        setStatusComment(idComment: ID, flags: [String], removeFlags: Boolean, active: Boolean, takedown: Boolean, deleted: Boolean): CommentReported
+        setStatusPost(active: Boolean, flags: [String], removeFlags: Boolean, takedown: Boolean, postId: String, deleted: Boolean): UpdatePostStatus!
         approveAdminAction(notifId: ID, approve: Boolean): BasicResponseAction
 
         # Randomization

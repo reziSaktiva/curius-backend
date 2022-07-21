@@ -187,8 +187,8 @@ exports.onPostCreate = functions.region('asia-southeast2')
                 objectID: id,
                 _tags: tags,
                 _geoloc: {
-                    lat: newData.location.lat.toString(),
-                    lng: newData.location.lng.toString()
+                    lat: newData.location.lat,
+                    lng: newData.location.lng
                 },
                 // field algolia
                 date_timestamp: new Date(newData.createdAt).getTime()
