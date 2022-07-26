@@ -338,7 +338,7 @@ module.exports = {
                 if (notifData.action === LIST_OF_PRIVILEGE.SET_FLAGS) {
                     status = {
                         ...status,
-                        flags: [...flags, ...notifData.data.flags || []]
+                        flags: [...notifData.data.flags]
                     }
 
                 }
@@ -366,7 +366,7 @@ module.exports = {
                 await db.doc(`/users/${notifData.data.username}`)
                     .get()
                     .then(doc => {
-                        return doc.ref.update({ status: notifData.action === "Banned" ? 'banned' : 'active' })
+                        return doc.ref.update({ status: notifData.action === 'banned' ? 'banned' : 'active' })
                     })
 
                 await createLogs({

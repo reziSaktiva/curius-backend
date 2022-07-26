@@ -490,7 +490,7 @@ module.exports = {
       if (removeFlags) action = LIST_OF_PRIVILEGE.REMOVE_FLAGS
 
       if (!hasAccessPriv({ id: level, action })) throw new Error('Permission Denied')
-      const shouldBeRequestApproval = !!(flags.length || takedown !== undefined || deleted !== undefined || active !== undefined) && level === 4;
+      const shouldBeRequestApproval = !!(flags.length || takedown !== undefined || deleted !== undefined || active !== undefined || removeFlags !== undefined) && level === 4;
 
       if (!postId) throw new Error('postId is Required')
 
@@ -712,7 +712,7 @@ module.exports = {
             if (flags.length) {
               status = {
                 ...oldStatus,
-                flags: [...(oldStatus.flags || []), ...flags]
+                flags: [...flags]
               }
             }
 

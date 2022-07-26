@@ -224,6 +224,7 @@ module.exports = {
     async getGraphSummary(_, { graphType, state }, context) {
       const index = client.initIndex(ALGOLIA_INDEX_POSTS);
       const indexUser = client.initIndex(ALGOLIA_INDEX_USERS_DESC);
+      const indexComment = client.initIndex('comments');
 
       const facetFilters = []
       const pagination = {
@@ -293,6 +294,10 @@ module.exports = {
 
       const searchDeletedUser = await indexUser.search('', { ...payload, facetFilters: [...facetFilters, [`_tags:has_deleted`]] })
 
+      // Comments
+
+      const searchCommentReported = await indexComment.search('', { ...payload, facetFilters: [...facetFilters, [`_tags:has_reported`]] })
+
       const section = state.split('.');
       const parentData = section[0];
       const childData = section[1];
@@ -311,11 +316,13 @@ module.exports = {
         if (childData === 'active') {
           dataDoc = searchDocsActive
         }
-      } else {
+      } else if (parentData === 'user') {
         if (childData === 'total') dataDoc = searchUser
         if (childData === 'deleted') dataDoc = searchDeletedUser
         if (childData === 'newUser') dataDoc = searchNewUser
         if (childData === 'active') dataDoc = activeUsers
+      } else {
+        dataDoc = searchCommentReported
       }
 
       const templateGraph = [...new Array(indexTime)].map((_i, idx) => {
