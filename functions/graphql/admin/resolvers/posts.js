@@ -484,13 +484,13 @@ module.exports = {
 
       let action = ''
       if (takedown) action = LIST_OF_PRIVILEGE.TAKEDOWN;
-      if (flags.length) action = LIST_OF_PRIVILEGE.SET_FLAGS;
+      if (flags.length > 0) action = LIST_OF_PRIVILEGE.SET_FLAGS;
       if (active !== undefined && active) action = LIST_OF_PRIVILEGE.ACTIVE_POSTS
       if (deleted) action = LIST_OF_PRIVILEGE.DELETE_POSTS
       if (removeFlags) action = LIST_OF_PRIVILEGE.REMOVE_FLAGS
 
       if (!hasAccessPriv({ id: level, action })) throw new Error('Permission Denied')
-      const shouldBeRequestApproval = !!(flags.length || takedown !== undefined || deleted !== undefined || active !== undefined || removeFlags !== undefined) && level === 4;
+      const shouldBeRequestApproval = !!(flags.length > 0 || takedown !== undefined || deleted !== undefined || active !== undefined || removeFlags !== undefined) && level === 4;
 
       if (!postId) throw new Error('postId is Required')
 
@@ -533,9 +533,10 @@ module.exports = {
         })
 
         let message = ''
-        if (takedown) message = `Admin ${name} request to reported Post Id ${postId}`
+        if (takedown) message = `Admin ${name} request to takedown Post Id ${postId}`
         if (active) message = `Admin ${name} request to activate Post Id ${postId}`
-        if (flags.length) message = `Admin ${name} request set flag ${flags.join(',')} to Post Id ${postId}`
+        if (flags.length > 0) message = `Admin ${name} request set flag ${flags.join(',')} to Post Id ${postId}`
+        if (removeFlags) message = `Admin ${name} request remove flag to Post Id ${postId}`
 
         await createLogs({ adminId: id, role: level, message, name })
 
@@ -559,7 +560,7 @@ module.exports = {
               const oldPost = data.data()
               const oldStatus = oldPost?.status;
 
-              if (flags.length) {
+              if (flags.length > 0) {
                 status = {
                   ...oldStatus,
                   flags: [...(oldStatus.flag || []), ...flags]
@@ -605,9 +606,10 @@ module.exports = {
               return doc.ref.update({ status: { ...oldPost.status, ...status } })
             })
           let message = ''
-          if (takedown) message = `Admin ${name} has reported Post Id ${docId}`
+          if (takedown) message = `Admin ${name} has takedown Post Id ${docId}`
           if (active) message = `Admin ${name} has activate Post Id ${docId}`
-          if (flags.length) message = `Admin ${name} has set flag ${flags.join(',')} to Post Id ${docId}`
+          if (flags.length > 0) message = `Admin ${name} has set flag ${flags.join(',')} to Post Id ${docId}`
+          if (removeFlags) message = `Admin ${name} has remove flag to Post Id ${postId}`
 
           await createLogs({ adminId: id, role: level, message, name })
           // Update Algolia Search Posts
@@ -635,13 +637,13 @@ module.exports = {
 
       let action = ''
       if (takedown) action = LIST_OF_PRIVILEGE.TAKEDOWN;
-      if (flags.length) action = LIST_OF_PRIVILEGE.SET_FLAGS;
+      if (flags.length > 0) action = LIST_OF_PRIVILEGE.SET_FLAGS;
       if (active !== undefined && active) action = LIST_OF_PRIVILEGE.ACTIVE_POSTS
       if (deleted) action = LIST_OF_PRIVILEGE.DELETE_POSTS
       if (removeFlags) action = LIST_OF_PRIVILEGE.REMOVE_FLAGS
 
       if (!hasAccessPriv({ id: level, action })) throw new Error('Permission Denied')
-      const shouldBeRequestApproval = !!(flags.length || takedown !== undefined || deleted !== undefined || active !== undefined) && level === 4;
+      const shouldBeRequestApproval = !!(flags.length > 0 || takedown !== undefined || deleted !== undefined || active !== undefined || removeFlags !== undefined) && level === 4;
 
       if (!idComment) throw new Error('permission denied')
 
@@ -677,7 +679,7 @@ module.exports = {
         await db.collection('/notifications').add({
           type: 'comments',
           data: {
-            ...(flags.length ? { flags } : {}),
+            ...(flags.length > 0 ? { flags } : {}),
             postId,
             commentId: idComment,
             username: owner.data().username,
@@ -692,9 +694,10 @@ module.exports = {
         })
 
         let message = ''
-        if (takedown) message = `Admin ${name} request to reported Post Id ${postId}`
-        if (active) message = `Admin ${name} request to activate Post Id ${postId}`
-        if (flags.length) message = `Admin ${name} request set flag ${flags.join(',')} to Post Id ${postId}`
+        if (takedown) message = `Admin ${name} request takedown to Comment Id ${idComment} on post id ${postId}`
+        if (active) message = `Admin ${name} request activate to Comment Id ${idComment} on post id ${postId}`
+        if (flags.length > 0) message = `Admin ${name} request set flag ${flags.join(',')} to Comment Id ${idComment} on post id ${postId}`
+        if (removeFlags) message = `Admin ${name} request remove flag to Comment Id ${idComment} on post id ${postId}`
 
         await createLogs({ adminId: id, role: level, message, name })
 
@@ -709,7 +712,7 @@ module.exports = {
             const oldStatus = oldData?.status;
             let status = {}
 
-            if (flags.length) {
+            if (flags.length > 0) {
               status = {
                 ...oldStatus,
                 flags: [...flags]
@@ -764,9 +767,10 @@ module.exports = {
           })
 
         let message = ''
-        if (takedown) message = `Admin ${name} has reported Comment Id ${idComment}`
-        if (active) message = `Admin ${name} has activate Comment Id ${idComment}`
-        if (deleted) message = `Admin ${name} has deleted Comment Id ${idComment}`
+        if (takedown) message = `Admin ${name} has to takedown Comment Id ${idComment} on post id ${postId}`
+        if (active) message = `Admin ${name} has to activate Comment Id ${idComment} on post id ${postId}`
+        if (flags.length) message = `Admin ${name} has set flag ${flags.join(',')} to Comment Id ${idComment} on post id ${postId}`
+        if (removeFlags) message = `Admin ${name} has remove flag to Comment Id ${idComment} on post id ${postId}`
 
         await createLogs({ adminId: id, role: level, message, name })
       }

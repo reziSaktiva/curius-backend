@@ -228,6 +228,14 @@ module.exports = {
                 })
             const userData = await db.doc(`/users/${notifData.data.username}`).get()
             const dataParse = userData.data();
+            const handleCreateLog = async (position) => {
+                await createLogs({
+                    adminId: id,
+                    role: level,
+                    message: `Admin ${name} has approved ${notifData.adminName} request for status ${position} ${notifData.data.username} to ${notifData.action}`,
+                    name
+                })
+            }
 
             if (!approve) {
                 await createLogs({
@@ -295,7 +303,7 @@ module.exports = {
                     .then(doc => {
                         doc.ref.update({ status })
                     })
-
+                handleCreateLog('post')
                 return {
                     id: postsParse.id,
                     status: notifData.action,
@@ -304,8 +312,8 @@ module.exports = {
             }
 
             if (notifData.type === 'comments') {
-                const postsData = await db.doc(`/posts/${notifData.data.postId}/comments/${notifData.data.commentId}`).get()
-                const commentParse = postsData.data();
+                const CommentData = await db.doc(`/posts/${notifData.data.postId}/comments/${notifData.data.commentId}`).get()
+                const commentParse = CommentData.data();
                 let status = commentParse?.status;
                 let flags = commentParse?.status.flag || [];
 
@@ -350,10 +358,23 @@ module.exports = {
                     }
                 }
 
-                await db.doc(`/posts/${notifData.data.postId}`).get()
+                const index = server.initIndex('comments');
+
+                await index.getObject(CommentData.id)
+                    .then(async data => {
+                        await index.partialUpdateObject({
+                            ...data,
+                            objectID: CommentData.id,
+                            status: newData.status,
+                        })
+                    }).catch(() => console.log('err'))
+
+                await db.doc(`/posts/${notifData.data.postId}/comments/${notifData.data.commentId}`).get()
                     .then(doc => {
                         doc.ref.update({ status })
                     })
+
+                handleCreateLog('comment')
 
                 return {
                     id: commentParse.id,
@@ -369,12 +390,7 @@ module.exports = {
                         return doc.ref.update({ status: notifData.action === 'banned' ? 'banned' : 'active' })
                     })
 
-                await createLogs({
-                    adminId: id,
-                    role: level,
-                    message: `Admin ${name} has approved ${notifData.adminName} request for status user ${notifData.data.username} to ${notifData.action}`,
-                    name
-                })
+                handleCreateLog('user')
 
                 return {
                     id: dataParse.id,
