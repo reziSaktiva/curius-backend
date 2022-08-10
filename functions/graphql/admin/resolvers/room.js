@@ -10,10 +10,11 @@ const adminAuthContext = require('../../../utility/adminAuthContext')
 const { client, server } = require('../../../utility/algolia')
 const { API_KEY_GEOCODE } = require('../../../utility/secret/API')
 const { hasAccessPriv, LIST_OF_PRIVILEGE } = require('../usecase/admin');
+const room = require('../../users/resolvers/room');
 
 module.exports = {
   Query: {
-    async searchRoom(_, { name, location, useDetailLocation, perPage, page, isDeactive, sortBy }, context) {
+    async searchRoom(_, { name, location, useDetailLocation, perPage, page, isDeactive, sortBy = 'desc', useExport = false }, context) {
       let indexKey = ALGOLIA_INDEX_ROOMS
       if (sortBy === 'asc') indexKey = ALGOLIA_INDEX_ROOMS_ASC
       if (sortBy === 'desc') indexKey = ALGOLIA_INDEX_ROOMS_DESC
@@ -60,11 +61,12 @@ module.exports = {
 
       const geoLocPayload = location && aroundLatLng ? {
         "aroundLatLng": aroundLatLng,
-        "aroundRadius": range * 1000,
       } : {};
 
+      const totalRoom = await index.search('', { "hitsPerPage": 1 })
+
       const pagination = {
-        "hitsPerPage": perPage || 10,
+        "hitsPerPage": useExport ? totalRoom.nbHits || 0 : perPage || 10,
         "page": page || 0,
       }
 
@@ -77,12 +79,10 @@ module.exports = {
         };
         const searchDocs = await index.search(name, payload)
 
-        const ids = searchDocs.hits.map(doc => doc.objectID)
-        if (!ids.length) return searchDocs
+        const rooms = searchDocs.hits.map(async doc => {
+          const room = await db.doc(`/room/${doc.objectID}`).get()
 
-        const getRooms = await db.collection('room').where('id', 'in', ids).get()
-        const rooms = await getRooms.docs.map(async (doc, idx) => {
-          const dataParse = doc.data()
+          const dataParse = room.data()
           if (!useDetailLocation || !dataParse?.location?.lat) return dataParse
 
           const request = await googleMapsClient
@@ -148,9 +148,9 @@ module.exports = {
   },
   Mutation: {
     async createRoom(_, { roomName, description, startingDate, tillDate, displayPicture, location, range }, context) {
-      const { name, level } = await adminAuthContext(context)
-      console.log('location: ', location);
-      if (!hasAccessPriv({ id: level, action: LIST_OF_PRIVILEGE.CREATE_ROOM })) throw new Error('Permission Denied')
+      const { name, level } = await adminAuthContext(context);
+
+      if (!hasAccessPriv({ id: level, action: LIST_OF_PRIVILEGE.CREATE_ROOM })) throw new Error('Permission Denied');
 
       const index = server.initIndex(ALGOLIA_INDEX_ROOMS)
 
@@ -165,31 +165,35 @@ module.exports = {
         },
         displayPicture,
         totalPosts: 0,
+        isDeactive: new Date(startingDate).getTime() < Date.now() && new Date(tillDate).getTime() > Date.now(),
         createdBy: name,
         createdAt: new Date().toISOString()
       }
 
       try {
         if (name) {
-          await db.collection('room').add(data)
+          return await db.collection('room').add(data)
             .then(async doc => {
               const newRoomPayload = {
                 ...data,
                 id: doc.id,
                 objectID: doc.id,
                 _geoloc: {
-                  lat: '',
-                  lng: ''
+                  lat: location.lat,
+                  lng: location.lng
                 },
-                isDeactive: false,
+                isDeactive: new Date(data.startingDate).getTime() < Date.now() && new Date(data.tillDate).getTime() > Date.now(),
                 // field algolia
                 date_timestamp: Date.now()
               };
               await index.saveObjects([newRoomPayload], { autoGenerateObjectIDIfNotExist: false })
               doc.update({ id: doc.id })
-            })
 
-          return `room ${roomName} has been created by ${name}`
+              return {
+                ...data,
+                id: doc.id,
+              }
+            })
         } else {
           throw new UserInputError("please login first")
         }
@@ -207,6 +211,13 @@ module.exports = {
         const targetCollection = `/room/${roomId}`
         await db.doc(targetCollection).delete();
         await index.deleteObject(roomId);
+
+        await db.collection('posts').where('room', '==', roomId).get()
+          .then(data => {
+            data.docs.forEach(doc => {
+              doc.ref.delete()
+            })
+          })
 
         await createLogs({
           adminId: id,
@@ -229,7 +240,7 @@ module.exports = {
     },
     async updateRoom(_, props, context) {
       const { isDeactive, roomId, roomName, description, startingDate, tillDate, displayPicture, location, range } = props
-      const { name, level } = await adminAuthContext(context)
+      const { name } = await adminAuthContext(context)
       if (!roomId) throw new Error('Room ID is requred')
       if (!name) throw new Error('Access Denied')
       const index = server.initIndex(ALGOLIA_INDEX_ROOMS)

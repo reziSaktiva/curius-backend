@@ -45,6 +45,7 @@ serverAdmin.applyMiddleware({ app: admin, path: '/', cors: true })
 const postsIndex = algoliaClient.initIndex(ALGOLIA_INDEX_POSTS)
 const usersIndex = algoliaClient.initIndex(ALGOLIA_INDEX_USERS)
 const roomIndex = algoliaClient.initIndex(ALGOLIA_INDEX_ROOMS)
+const adminIndex = algoliaClient.initIndex('admin')
 
 exports.onUserDelete = functions.region('asia-southeast2')
     .firestore
@@ -186,8 +187,8 @@ exports.onPostCreate = functions.region('asia-southeast2')
                 objectID: id,
                 _tags: tags,
                 _geoloc: {
-                    lat: newData.location.lat.toString(),
-                    lng: newData.location.lng.toString()
+                    lat: newData.location.lat,
+                    lng: newData.location.lng
                 },
                 // field algolia
                 date_timestamp: new Date(newData.createdAt).getTime()
@@ -237,6 +238,62 @@ exports.onPostUpdate = functions.region('asia-southeast2')
             }
 
             postsIndex.partialUpdateObject(newPostPayload)
+        }
+        catch (err) {
+            functions.logger.log(err)
+        }
+    })
+
+exports.onAdminUpdate = functions.region('asia-southeast2')
+    .firestore
+    .document('/admin/{id}')
+    .onUpdate(async (snapshot, _context) => {
+        const newData = snapshot.after.data();
+        const id = newData.id;
+
+        const newPostPayload = {
+            ...newData,
+            objectID: id,
+        }
+        adminIndex.partialUpdateObject(newPostPayload)
+    })
+
+exports.onAdminDelete = functions.region('asia-southeast2')
+    .firestore
+    .document('/posts/{id}')
+    .onDelete(async (snapshot) => {
+        try {
+            const data = snapshot.data()
+            adminIndex.deleteObject(data.id.toString())
+        }
+        catch (err) {
+            functions.logger.log(err)
+        }
+    })
+
+exports.onRoomUpdate = functions.region('asia-southeast2')
+    .firestore
+    .document('/room/{id}')
+    .onDelete(async (snapshot) => {
+        try {
+            const data = snapshot.data()
+
+            if (new Date(data.startingDate).getTime() < Date.now() && new Date(data.tillDate).getTime() > Date.now()) {
+                db.doc(`/room/${snapshot.id}`).update({ isDeactive: true })
+
+                roomIndex.partialUpdateObject({
+                    ...data,
+                    isDeactive: true,
+                    objectID: snapshot.id
+                })
+            } else {
+                db.doc(`/room/${snapshot.id}`).update({ isDeactive: false })
+                roomIndex.partialUpdateObject({
+                    ...data,
+                    isDeactive: false,
+                    objectID: snapshot.id
+                })
+            }
         }
         catch (err) {
             functions.logger.log(err)

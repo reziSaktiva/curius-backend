@@ -26,8 +26,10 @@ module.exports = {
                 "facets": ["*"]
             };
 
+            const totalUsers = await index.search('', { "hitsPerPage": 1 })
+
             const pagination = {
-                "hitsPerPage": useExport ? 1000 : perPage || 10,
+                "hitsPerPage": useExport ? totalUsers.nbHits || 0 : perPage || 10,
                 "page": page || 0,
             }
             const timestampFrom = get(filters, 'timestamp.from', '');
@@ -35,7 +37,7 @@ module.exports = {
             let facetFilters = []
             let newFilters = ``
             const _tags = []
-            
+
             if (status) facetFilters.push([`status:${status}`])
             if (filters?.hasEmail) _tags.push(`has_email`)
             if (filters?.hasPhoneNumber) _tags.push(`has_phone_number`)
@@ -45,7 +47,7 @@ module.exports = {
             if (timestampFrom) {
                 const dateFrom = moment(timestampFrom).startOf('day').valueOf();
                 const dateTo = moment(timestampTo).endOf('day').valueOf();
-        
+
                 newFilters = `date_timestamp:${dateFrom} TO ${dateTo}`
             }
 
@@ -81,7 +83,7 @@ module.exports = {
                             // while (userIds.length) {
                             //     // const batch = userIds.splice(0, 10);
                             //     // console.log('userIds: ',userIds)
-                            
+
                             //     batches.push(
                             //         db.collection('users')
                             //           .where(
@@ -111,14 +113,14 @@ module.exports = {
     },
     Mutation: {
         async changeUserStatus(_, { status, username }, _context) {
-            const { name, level, id, levelName } = await adminAuthContext(_context)
+            const { name, level, id, levelName } = await adminAuthContext(_context);
             // only level 3 should be ask for review update user status
             const listStatus = ['active', 'banned', 'delete', 'cancel'];
 
-            const includeStatus = listStatus.includes(status)
-            const shouldBeRequestApproval = !!(status && level === 3)
+            const includeStatus = listStatus.includes(status);
+            const shouldBeRequestApproval = !!(status && level === 3);
 
-            if (status === 'banned' && !hasAccessPriv({ id: level, action: LIST_OF_PRIVILEGE.BAN_USER })) throw new Error('Permission Denied')
+            if (!hasAccessPriv({ id: level, action: LIST_OF_PRIVILEGE.BAN_USER })) throw new Error('Permission Denied')
 
             if (!includeStatus) {
                 return {
@@ -141,24 +143,28 @@ module.exports = {
                     const users = getUsers.docs.map(doc => doc.data())
 
                     if (users.length) {
-                        return {
-                            ...userData,
-                            status: userData.status,
-                            message: "You or other admin already request to change status for this user"
-                        }
+                        // return {
+                        //     ...userData,
+                        //     status: userData.status,
+                        //     message: "You or other admin already request to change status for this user"
+                        // }
+                        throw new Error('You or other admin already request to change status for this user')
                     }
                     await db.collection('/notifications').add({
                         type: 'users',
-                        data: { username },
+                        data: {
+                            username,
+                            profilePicture: userData.profilePicture
+                        },
                         isVerify: false,
                         adminName: name,
                         adminRole: levelName,
-                        action: "Banned",
-                        isRead: false
+                        action: status,
+                        isRead: false,
+                        status: userData.status
                     })
 
                 } else {
-                    console.log('approve direct');
                     await db.doc(`/users/${username}`)
                         .get()
                         .then(doc => {
@@ -167,7 +173,6 @@ module.exports = {
                 }
 
                 if (!shouldBeRequestApproval) {
-                    console.log('userData.id: ', userData.id);
                     await index.partialUpdateObject({
                         objectID: userData.id,
                         status
@@ -183,7 +188,6 @@ module.exports = {
                     name
                 })
 
-                console.log('userData.status: ', userData.status);
                 const message = shouldBeRequestApproval ? 'waiting approval from super admin' : 'success'
                 const response = {
                     ...userData,
@@ -208,7 +212,7 @@ module.exports = {
                 .get()
                 .then(doc => {
                     notifData = doc.data()
-                    if (notifData.type === 'users' && notifData.action === 'Banned') {
+                    if (notifData.type === 'users' && notifData.action) {
                         return doc.ref.update({ isVerify: true, approve })
                     }
 
@@ -216,17 +220,28 @@ module.exports = {
                         return doc.ref.update({ isVerify: true, approve })
                     }
 
+                    if (notifData.type === 'comments' && notifData.action) {
+                        return doc.ref.update({ isVerify: true, approve })
+                    }
+
                     return doc
                 })
             const userData = await db.doc(`/users/${notifData.data.username}`).get()
             const dataParse = userData.data();
-
-            if (!approve) {
-                console.log('decline log')
+            const handleCreateLog = async (position) => {
                 await createLogs({
                     adminId: id,
                     role: level,
-                    message: `Admin ${name} has decline ${notifData.adminName} request for status user ${notifData.data.username} to Banned`,
+                    message: `Admin ${name} has approved ${notifData.adminName} request for status ${position} ${notifData.data.username} to ${notifData.action}`,
+                    name
+                })
+            }
+
+            if (!approve) {
+                await createLogs({
+                    adminId: id,
+                    role: level,
+                    message: `Admin ${name} has decline ${notifData.adminName} request for status ${notifData.type} ${notifData.data.username} to ${notifData.action}`,
                     name
                 })
 
@@ -272,44 +287,115 @@ module.exports = {
                 if (notifData.action === LIST_OF_PRIVILEGE.SET_FLAGS) {
                     status = {
                         ...status,
-                        flag: [...flags, ...notifData.flags || []]
+                        flags: [...flags, ...notifData.data.flags || []]
                     }
 
+                }
+
+                if (notifData.action === LIST_OF_PRIVILEGE.REMOVE_FLAGS) {
+                    status = {
+                        ...status,
+                        flags: []
+                    }
                 }
 
                 await db.doc(`/posts/${notifData.data.postId}`).get()
                     .then(doc => {
                         doc.ref.update({ status })
                     })
-
+                handleCreateLog('post')
                 return {
                     id: postsParse.id,
                     status: notifData.action,
-                    message: `Success Approve to action ${notifData.action} post `
+                    message: `Success Approve to action ${notifData.action} post`
+                }
+            }
+
+            if (notifData.type === 'comments') {
+                const CommentData = await db.doc(`/posts/${notifData.data.postId}/comments/${notifData.data.commentId}`).get()
+                const commentParse = CommentData.data();
+                let status = commentParse?.status;
+                let flags = commentParse?.status.flag || [];
+
+                if (notifData.action === LIST_OF_PRIVILEGE.TAKEDOWN) {
+                    status = {
+                        ...status,
+                        active: false,
+                        takedown: true,
+                        deleted: false
+                    }
+                }
+                if (notifData.action === LIST_OF_PRIVILEGE.ACTIVE_POSTS) {
+                    status = {
+                        ...status,
+                        active: true,
+                        takedown: false,
+                        deleted: false
+                    }
+                }
+
+                if (notifData.action === LIST_OF_PRIVILEGE.DELETE_POSTS) {
+                    status = {
+                        ...status,
+                        active: false,
+                        takedown: false,
+                        deleted: true
+                    }
+                }
+
+                if (notifData.action === LIST_OF_PRIVILEGE.SET_FLAGS) {
+                    status = {
+                        ...status,
+                        flags: [...notifData.data.flags]
+                    }
+
+                }
+
+                if (notifData.action === LIST_OF_PRIVILEGE.REMOVE_FLAGS) {
+                    status = {
+                        ...status,
+                        flags: []
+                    }
+                }
+
+                const index = server.initIndex('comments');
+
+                await index.getObject(CommentData.id)
+                    .then(async data => {
+                        await index.partialUpdateObject({
+                            ...data,
+                            objectID: CommentData.id,
+                            status: newData.status,
+                        })
+                    }).catch(() => console.log('err'))
+
+                await db.doc(`/posts/${notifData.data.postId}/comments/${notifData.data.commentId}`).get()
+                    .then(doc => {
+                        doc.ref.update({ status })
+                    })
+
+                handleCreateLog('comment')
+
+                return {
+                    id: commentParse.id,
+                    status: notifData.action,
+                    message: `Success Approve to action ${notifData.action} Comment`
                 }
             }
 
             if (notifData.type === "users") {
-                if (notifData.action === "Banned") {
-                    await db.doc(`/users/${notifData.data.username}`)
-                        .get()
-                        .then(doc => {
-                            return doc.ref.update({ status: 'banned' })
-                        })
-
-                    console.log('approve log')
-                    await createLogs({
-                        adminId: id,
-                        role: level,
-                        message: `Admin ${name} has approved ${notifData.adminName} request for status user ${notifData.data.username} to Banned`,
-                        name
+                await db.doc(`/users/${notifData.data.username}`)
+                    .get()
+                    .then(doc => {
+                        return doc.ref.update({ status: notifData.action === 'banned' ? 'banned' : 'active' })
                     })
 
-                    return {
-                        id: dataParse.id,
-                        status: notifData.action, // still return previous data status
-                        message: "Success Approve admin action"
-                    }
+                handleCreateLog('user')
+
+                return {
+                    id: dataParse.id,
+                    status: notifData.action, // still return previous data status
+                    message: "Success Approve admin action"
                 }
             } else {
                 return {

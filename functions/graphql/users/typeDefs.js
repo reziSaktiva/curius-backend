@@ -222,12 +222,30 @@ module.exports = gql`
         reply: ReplyData
     }
     type Query {
+        """
+        this query is not ready !!!
+        """
         moreForYou: dataPost
         getPosts(lat: Float, lng: Float, range: Float page: Int type: String, room: ID, username: String): dataPost
+        """
+        (NOT USED)
+        """
         getPopularPosts(lat: Float, lng: Float range: Float): dataPost
+        """
+        (NOT READY)
+        """
         getVisited: [GeoLocation]
+        """
+        (NOT USED)
+        """
         getProfilePosts(username: String): dataPost
+        """
+        (NOT USED)
+        """
         getRoomPosts(room: String!):[Post]!
+        """
+        (NOT USED)
+        """
         getProfileLikedPost(username: String): dataPost
         getPost(id: ID!): Post!
         getUserData: UserData
@@ -311,7 +329,7 @@ module.exports = gql`
     }
     type Mutation {
         # users mutation
-        registerUser(registerInput: RegisterInput): String
+        registerUser(registerInput: RegisterInput): String 
         login(username: String!, password: String!): String!
         loginWithFacebook(username: String!, token: String!): String!
         checkUserAccount(email: String): Boolean!
